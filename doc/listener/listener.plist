@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>UserName</key>
+    <string>nico</string>
+    <key>Label</key>
+    <string>org.babymri.chris-ultron</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/nico/work/gitroot/chris-ultron-backend/chris_backend/plugins/services/pacslistener/pacslistener.py</string>
+    	<string>-t</string>
+    	<string>/tmp</string>
+    	<string>-l</string>
+    	<string>/tmp/log</string>
+    	<string>-d</string>
+    	<string>/tmp/data</string>
+    </array>
+    <key>inetdCompatibility</key>
+    <dict>
+        <key>Wait</key>
+        <false/>
+    </dict>
+    <key>Sockets</key>
+    <dict>
+        <key>Listeners</key>
+        <dict>
+            <key>SockServiceName</key>
+            <string>chris-ultron</string>
+            <key>SockType</key>
+            <string>stream</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

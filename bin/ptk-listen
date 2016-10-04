@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+#                                                            _
+# Pacs ToolKit Listener
+#
+# (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+# FOR DEV PURPOSE
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+import argparse
+import ptk
+
+parser = argparse.ArgumentParser(description='DICOM Listener script (based on DCMTK and PyDicom)')
+parser.add_argument('-t', '--tmpdir', action='store', dest='tmp_directory', required=True, type=str, help='Directory to store temporary files.')
+parser.add_argument('-l', '--logdir', action='store', dest='log_directory', required=True, type=str, help='Directory to store log files.')
+parser.add_argument('-d', '--datadir', action='store', dest='data_directory', required=True, type=str, help='Directory to store DICOM files.')
+
+opts = parser.parse_args()
+ptk.listen(vars(opts))
