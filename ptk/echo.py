@@ -1,10 +1,11 @@
 import subprocess
-import ptk.utils
 
-class Echo():
+from .base import Base
+
+class Echo(Base):
     """docstring for Echo."""
     def __init__(self, arg):
-        ptk.utils.init(self, arg)
+        super(Echo, self).__init__(arg)
         self.executable = 'echoscu'
 
     def command(self):

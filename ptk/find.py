@@ -1,11 +1,11 @@
 import subprocess, re
-import ptk.utils
 
-class Find():
+from .base import Base
+
+class Find(Base):
     """docstring for Find."""
     def __init__(self, arg):
-
-        ptk.utils.init(self, arg)
+        super(Find, self).__init__(arg)
         self.executable = 'findscu'
         # to be moved out
         self.postfilter_parameters = {
@@ -15,7 +15,12 @@ class Find():
             'SeriesDescription': ''
         }
 
-    def buildCommand(self, opt={}):
+    def command(self, opt={}):
+        command = '-xi -S'
+
+        return self.executable + ' ' + command + ' ' + self.parameters(opt) + ' ' + self.command_suffix
+
+    def parameters(self, opt={}):
         parameters = {
             'PatientID': '',                     # PATIENT INFORMATION
             'PatientName': '',
@@ -34,13 +39,7 @@ class Find():
             'QueryRetrieveLevel': 'SERIES'
         }
 
-        # build query
-        command = ' -xi'
-        command += ' -S'
-
-        return self.commandWrap(command, parameters, opt)
-
-    def commandWrap(self, command, parameters, opt={}):
+        command = ''
         for key, value in parameters.items():
             # update value if provided
             if key in opt:
@@ -51,9 +50,7 @@ class Find():
             else:
                 command += ' -k ' + key
 
-        print(command)
-
-        return self.executable + ' ' + command + ' ' + self.command_suffix
+        return command
 
     def preparePostFilter(self):
         print('prepare post filter')
@@ -68,7 +65,7 @@ class Find():
         #
         #
         # find data
-        response = subprocess.run(self.buildCommand(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        response = subprocess.run(self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         # format response
         return self.formatResponse(response)
 
