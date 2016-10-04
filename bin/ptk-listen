@@ -21,5 +21,4 @@ parser.add_argument('-t', '--tmpdir', action='store', dest='tmp_directory', requ
 parser.add_argument('-l', '--logdir', action='store', dest='log_directory', required=True, type=str, help='Directory to store log files.')
 parser.add_argument('-d', '--datadir', action='store', dest='data_directory', required=True, type=str, help='Directory to store DICOM files.')
 
-opts = parser.parse_args()
-ptk.listen(vars(opts))
+ptk.listen(vars(parser.parse_args()))

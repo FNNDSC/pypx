@@ -13,6 +13,7 @@ class Listen():
         self.tmp_directory = args['tmp_directory']
         self.log_directory = args['log_directory']
         self.data_directory = args['data_directory']
+        self.executable = '/usr/local/bin/storescp'
 
         os.makedirs(self.tmp_directory, exist_ok=True)
         os.makedirs(self.log_directory, exist_ok=True)
@@ -77,7 +78,7 @@ class Listen():
     def run(self):
 
         # start listening to incoming data
-        command = 'storescp -id -od "' + self.uuid_directory + '" -xcr "touch ' + self.uuid_directory + '/#c;touch ' + self.uuid_directory + '/#a" -pm -sp;'
+        command = self.executable + ' -id -od "' + self.uuid_directory + '" -xcr "touch ' + self.uuid_directory + '/#c;touch ' + self.uuid_directory + '/#a" -pm -sp;'
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
         abs_files = [os.path.join(self.uuid_directory,f) for f in os.listdir(self.uuid_directory)]
