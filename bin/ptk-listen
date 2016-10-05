@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #                                                            _
-# Pacs ToolKit Listener
+# Pacs ToolKit Listen wrapper
 #
 # (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
 #                   Boston Children's Hospital
@@ -10,15 +10,15 @@
 #
 
 # FOR DEV PURPOSE
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# import sys, os
+# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import argparse
-import ptk
+import argparse, ptk
 
 parser = argparse.ArgumentParser(description='DICOM Listener script (based on DCMTK and PyDicom)')
-parser.add_argument('-t', '--tmpdir', action='store', dest='tmp_directory', required=True, type=str, help='Directory to store temporary files.')
-parser.add_argument('-l', '--logdir', action='store', dest='log_directory', required=True, type=str, help='Directory to store log files.')
-parser.add_argument('-d', '--datadir', action='store', dest='data_directory', required=True, type=str, help='Directory to store DICOM files.')
+parser.add_argument('-t', '--tmpdir', action='store', dest='tmp_directory', type=str, default='/tmp', help='Directory to store temporary files.')
+parser.add_argument('-l', '--logdir', action='store', dest='log_directory', type=str, default='/tmp/log', help='Directory to store log files.')
+parser.add_argument('-d', '--datadir', action='store', dest='data_directory', type=str, default='/tmp/data', help='Directory to store DICOM files.')
+parser.add_argument('-e', '--executable', action='store', dest='executable', type=str, default='/usr/local/bin/storescp', help='Storescp executable absolute location')
 
 ptk.listen(vars(parser.parse_args()))

@@ -1,4 +1,5 @@
 class Base():
+    """docstring for Echo."""
     def __init__(self,arg):
         self.arg = arg
 
@@ -22,9 +23,10 @@ class Base():
         else:
             self.server_port = '4241'
 
-        self.query = ''
-        self.command_suffix = ''
-        self.commandSuffix()
+        if 'executable' in arg:
+            self.executable = arg['executable']
+        else:
+            self.executable = '/usr/local/bin/echoscu'
 
         self.response = {
             'status': 'error',
@@ -33,7 +35,9 @@ class Base():
 
     def commandSuffix(self):
         # required parameters
-        self.command_suffix = ' -aec ' + self.aec
-        self.command_suffix += ' -aet ' + self.aet
-        self.command_suffix += ' ' + self.server_ip
-        self.command_suffix += ' ' + self.server_port
+        command_suffix = ' -aec ' + self.aec
+        command_suffix += ' -aet ' + self.aet
+        command_suffix += ' ' + self.server_ip
+        command_suffix += ' ' + self.server_port
+
+        return command_suffix

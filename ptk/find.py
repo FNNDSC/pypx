@@ -1,12 +1,13 @@
+# Global modules
 import subprocess, re
 
+# PTK modules
 from .base import Base
 
 class Find(Base):
     """docstring for Find."""
     def __init__(self, arg):
         super(Find, self).__init__(arg)
-        self.executable = 'findscu'
         # to be moved out
         self.postfilter_parameters = {
             'PatientSex': '',
@@ -18,9 +19,9 @@ class Find(Base):
     def command(self, opt={}):
         command = '-xi -S'
 
-        return self.executable + ' ' + command + ' ' + self.parameters(opt) + ' ' + self.command_suffix
+        return self.executable + ' ' + command + ' ' + self.query(opt) + ' ' + self.commandSuffix()
 
-    def parameters(self, opt={}):
+    def query(self, opt={}):
         parameters = {
             'PatientID': '',                     # PATIENT INFORMATION
             'PatientName': '',
@@ -39,18 +40,18 @@ class Find(Base):
             'QueryRetrieveLevel': 'SERIES'
         }
 
-        command = ''
+        query = ''
         for key, value in parameters.items():
             # update value if provided
             if key in opt:
                 value = opt[key]
-            # update command
+            # update query
             if value != '':
-                command += ' -k "' + key + '=' + value + '"'
+                query += ' -k "' + key + '=' + value + '"'
             else:
-                command += ' -k ' + key
+                query += ' -k ' + key
 
-        return command
+        return query
 
     def preparePostFilter(self):
         print('prepare post filter')
@@ -60,8 +61,6 @@ class Find(Base):
         # $post_filter['SeriesDescription'] = $seriesdescription;
 
     def run(self, opt={}):
-        print('run Find')
-        print(opt)
         #
         #
         # find data
@@ -123,12 +122,12 @@ class Find(Base):
 
         return data
 
-    def formatResponse(self, response):
-        std = response.stdout.decode('ascii')
+    def formatResponse(self, raw_response):
+        std = raw_response.stdout.decode('ascii')
         response = {
             'status': 'success',
             'data': '',
-            'command': response.args
+            'command': raw_response.args
         }
 
         status = self.checkResponse(std)
