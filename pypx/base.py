@@ -21,7 +21,7 @@ class Base():
         if 'server_port' in arg:
             self.server_port = arg['server_port']
         else:
-            self.server_port = '4241'
+            self.server_port = '4242'
 
         if 'executable' in arg:
             self.executable = arg['executable']

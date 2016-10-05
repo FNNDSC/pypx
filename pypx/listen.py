@@ -5,7 +5,7 @@ import os, subprocess, uuid, shutil, configparser
 import dicom
 
 # PTK modules
-import ptk.utils
+import pypx.utils
 
 class Listen():
     """docstring for Listen."""

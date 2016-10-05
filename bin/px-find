@@ -13,7 +13,7 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import argparse, ptk
+import argparse, pypx
 
 parser = argparse.ArgumentParser(description='Find PACS')
 
@@ -35,5 +35,5 @@ parser.add_argument('--studyDescription', action='store', dest='StudyDescription
 parser.add_argument('--seriesDescription', action='store', dest='SeriesDescription', type=str, default='', help='Series Description')
 
 opts = parser.parse_args()
-output = ptk.find(vars(opts))
+output = pypx.find(vars(opts))
 print(output)

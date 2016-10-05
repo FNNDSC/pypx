@@ -13,7 +13,7 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import argparse, ptk
+import argparse, pypx
 
 parser = argparse.ArgumentParser(description='Echo PACS')
 
@@ -26,5 +26,5 @@ parser.add_argument('--executable', action='store', dest='executable', type=str,
 
 
 opts = parser.parse_args()
-output = ptk.echo(vars(opts))
+output = pypx.echo(vars(opts))
 print(output)
