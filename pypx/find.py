@@ -1,7 +1,7 @@
 # Global modules
 import subprocess, re
 
-# PTK modules
+# PYPX modules
 from .base import Base
 
 class Find(Base):

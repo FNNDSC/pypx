@@ -4,7 +4,7 @@ import os, subprocess, uuid, shutil, configparser
 # PyDicom module
 import dicom
 
-# PTK modules
+# PYPX modules
 import pypx.utils
 
 class Listen():

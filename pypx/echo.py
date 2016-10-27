@@ -1,7 +1,7 @@
 # Global modules
 import subprocess
 
-# PTK modules
+# PYPX modules
 from .base import Base
 
 class Echo(Base):
