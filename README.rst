@@ -65,3 +65,19 @@ Modules
    #   'data': '',
    #   'status': 'success'
    # }
+
+***************
+4. Credits
+***************
+   
+PyDicom_
+
+-  Author(s): darcymason_
+
+DCMTK_
+
+-  Author(s): Dicom @ OFFIS Team
+
+.. _PyDicom: http://www.python.org/
+.. _darcymason: https://github.com/darcymason
+.. _DCMTK: http://dicom.offis.de/dcmtk.php.en
