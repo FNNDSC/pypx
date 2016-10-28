@@ -11,13 +11,13 @@ PyPx - v0.2
 
 Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple way to interact with the PACS:
 
-1. **echo:** Ping the PACS to make sure it is online (*echoscu*).
+1. **px-echo:** Ping the PACS to make sure it is online (*echoscu*).
 
-2. **find:** Find data on the PACS (*findscu*).
+2. **px-find:** Find data on the PACS (*findscu*).
 
-3. **move:** Move data on the PACS (*movescu*).
+3. **px-move:** Move data on the PACS (*movescu*).
 
-4. **listen:** Listen for incoming data from the PACS (*storescp*).
+4. **px-listen:** Listen for incoming data from the PACS (*storescp*).
 
 ***************
 2. Installation
