@@ -29,10 +29,9 @@ Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple w
 2. Installation
 ***************
 
-.. code-block::python
+.. code-block:: bash
    
-   # pip package
-   $> pip install pypx
+   pip install pypx
 
 ***************
 3. Usage
@@ -41,15 +40,14 @@ Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple w
 Scripts
 ===============
 
-.. code-block::python
+.. code-block:: bash
 
-   # in a terminal
-   $> px-echo --help
+   px-echo --help
 
 Modules
 ===============
 
-.. code-block::python
+.. code-block:: python
 
    # in yourscript.py
    import pypx
