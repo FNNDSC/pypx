@@ -1,9 +1,9 @@
 import sys
-from setuptools import setup
-
 # Make sure we are running python3
-if not sys.version_info[0] < 3:
+if sys.version_info[0] < 3:
     sys.exit("Sorry, only Python 3+ is supported")
+
+from setuptools import setup
 
 def readme():
     with open('README.rst') as f:
@@ -21,5 +21,7 @@ setup(name='pypx',
       install_requires=[
           'pydicom',
       ],
+      test_suite='nose.collector',
+      tests_require=['nose'],
       scripts=['bin/px-echo', 'bin/px-find', 'bin/px-listen', 'bin/px-move'],
       zip_safe=False)

@@ -1,5 +1,5 @@
 # Global modules
-import subprocess, re
+import subprocess, re, collections
 
 # PYPX modules
 from .base import Base
@@ -41,7 +41,9 @@ class Find(Base):
         }
 
         query = ''
-        for key, value in parameters.items():
+        # we use a sorted dictionnary so we can test generated command more easily
+        ordered = collections.OrderedDict(sorted(parameters.items(), key=lambda t: t[0]))
+        for key, value in ordered.items():
             # update value if provided
             if key in opt:
                 value = opt[key]
