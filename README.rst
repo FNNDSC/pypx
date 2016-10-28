@@ -1,5 +1,5 @@
 ####################################
-The Python Pacs (Pypx) module - v0.2
+PyPx - v0.2
 ####################################
 .. image:: https://badge.fury.io/py/pypx.svg
     :target: https://badge.fury.io/py/pypx
