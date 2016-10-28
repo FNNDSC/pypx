@@ -4,7 +4,10 @@ PyPx - v0.3
 .. image:: https://badge.fury.io/py/pypx.svg
     :target: https://badge.fury.io/py/pypx
 
-.. image:: https://img.shields.io/badge/python-3.0%2B-blue.svg
+.. image:: https://travis-ci.org/FNNDSC/pypx.svg?branch=master
+    :target: https://travis-ci.org/FNNDSC/pypx
+
+.. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
     :target: https://badge.fury.io/py/pypx
 ***************
 1. Overview
