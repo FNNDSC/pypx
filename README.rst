@@ -1,6 +1,7 @@
 ####################################
 PyPx - v0.3
 ####################################
+
 .. image:: https://badge.fury.io/py/pypx.svg
     :target: https://badge.fury.io/py/pypx
 
@@ -9,6 +10,7 @@ PyPx - v0.3
 
 .. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
     :target: https://badge.fury.io/py/pypx
+
 ***************
 1. Overview
 ***************
@@ -27,7 +29,7 @@ Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple w
 2. Installation
 ***************
 
-.. code-block::
+.. code-block::python
    
    # pip package
    $> pip install pypx
@@ -35,10 +37,11 @@ Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple w
 ***************
 3. Usage
 ***************
+
 Scripts
 ===============
 
-.. code-block::
+.. code-block::python
 
    # in a terminal
    $> px-echo --help
@@ -46,7 +49,7 @@ Scripts
 Modules
 ===============
 
-.. code-block::
+.. code-block::python
 
    # in yourscript.py
    import pypx
