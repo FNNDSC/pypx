@@ -1,6 +1,6 @@
 import sys
 # Make sure we are running python3
-if sys.version_info[0] < 3.5:
+if (sys.version_info[0] < 3) and (sys.version_info[1] < 5):
     sys.exit("Sorry, only Python 3.5+ is supported")
 
 from setuptools import setup
