@@ -1,4 +1,9 @@
+import sys
 from setuptools import setup
+
+# Make sure we are running python3
+if not sys.version_info[0] < 3:
+    sys.exit("Sorry, only Python 3+ is supported")
 
 def readme():
     with open('README.rst') as f:

@@ -1,10 +1,11 @@
 ####################################
-PyPx - v0.2
+PyPx - v0.3
 ####################################
 .. image:: https://badge.fury.io/py/pypx.svg
     :target: https://badge.fury.io/py/pypx
 
-
+.. image:: https://img.shields.io/badge/python-3.0%2B-blue.svg
+    :target: https://badge.fury.io/py/pypx
 ***************
 1. Overview
 ***************
@@ -37,7 +38,7 @@ Scripts
 .. code-block::
 
    # in a terminal
-   $> px-echo
+   $> px-echo --help
 
 Modules
 ===============
@@ -49,8 +50,8 @@ Modules
 
    options = {
      'executable': '/bin/echoscu',
-     'aec': 'CHRIS-ULTRON-AEC',
-     'aet': 'CHRIS-ULTRON-AET',
+     'aec': 'MY-AEC',
+     'aet': 'MY-AET',
      'server_ip': '192.168.1.110',
      'server_port': '4242'
    }
@@ -60,7 +61,7 @@ Modules
 
    # output:
    # {
-   #   'command': '/usr/local/bin/echoscu --timeout 5  -aec CHRIS-ULTRON-AEC -aet CHRIS-ULTRON-AET 192.168.1.110 4242',
+   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
    #   'data': '',
    #   'status': 'success'
    # }
