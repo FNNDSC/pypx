@@ -5,7 +5,7 @@ import pypx
 class TestFind(TestCase):
     def test_find_command(self):
         options = {
-            'executable': '/bin/echoscu',
+            'executable': '/bin/findscu',
             'aec': 'MY-AEC',
             'aet': 'MY-AET',
             'server_ip': '192.168.1.110',
@@ -13,7 +13,7 @@ class TestFind(TestCase):
             }
         output = pypx.find(options)
         command = '\
-/bin/echoscu -xi -S  \
+/bin/findscu -xi -S  \
 -k InstanceNumber \
 -k ModalitiesInStudy \
 -k NumberOfSeriesRelatedInstances \
