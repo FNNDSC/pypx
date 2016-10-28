@@ -5,8 +5,8 @@ def readme():
         return f.read()
 
 setup(name='pypx',
-      version='0.1',
-      description='Pacs ToolKit based on DCMTK',
+      version='0.2',
+      description='Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
       long_description=readme(),
       url='http://github.com/fnndsc/pypx',
       author='FNNDSC Developpers',
@@ -16,5 +16,5 @@ setup(name='pypx',
       install_requires=[
           'pydicom',
       ],
-      scripts=['bin/px-echo', 'bin/px-find', 'bin/px-listen'],
+      scripts=['bin/px-echo', 'bin/px-find', 'bin/px-listen', 'bin/px-move'],
       zip_safe=False)
