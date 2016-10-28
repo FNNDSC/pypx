@@ -24,7 +24,6 @@ parser.add_argument('--serverIP', action='store', dest='server_ip', type=str, de
 parser.add_argument('--serverPort', action='store', dest='server_port', type=str, default='4242', help='PACS server port')
 parser.add_argument('--executable', action='store', dest='executable', type=str, default='/usr/local/bin/echoscu', help='Echoscu executable absolute location')
 
-
 opts = parser.parse_args()
 output = pypx.echo(vars(opts))
 print(output)

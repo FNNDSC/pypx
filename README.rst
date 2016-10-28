@@ -47,5 +47,20 @@ Modules
    # in yourscript.py
    import pypx
 
+   options = {
+     'executable': '/bin/echoscu',
+     'aec': 'CHRIS-ULTRON-AEC',
+     'aet': 'CHRIS-ULTRON-AET',
+     'server_ip': '192.168.1.110',
+     'server_port': '4242'
+   }
+
    output = pypx.echo(options)
    print(output)
+
+   # output:
+   # {
+   #   'command': '/usr/local/bin/echoscu --timeout 5  -aec CHRIS-ULTRON-AEC -aet CHRIS-ULTRON-AET 192.168.1.110 4242',
+   #   'data': '',
+   #   'status': 'success'
+   # }
