@@ -10,24 +10,13 @@ class Move(Base):
         super(Move, self).__init__(arg)
 
     def command(self, opt={}):
-        command = '-aem ' + opt['aet_listener']
+        command = '--move ' + opt['aet_listener']
+        command += ' --timeout 5'
         command += ' -k QueryRetrieveLevel=SERIES'
         command += ' -k SeriesInstanceUID=' + opt['series_uid']
-
-        print( self.executable + ' ' + command + ' ' + self.commandSuffix() )
 
         return self.executable + ' ' + command + ' ' + self.commandSuffix()
     
     def run(self, opt={}):
-        print('run Move')
-
-        print( opt )
-
-        series_uids = opt['series_uids'].split(',')
-
-        for series_uid in series_uids:
-            opt['series_uid'] = series_uid
-            response = subprocess.run(self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-            print( response )
-
-        return 'Yay!'
+        response = subprocess.run(self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        return self.handle(response)

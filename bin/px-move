@@ -10,12 +10,12 @@
 #
 
 # FOR DEV PURPOSE
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# import sys, os
+# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import argparse, pypx
 
-parser = argparse.ArgumentParser(description='Find PACS')
+parser = argparse.ArgumentParser(description='Move data from PACS')
 
 # PACS settings
 parser.add_argument('--aet', action='store', dest='aet', type=str, default='CHRIS-ULTRON-AET', help='aet')
@@ -26,7 +26,7 @@ parser.add_argument('--executable', action='store', dest='executable', type=str,
 
 # Query settings
 parser.add_argument('--aetl', action='store', dest='aet_listener', type=str, default='CHRIS-ULTRON-LIS', help='aet of the dicom listener')
-parser.add_argument('--seriesUIDS', action='store', dest='series_uids', type=str, default='1.2.392.200036.9125.3.1884891176246156.64786914937.231634', help='Series to be moved')
+parser.add_argument('--seriesUID', action='store', dest='series_uid', type=str, default='1.2.392.200036.9125.3.1884891176246156.64786914937.231634', help='Series to be moved')
 
 opts = parser.parse_args()
 output = pypx.move(vars(opts))

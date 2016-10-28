@@ -41,3 +41,16 @@ class Base():
         command_suffix += ' ' + self.server_port
 
         return command_suffix
+
+    def handle(self, raw_response):
+        std = raw_response.stdout.decode('ascii')
+        response = {
+            'status': 'success',
+            'data': '',
+            'command': raw_response.args
+        }
+        if std != '':
+            response['status'] = 'error'
+            response['data'] = std
+
+        return response

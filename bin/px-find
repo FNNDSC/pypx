@@ -15,7 +15,7 @@
 
 import argparse, pypx
 
-parser = argparse.ArgumentParser(description='Find PACS')
+parser = argparse.ArgumentParser(description='Find data on PACS')
 
 # PACS settings
 parser.add_argument('--aet', action='store', dest='aet', type=str, default='CHRIS-ULTRON-AET', help='aet')

@@ -16,18 +16,4 @@ class Echo(Base):
 
     def run(self):
         response = subprocess.run(self.command(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-        result = self.handle(response)
-        return result
-
-    def handle(self, raw_response):
-        std = raw_response.stdout.decode('ascii')
-        response = {
-            'status': 'success',
-            'data': '',
-            'command': raw_response.args
-        }
-        if std != '':
-            response['status'] = 'error'
-            response['data'] = std
-
-        return response
+        return self.handle(response)
