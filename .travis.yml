@@ -5,3 +5,5 @@ python:
 install: "pip install ."
 # command to run tests
 script: nosetests
+notifications:
+  slack: fnndsc:f2Wkw1ePnzrUSsftixV3o5RB
