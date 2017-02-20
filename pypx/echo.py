@@ -15,5 +15,6 @@ class Echo(Base):
         return self.executable + ' ' + command + ' ' + self.commandSuffix()
 
     def run(self):
-        response = subprocess.run(self.command(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        response = subprocess.run(
+            self.command(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         return self.handle(response)

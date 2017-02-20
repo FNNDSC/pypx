@@ -66,22 +66,23 @@ class Find(Base):
         #
         #
         # find data
-        response = subprocess.run(self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        response = subprocess.run(
+            self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         # format response
         return self.formatResponse(response)
 
     def checkResponse(self, response):
-        stdSplit = response.split('\n')
-        infoCount = 0
-        errorCount = 0
-        for line in stdSplit:
+        std_split = response.split('\n')
+        info_count = 0
+        error_count = 0
+        for line in std_split:
             if line.startswith('I: '):
-                infoCount += 1
+                info_count += 1
             elif line.startswith('E: '):
-                errorCount += 1
+                error_count += 1
 
         status = 'error'
-        if errorCount == 0:
+        if error_count == 0:
             status = 'success'
 
         return status
@@ -90,16 +91,16 @@ class Find(Base):
         data = []
 
         uid = 0
-        stdSplit = response.split('\n')
+        std_split = response.split('\n')
 
-        for line in stdSplit:
+        for line in std_split:
             if line.startswith('I: ---------------------------'):
                 data.append({})
                 data[-1]['uid'] = {}
                 data[-1]['uid']['tag'] = 0
                 data[-1]['uid']['value'] = uid
                 data[-1]['uid']['label'] = 'uid'
-                uid +=1
+                uid += 1
 
             elif line.startswith('I: '):
                 lineSplit = line.split()

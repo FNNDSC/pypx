@@ -16,7 +16,8 @@ class Move(Base):
         command += ' -k SeriesInstanceUID=' + opt['series_uid']
 
         return self.executable + ' ' + command + ' ' + self.commandSuffix()
-    
+
     def run(self, opt={}):
-        response = subprocess.run(self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        response = subprocess.run(
+            self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         return self.handle(response)

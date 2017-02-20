@@ -13,15 +13,24 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import argparse, pypx
+import argparse
+import pypx
 
 parser = argparse.ArgumentParser(description='Listen for incoming data from PACS')
 
 # Settings
-parser.add_argument('-t', '--tmpdir', action='store', dest='tmp_directory', type=str, default='/tmp', help='Directory to store temporary files.')
-parser.add_argument('-l', '--logdir', action='store', dest='log_directory', type=str, default='/tmp/log', help='Directory to store log files.')
-parser.add_argument('-d', '--datadir', action='store', dest='data_directory', type=str, default='/tmp/data', help='Directory to store DICOM files.')
-parser.add_argument('-e', '--executable', action='store', dest='executable', type=str, default='/usr/local/bin/storescp', help='Storescp executable absolute location')
+parser.add_argument(
+    '-t', '--tmpdir', action='store', dest='tmp_directory', type=str,
+    default='/tmp', help='Directory to store temporary files.')
+parser.add_argument(
+    '-l', '--logdir', action='store', dest='log_directory', type=str,
+    default='/tmp/log', help='Directory to store log files.')
+parser.add_argument(
+    '-d', '--datadir', action='store', dest='data_directory', type=str,
+    default='/tmp/data', help='Directory to store DICOM files.')
+parser.add_argument(
+    '-e', '--executable', action='store', dest='executable', type=str,
+    default='/usr/local/bin/storescp', help='Storescp executable absolute location')
 
 opts = parser.parse_args()
 pypx.listen(vars(opts))

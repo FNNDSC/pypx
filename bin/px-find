@@ -13,26 +13,48 @@
 # import sys, os
 # sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import argparse, pypx
+import argparse
+import pypx
 
 parser = argparse.ArgumentParser(description='Find data on PACS')
 
 # PACS settings
-parser.add_argument('--aet', action='store', dest='aet', type=str, default='CHRIS-ULTRON-AET', help='aet')
-parser.add_argument('--aec', action='store', dest='aec', type=str, default='CHRIS-ULTRON-AEC', help='aec')
-parser.add_argument('--serverIP', action='store', dest='server_ip', type=str, default='192.168.1.110', help='PACS server IP')
-parser.add_argument('--serverPort', action='store', dest='server_port', type=str, default='4242', help='PACS server port')
-parser.add_argument('--executable', action='store', dest='executable', type=str, default='/usr/local/bin/findscu', help='Findscu executable absolute location')
+parser.add_argument(
+    '--aet', action='store', dest='aet', type=str, default='CHRIS-ULTRON-AET', help='aet')
+parser.add_argument(
+    '--aec', action='store', dest='aec', type=str, default='CHRIS-ULTRON-AEC', help='aec')
+parser.add_argument(
+    '--serverIP', action='store', dest='server_ip', type=str,
+    default='192.168.1.110', help='PACS server IP')
+parser.add_argument(
+    '--serverPort', action='store', dest='server_port', type=str,
+    default='4242', help='PACS server port')
+parser.add_argument(
+    '--executable', action='store', dest='executable', type=str,
+    default='/usr/local/bin/findscu', help='Findscu executable absolute location')
 
 # Query settings
-parser.add_argument('--patientID', action='store', dest='PatientID', type=str, default='2175', help='Patient ID')
-parser.add_argument('--patientName', action='store', dest='PatientName', type=str, default='', help='Patient name')
-parser.add_argument('--patientSex', action='store', dest='PatientSex', type=str, default='', help='Patient sex')
-parser.add_argument('--studyDate', action='store', dest='StudyDate', type=str, default='', help='Study date (YYYY/MM/DD)')
-parser.add_argument('--modalitiesInStudy', action='store', dest='ModalitiesInStudy', type=str, default='', help='Modalities in study')
-parser.add_argument('--performedStationAETitle', action='store', dest='PerformedStationAETitle', type=str, default='', help='Performed station aet')
-parser.add_argument('--studyDescription', action='store', dest='StudyDescription', type=str, default='', help='Study description')
-parser.add_argument('--seriesDescription', action='store', dest='SeriesDescription', type=str, default='', help='Series Description')
+parser.add_argument(
+    '--patientID', action='store', dest='PatientID', type=str, default='', help='Patient ID')
+parser.add_argument(
+    '--patientName', action='store', dest='PatientName', type=str, default='', help='Patient name')
+parser.add_argument(
+    '--patientSex', action='store', dest='PatientSex', type=str, default='', help='Patient sex')
+parser.add_argument(
+    '--studyDate', action='store', dest='StudyDate', type=str,
+    default='', help='Study date (YYYY/MM/DD)')
+parser.add_argument(
+    '--modalitiesInStudy', action='store', dest='ModalitiesInStudy',
+    type=str, default='', help='Modalities in study')
+parser.add_argument(
+    '--performedStationAETitle', action='store',
+    dest='PerformedStationAETitle', type=str, default='', help='Performed station aet')
+parser.add_argument(
+    '--studyDescription', action='store',
+    dest='StudyDescription', type=str, default='', help='Study description')
+parser.add_argument(
+    '--seriesDescription', action='store', dest='SeriesDescription', type=str,
+    default='', help='Series Description')
 
 opts = parser.parse_args()
 output = pypx.find(vars(opts))
