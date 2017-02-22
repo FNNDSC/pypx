@@ -72,10 +72,16 @@ class Listen():
             errorfile.close()
             raise NameError('File doesn\'t exist:' + path)
 
+    def processDicomField(self, dcm_info, field):
+        value = "undefined"
+        if field in dcm_info:
+          value = pypx.utils.sanitize(dcm_info[field])
+        return value
+
     def processPatient(self, dcm_info, log_file, data_directory):
         # get information of interest
-        patient_id = pypx.utils.sanitize(dcm_info.PatientID)
-        patient_name = pypx.utils.sanitize(dcm_info.PatientName)
+        patient_id = self.processDicomField(dcm_info, "PatientID")
+        patient_name = self.processDicomField(dcm_info, "PatientName")
 
         # log it
         log_file.write('    PatientID: ' + patient_id + '\n')
@@ -97,9 +103,9 @@ class Listen():
 
     def processStudy(self, dcm_info, log_file, patient_directory):
         # get information of interest
-        study_description = pypx.utils.sanitize(dcm_info.StudyDescription)
-        study_date = pypx.utils.sanitize(dcm_info.StudyDate)
-        study_uid = pypx.utils.sanitize(dcm_info.StudyInstanceUID)
+        study_description = self.processDicomField(dcm_info, "StudyDescription")
+        study_date = self.processDicomField(dcm_info, "StudyDate")
+        study_uid = self.processDicomField(dcm_info, "StudyInstanceUID")
 
         # log it
         log_file.write('      StudyDescription: ' + study_description + '\n')
@@ -124,9 +130,9 @@ class Listen():
 
     def processSeries(self, dcm_info, log_file, study_directory):
         # get information of interest
-        series_description = pypx.utils.sanitize(dcm_info.SeriesDescription)
-        series_date = pypx.utils.sanitize(dcm_info.SeriesDate)
-        series_uid = pypx.utils.sanitize(dcm_info.SeriesInstanceUID)
+        series_description = self.processDicomField(dcm_info, "SeriesDescription")
+        series_date = self.processDicomField(dcm_info, "SeriesDate")
+        series_uid = self.processDicomField(dcm_info, "SeriesInstaceUID")
 
         # log it
         log_file.write('        SeriesDescription: ' + series_description + '\n')
@@ -151,8 +157,8 @@ class Listen():
 
     def processImage(self, dcm_info, log_file, error_file, series_directory, tmp_file):
         # get information of interest
-        image_uid = pypx.utils.sanitize(dcm_info.SOPInstanceUID)
-        image_instance_number = pypx.utils.sanitize(dcm_info.InstanceNumber)
+        image_uid = self.processDicomField(dcm_info, "SOPInstanceUID")
+        image_instance_number = self.processDicomField(dcm_info, "InstanceNumber")
 
         # log it
         log_file.write('          SOPInstanceUID: ' + image_uid + '\n')
