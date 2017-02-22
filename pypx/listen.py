@@ -75,7 +75,7 @@ class Listen():
     def processDicomField(self, dcm_info, field):
         value = "undefined"
         if field in dcm_info:
-          value = pypx.utils.sanitize(dcm_info[field])
+            value = pypx.utils.sanitize(dcm_info.data_element(field).value)
         return value
 
     def processPatient(self, dcm_info, log_file, data_directory):
