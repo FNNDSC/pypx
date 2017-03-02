@@ -56,7 +56,6 @@ px-echo script
 .. code-block:: bash
 
    # need some help?
-
    px-echo --help
 
 
@@ -65,13 +64,13 @@ px-echo script
    # called aet: ORTHANC
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
-
-   px-echo --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242
+   # Echoscu executable: /usr/local/bin/echoscu
+   px-echo --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/echoscu
 
    # output
-   # { 'status': 'success',
-   #   'command': '/usr/local/bin/echoscu --timeout 5  -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
-   #   'data': ''}
+   #   { 'status': 'success',
+   #     'command': '/usr/local/bin/echoscu --timeout 5  -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
+   #     'data': ''}
 
 px-echo module
 -------------------
@@ -81,15 +80,15 @@ px-echo module
    # in yourscript.py
    import pypx
 
-   options = {
-     'executable': '/bin/echoscu',
-     'aec': 'MY-AEC', # called aet
-     'aet': 'MY-AET', # calling aet
-     'server_ip': '192.168.1.110',
-     'server_port': '4242'
+   pacs_settings = {
+     'executable': '/usr/local/bin/echoscu',
+     'aec': 'ORTHANC',
+     'aet': 'CHIPS',
+     'server_ip': '127.0.0.1',
+     'server_port': '4242',
    }
 
-   output = pypx.echo(options)
+   output = pypx.echo(pacs_settings)
    print(output)
 
    # output:
@@ -116,7 +115,40 @@ px-find script
 -------------------
 .. code-block:: bash
 
+   # need some help?
    px-find --help
+
+
+   # query Orthanc PACS server
+   # calling aet: CHIPS
+   # called aet: ORTHANC
+   # Orthanc PACS server IP: 127.0.0.1
+   # Orthanc PACS server port: 4242
+   # Echoscu executable: /usr/local/bin/echoscu
+   px-find --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/findscu \
+     --patientID 32124
+
+   # output
+   #   {'status': 'success',
+   #    'command': '/usr/local/bin/findscu -xi -S 
+   #      -k InstanceNumber
+   #      -k ModalitiesInStudy
+   #      -k NumberOfSeriesRelatedInstances
+   #      -k PatientBirthDate
+   #      -k "PatientID=32124"
+   #      -k PatientName
+   #      -k PatientSex
+   #      -k PerformedStationAETitle
+   #      -k "QueryRetrieveLevel=SERIES"
+   #      -k SeriesDate
+   #      -k SeriesDescription
+   #      -k SeriesInstanceUID
+   #      -k StudyDate
+   #      -k StudyDescription
+   #      -k StudyInstanceUID 
+   #      -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
+   #    'data': [lot of stuff if a match] # [] if no results
+   #    }
 
 px-find module
 -------------------
@@ -126,23 +158,44 @@ px-find module
    # in yourscript.py
    import pypx
 
-   options = {
-     'executable': '/bin/echoscu',
-     'aec': 'MY-AEC',
-     'aet': 'MY-AET',
-     'server_ip': '192.168.1.110',
-     'server_port': '4242'
+   pacs_settings = {
+     'executable': '/usr/local/bin/findscu',
+     'aec': 'ORTHANC',
+     'aet': 'CHIPS',
+     'server_ip': '127.0.0.1',
+     'server_port': '4242',
    }
 
-   output = pypx.echo(options)
+   # query parameters
+   query_settings = {
+       'PatientID': 32124,
+    }
+
+   # python 3.5 ** syntax
+   output = pypx.find({**pacs_settings, **query_settings})
    print(output)
 
-   # output:
-   # {
-   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
-   #   'data': '',
-   #   'status': 'success'
-   # }
+   # output
+   #   {'status': 'success',
+   #    'command': '/usr/local/bin/findscu -xi -S 
+   #      -k InstanceNumber
+   #      -k ModalitiesInStudy
+   #      -k NumberOfSeriesRelatedInstances
+   #      -k PatientBirthDate
+   #      -k "PatientID=32124"
+   #      -k PatientName
+   #      -k PatientSex
+   #      -k PerformedStationAETitle
+   #      -k "QueryRetrieveLevel=SERIES"
+   #      -k SeriesDate
+   #      -k SeriesDescription
+   #      -k SeriesInstanceUID
+   #      -k StudyDate
+   #      -k StudyDescription
+   #      -k StudyInstanceUID 
+   #      -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
+   #    'data': [lot of stuff if a match] # [] if no results
+   #    }
 
 px-move
 ===============
