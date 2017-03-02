@@ -45,7 +45,7 @@ px-echo
 
 about px-echo
 -------------------
-px-echo is a wrapper around dcmtk echoscu_.
+``px-echo`` is a wrapper around dcmtk echoscu_.
 
 ::
 
@@ -61,12 +61,12 @@ px-echo script
    px-echo --help
 
 
-   # query Orthanc PACS server
+   # ping Orthanc PACS server
    # calling aet: CHIPS
    # called aet: ORTHANC
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
-   # Echoscu executable: /usr/local/bin/echoscu
+   # echoscu executable: /usr/local/bin/echoscu
    px-echo --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/echoscu
 
    # output
@@ -105,7 +105,9 @@ px-find
 
 about px-find
 -------------------
-px-find is a wrapper around dcmtk findscu_.
+``px-find`` is a wrapper around dcmtk findscu_.
+
+Find series on a PACS server given a vast array of parameters. See ``px-find --help`` for the full list.
 
 ::
 
@@ -121,12 +123,12 @@ px-find script
    px-find --help
 
 
-   # query Orthanc PACS server
+   # find data in Orthanc PACS server
    # calling aet: CHIPS
    # called aet: ORTHANC
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
-   # Echoscu executable: /usr/local/bin/findscu
+   # findscu executable: /usr/local/bin/findscu
    px-find --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/findscu \
      --patientID 32124
 
@@ -204,7 +206,9 @@ px-move
 
 about px-move
 -------------------
-px-move is a wrapper around dcmtk movescu_.
+``px-move`` is a wrapper around dcmtk movescu_.
+
+Move series given its SeriesUID. SeriesUID can be retrieved with ``px-find``.
 
 ::
 
@@ -218,13 +222,13 @@ px-move script
 
    px-move --help
 
-   # query Orthanc PACS server
+   # move data from Orthanc PACS server to AETL
    # calling aet: CHIPS
    # calling aet that will receive the data: CHIPS
    # called aet: ORTHANC
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
-   # Echoscu executable: /usr/local/bin/movescu
+   # movescu executable: /usr/local/bin/movescu
    px-move --aet CHIPS --aetl CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/movescu \
      --seriesUID 1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0
 
@@ -276,7 +280,9 @@ px-listen
 
 about px-listen
 -------------------
-px-listen is a wrapper around dcmtk storescp_.
+``px-listen`` is a wrapper around dcmtk storescp_.
+
+It should be connected to a daemon/service in order to act as a DICOM_Listener_.
 
 ::
 
@@ -290,31 +296,12 @@ px-listen script
 
    px-listen --help
 
-px-listen module
--------------------
-
-.. code-block:: python
-
-   # in yourscript.py
-   import pypx
-
-   options = {
-     'executable': '/bin/echoscu',
-     'aec': 'MY-AEC',
-     'aet': 'MY-AET',
-     'server_ip': '192.168.1.110',
-     'server_port': '4242'
-   }
-
-   output = pypx.echo(options)
-   print(output)
-
-   # output:
-   # {
-   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
-   #   'data': '',
-   #   'status': 'success'
-   # }
+   # receive DICOM data Orthanc PACS server
+   # tmp directory to store the data before ordering: /tmp
+   # log directory to log all incoming/processing data : /incoming/log
+   # data directory to store ordered data : /incoming/data
+   # storescp executable: /usr/local/bin/storescp
+   px-listen -t /tmp -l /incoming/log -d /incoming/data --executable /usr/local/bin/storescp
 
 4. Credits
 *****************
@@ -334,3 +321,4 @@ DCMTK_
 .. _findscu: http://support.dcmtk.org/docs/findscu.html
 .. _movescu: http://support.dcmtk.org/docs/movescu.html
 .. _storescp: http://support.dcmtk.org/docs/storescp.html
+.. _DICOM_Listener: https://github.com/FNNDSC/pypx/wiki/dicom_listener
