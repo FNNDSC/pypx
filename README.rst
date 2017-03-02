@@ -11,41 +11,115 @@ PyPx - 0.7
 .. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
     :target: https://badge.fury.io/py/pypx
 
-***************
 1. Overview
-***************
+*****************
 
 Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple way to interact with the PACS:
 
-1. **px-echo:** Ping the PACS to make sure it is online (*echoscu*).
+- **px-echo:** Ping the PACS to make sure it is online (*echoscu*).
 
-2. **px-find:** Find data on the PACS (*findscu*).
+- **px-find:** Find data on the PACS (*findscu*).
 
-3. **px-move:** Move data on the PACS (*movescu*).
+- **px-move:** Move data from the PACS (*movescu*).
 
-4. **px-listen:** Listen for incoming data from the PACS (*storescp*).
+- **px-listen:** Listen for incoming data from the PACS (*storescp*).
 
-***************
 2. Installation
-***************
+*****************
 
 .. code-block:: bash
-   
-   pip install pypx
 
-***************
+   apt-get update \
+   && apt-get install -y dcmtk \
+   && apt-get install -y python3-pip python3-dev \
+   && pip3 install --upgrade pip \
+   && pip install pypx
+
 3. Usage
-***************
+*****************
 
-Scripts
+px-echo
 ===============
 
+about px-echo
+-------------------
+px-echo is a wrapper around dcmtk echoscu_.
+
+::
+
+    It sends a DICOM C-ECHO message to a Service Class Provider (SCP) and waits for a response.
+    The application can be used to verify basic DICOM connectivity.
+    -- DCMTK, about echoscu.
+
+px-echo script
+-------------------
 .. code-block:: bash
+
+   # need some help?
 
    px-echo --help
 
-Modules
+
+   # query Orthanc PACS server
+   # calling aet: CHIPS
+   # called aet: ORTHANC
+   # Orthanc PACS server IP: 127.0.0.1
+   # Orthanc PACS server port: 4242
+
+   px-echo --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242
+
+   # output
+   # { 'status': 'success',
+   #   'command': '/usr/local/bin/echoscu --timeout 5  -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
+   #   'data': ''}
+
+px-echo module
+-------------------
+
+.. code-block:: python
+
+   # in yourscript.py
+   import pypx
+
+   options = {
+     'executable': '/bin/echoscu',
+     'aec': 'MY-AEC', # called aet
+     'aet': 'MY-AET', # calling aet
+     'server_ip': '192.168.1.110',
+     'server_port': '4242'
+   }
+
+   output = pypx.echo(options)
+   print(output)
+
+   # output:
+   # {
+   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
+   #   'data': '',
+   #   'status': 'success'
+   # }
+
+px-find
 ===============
+
+about px-find
+-------------------
+px-find is a wrapper around dcmtk findscu_.
+
+::
+
+    It sends query keys to an SCP and awaits responses.
+    The application can be used to test SCPs of the Query/Retrieve and Basic Worklist Management Service Classes.
+    -- DCMTK, about findscu.
+
+px-find script
+-------------------
+.. code-block:: bash
+
+   px-find --help
+
+px-find module
+-------------------
 
 .. code-block:: python
 
@@ -70,9 +144,98 @@ Modules
    #   'status': 'success'
    # }
 
-***************
+px-move
+===============
+
+about px-move
+-------------------
+px-move is a wrapper around dcmtk movescu_.
+
+::
+
+    It sends query keys to an SCP and awaits responses.
+    The application can be used to test SCPs of the Query/Retrieve Service Class. The movescu application can initiate the transfer of images to a third party or can retrieve images to itself.
+    -- DCMTK, about movescu.
+
+px-move script
+-------------------
+.. code-block:: bash
+
+   px-move --help
+
+px-move module
+-------------------
+
+.. code-block:: python
+
+   # in yourscript.py
+   import pypx
+
+   options = {
+     'executable': '/bin/echoscu',
+     'aec': 'MY-AEC',
+     'aet': 'MY-AET',
+     'server_ip': '192.168.1.110',
+     'server_port': '4242'
+   }
+
+   output = pypx.echo(options)
+   print(output)
+
+   # output:
+   # {
+   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
+   #   'data': '',
+   #   'status': 'success'
+   # }
+
+px-listen
+===============
+
+about px-listen
+-------------------
+px-listen is a wrapper around dcmtk storescp_.
+
+::
+
+     It listens on a specific TCP/IP port for incoming association requests from a Storage Service Class User (SCU).
+     It can receive both DICOM images and other DICOM composite objects.
+    -- DCMTK, about storescp.
+
+px-listen script
+-------------------
+.. code-block:: bash
+
+   px-listen --help
+
+px-listen module
+-------------------
+
+.. code-block:: python
+
+   # in yourscript.py
+   import pypx
+
+   options = {
+     'executable': '/bin/echoscu',
+     'aec': 'MY-AEC',
+     'aet': 'MY-AET',
+     'server_ip': '192.168.1.110',
+     'server_port': '4242'
+   }
+
+   output = pypx.echo(options)
+   print(output)
+
+   # output:
+   # {
+   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
+   #   'data': '',
+   #   'status': 'success'
+   # }
+
 4. Credits
-***************
+*****************
    
 PyDicom_
 
@@ -85,3 +248,7 @@ DCMTK_
 .. _PyDicom: http://www.python.org/
 .. _darcymason: https://github.com/darcymason
 .. _DCMTK: http://dicom.offis.de/dcmtk.php.en
+.. _echoscu: http://support.dcmtk.org/docs/echoscu.html
+.. _findscu: http://support.dcmtk.org/docs/findscu.html
+.. _movescu: http://support.dcmtk.org/docs/movescu.html
+.. _storescp: http://support.dcmtk.org/docs/storescp.html
