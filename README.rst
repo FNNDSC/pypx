@@ -124,7 +124,7 @@ px-find script
    # called aet: ORTHANC
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
-   # Echoscu executable: /usr/local/bin/echoscu
+   # Echoscu executable: /usr/local/bin/findscu
    px-find --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/findscu \
      --patientID 32124
 
@@ -216,6 +216,25 @@ px-move script
 
    px-move --help
 
+   # query Orthanc PACS server
+   # calling aet: CHIPS
+   # calling aet that will receive the data: CHIPS
+   # called aet: ORTHANC
+   # Orthanc PACS server IP: 127.0.0.1
+   # Orthanc PACS server port: 4242
+   # Echoscu executable: /usr/local/bin/movescu
+   px-move --aet CHIPS --aetl CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/movescu \
+     --seriesUID 1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0
+
+   # output
+   #   {'status': 'success',
+   #    'command': '/usr/local/bin/movescu --move CHIPS --timeout 5
+   #      -k QueryRetrieveLevel=SERIES
+   #      -k SeriesInstanceUID=1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0 
+   #      -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
+   #    'data': ''
+   #    }
+
 px-move module
 -------------------
 
@@ -224,23 +243,31 @@ px-move module
    # in yourscript.py
    import pypx
 
-   options = {
-     'executable': '/bin/echoscu',
-     'aec': 'MY-AEC',
-     'aet': 'MY-AET',
-     'server_ip': '192.168.1.110',
-     'server_port': '4242'
+   pacs_settings = {
+     'executable': '/usr/local/bin/findscu',
+     'aec': 'ORTHANC',
+     'aet': 'CHIPS',
+     'server_ip': '127.0.0.1',
+     'server_port': '4242',
    }
 
-   output = pypx.echo(options)
+   # query parameters
+   query_settings = {
+       'SeriesInstanceUID': '1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0',
+    }
+
+   # python 3.5 ** syntax
+   output = pypx.move({**pacs_settings, **query_settings})
    print(output)
 
-   # output:
-   # {
-   #   'command': '/bin/echoscu --timeout 5  -aec MY-AEC -aet MY-AET 192.168.1.110 4242',
-   #   'data': '',
-   #   'status': 'success'
-   # }
+   # output
+   #   {'status': 'success',
+   #    'command': '/usr/local/bin/movescu --move CHIPS --timeout 5
+   #      -k QueryRetrieveLevel=SERIES
+   #      -k SeriesInstanceUID=1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0 
+   #      -aec ORTHANC -aet CHIPS 127.0.0.1 4242',
+   #    'data': ''
+   #    }
 
 px-listen
 ===============
