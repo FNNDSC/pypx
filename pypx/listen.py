@@ -132,7 +132,7 @@ class Listen():
         # get information of interest
         series_description = self.processDicomField(dcm_info, "SeriesDescription")
         series_date = self.processDicomField(dcm_info, "SeriesDate")
-        series_uid = self.processDicomField(dcm_info, "SeriesInstaceUID")
+        series_uid = self.processDicomField(dcm_info, "SeriesInstanceUID")
 
         # log it
         log_file.write('        SeriesDescription: ' + series_description + '\n')
