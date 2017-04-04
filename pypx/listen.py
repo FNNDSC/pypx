@@ -73,7 +73,7 @@ class Listen():
             raise NameError('File doesn\'t exist:' + path)
 
     def processDicomField(self, dcm_info, field):
-        value = "undefined"
+        value = "no value provided"
         if field in dcm_info:
             value = pypx.utils.sanitize(dcm_info.data_element(field).value)
         return value

@@ -7,7 +7,7 @@ def sanitize(value):
     # only keep alpha numeric characters and replace the rest by "_"
     svalue = "".join(character if character.isalnum() else '.' for character in tvalue)
     if not svalue:
-        svalue = "nvp"
+        svalue = "no value provided"
     return svalue
 
 def patientPath(data_directory, patient_id, patient_name):
