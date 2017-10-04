@@ -26,6 +26,7 @@ class Find(Base):
             'PatientID': '',                     # PATIENT INFORMATION
             'PatientName': '',
             'PatientBirthDate': '',
+            'PatientAge': '',
             'PatientSex': '',
             'StudyDate': '',                     # STUDY INFORMATION
             'StudyDescription': '',
