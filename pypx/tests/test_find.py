@@ -17,6 +17,7 @@ class TestFind(TestCase):
 -k InstanceNumber \
 -k ModalitiesInStudy \
 -k NumberOfSeriesRelatedInstances \
+-k PatientAge \
 -k PatientBirthDate \
 -k PatientID \
 -k PatientName \
