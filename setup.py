@@ -10,7 +10,7 @@ def readme():
         return f.read()
 
 setup(name='pypx',
-      version='0.9',
+      version='0.10',
       description='Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
       long_description=readme(),
       url='http://github.com/fnndsc/pypx',
