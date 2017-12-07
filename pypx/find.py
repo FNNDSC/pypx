@@ -67,10 +67,49 @@ class Find(Base):
         #
         #
         # find data
+
+        #
+        #
+        # Run query at Study level first
+        # BCH and MGH does not directly allow MRN query at Series level
+        opt['QueryRetrieveLevel'] = 'STUDY';
+
         response = subprocess.run(
             self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         # format response
-        return self.formatResponse(response)
+        formattedStudies = self.formatResponse(response)
+
+        print(formattedStudies)
+
+        results = []
+
+        for study in formattedStudies['data']:
+            studyInstanceUID = study['StudyInstanceUID']['value']
+            opt['QueryRetrieveLevel'] = 'SERIES';
+            opt['StudyInstanceUID'] = studyInstanceUID;
+            studyResponse = subprocess.run(
+                self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+            # print(self.formatResponse(studyResponse))
+            formattedStudy = self.formatResponse(studyResponse)
+
+            for series in formattedStudy['data']:
+                series['command'] = {}
+                series['command']['tag'] = 0
+                series['command']['value'] = formattedStudy['command']
+                series['command']['label'] = 'command'
+
+                series['status'] = {}
+                series['status']['tag'] = 0
+                series['status']['value'] = formattedStudy['status']
+                series['status']['label'] = 'status'
+
+                results.append(series)
+
+        formattedStudies['dataStudy'] = formattedStudies['data'];
+        formattedStudies['data'] = results;
+        
+        return formattedStudies
+
 
     def checkResponse(self, response):
         std_split = response.split('\n')

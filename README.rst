@@ -303,7 +303,16 @@ px-listen script
    # storescp executable: /usr/local/bin/storescp
    px-listen -t /tmp -l /incoming/log -d /incoming/data --executable /usr/local/bin/storescp
 
-4. Credits
+4. Local testing
+*****************
+
+Uncomment first 2 imports in the binary command to test then run is a below.
+
+.. code-block:: bash
+
+  python3 bin/px-find --aet CHIPS --aec CHIPS --serverIP 192.168.0.1 --serverPort 4242
+
+5. Credits
 *****************
    
 PyDicom_

@@ -34,3 +34,5 @@ class TestFind(TestCase):
 
         self.maxDiff = None
         self.assertEqual(output['command'], command)
+
+        print('hi')
