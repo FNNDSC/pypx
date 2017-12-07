@@ -23,7 +23,7 @@ class TestFind(TestCase):
 -k PatientName \
 -k PatientSex \
 -k PerformedStationAETitle \
--k "QueryRetrieveLevel=SERIES" \
+-k "QueryRetrieveLevel=STUDY" \
 -k SeriesDate \
 -k SeriesDescription \
 -k SeriesInstanceUID \
