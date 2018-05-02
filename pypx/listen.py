@@ -7,7 +7,7 @@ import configparser
 import json
 
 # PyDicom module
-import dicom
+import pydicom
 
 # PYPX modules
 import pypx.utils
@@ -280,7 +280,7 @@ class Listen():
                 stdout_file.write('>>> ' + data + '\n')
                 # abs path to data
                 abs_data = os.path.join(directory, data)
-                dcm_info = dicom.read_file(abs_data)
+                dcm_info = pydicom.dcmread(abs_data)
 
                 # process patient
                 patient_info = self.processPatient(dcm_info, stdout_file, self.data_directory)
