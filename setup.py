@@ -20,6 +20,8 @@ setup(name='pypx',
       packages=['pypx'],
       install_requires=[
           'pydicom',
+          'pfmisc',
+          'pprint',
       ],
       test_suite='nose.collector',
       tests_require=['nose'],
