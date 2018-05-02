@@ -4,6 +4,7 @@ import subprocess
 import uuid
 import shutil
 import configparser
+import json
 
 # PyDicom module
 import dicom
@@ -11,18 +12,47 @@ import dicom
 # PYPX modules
 import pypx.utils
 
+import pudb
+import pfmisc
+import pprint
+
 class Listen():
     """docstring for Listen."""
     def __init__(self, args):
+
+        self.__name__           = 'Listen'
+
         self.tmp_directory = args['tmp_directory']
         self.log_directory = args['log_directory']
         self.data_directory = args['data_directory']
         self.executable = args['executable']
 
+        # Debugging control
+        self.b_useDebug         = True
+        self.str_debugFile      = '%s/listen.run.log' % self.log_directory
+        self.b_quiet            = True
+        self.dp                 = pfmisc.debug(    
+                                            verbosity   = 0,
+                                            level       = -1,
+                                            within      = self.__name__,
+                                            debugToFile = self.b_useDebug,
+                                            debugFile   = self.str_debugFile
+                                            )
+        self.pp                 = pprint.PrettyPrinter(indent=4)
+
+        self.dp.qprint('Called!')
+
         # maybe it should not create it, as it is a requirement
-        os.makedirs(self.tmp_directory, exist_ok=True)
-        os.makedirs(self.log_directory, exist_ok=True)
-        os.makedirs(self.data_directory, exist_ok=True)
+        os.makedirs(self.tmp_directory,     exist_ok=True)
+        os.makedirs(self.log_directory,     exist_ok=True)
+        os.makedirs(self.data_directory,    exist_ok=True)
+
+        self.series_mapDir  = os.path.join(self.log_directory, 'series_map')
+        self.study_mapDir   = os.path.join(self.log_directory, 'study_map')
+        self.patient_mapDir = os.path.join(self.log_directory, 'patient_map')
+        os.makedirs(self.series_mapDir,     exist_ok=True)
+        os.makedirs(self.study_mapDir,      exist_ok=True)
+        os.makedirs(self.patient_mapDir,    exist_ok=True)
 
         # create unique directory to store inconming data
         self.uuid = str(uuid.uuid4())
@@ -82,6 +112,7 @@ class Listen():
         # get information of interest
         patient_id = self.processDicomField(dcm_info, "PatientID")
         patient_name = self.processDicomField(dcm_info, "PatientName")
+        self.dp.qprint('Processing %s...' % patient_id)
 
         # log it
         log_file.write('    PatientID: ' + patient_id + '\n')
@@ -90,6 +121,12 @@ class Listen():
         # create patient directory
         patient_directory = pypx.utils.patientPath(data_directory, patient_id, patient_name)
         self.mkdir(patient_directory, self.log_error)
+
+        # Save a mapping from this series_uid to the acutal FS location
+        # where the file will be written
+        str_mapFile     = os.path.join(self.patient_mapDir, '%s.json' % patient_id)
+        if not os.path.exists(str_mapFile):
+            self.mapFile_save( {patient_id : patient_directory}, str_mapFile )
 
         # create patient.info file
         patient_info = configparser.ConfigParser()
@@ -106,6 +143,7 @@ class Listen():
         study_description = self.processDicomField(dcm_info, "StudyDescription")
         study_date = self.processDicomField(dcm_info, "StudyDate")
         study_uid = self.processDicomField(dcm_info, "StudyInstanceUID")
+        self.dp.qprint('Processing %s...' % study_uid)
 
         # log it
         log_file.write('      StudyDescription: ' + study_description + '\n')
@@ -116,6 +154,12 @@ class Listen():
         study_directory = pypx.utils.studyPath(
             patient_directory, study_description, study_date, study_uid)
         self.mkdir(study_directory, self.log_error)
+
+        # Save a mapping from this series_uid to the acutal FS location
+        # where the file will be written
+        str_mapFile     = os.path.join(self.study_mapDir, '%s.json' % study_uid)
+        if not os.path.exists(str_mapFile):
+            self.mapFile_save( {study_uid : study_directory}, str_mapFile )
 
         # create study.info file
         study_info = configparser.ConfigParser()
@@ -133,6 +177,7 @@ class Listen():
         series_description = self.processDicomField(dcm_info, "SeriesDescription")
         series_date = self.processDicomField(dcm_info, "SeriesDate")
         series_uid = self.processDicomField(dcm_info, "SeriesInstanceUID")
+        self.dp.qprint('Processing %s' % series_uid)
 
         # log it
         log_file.write('        SeriesDescription: ' + series_description + '\n')
@@ -144,6 +189,12 @@ class Listen():
             study_directory, series_description, series_date, series_uid)
         self.mkdir(series_directory, self.log_error)
 
+        # Save a mapping from this series_uid to the acutal FS location
+        # where the file will be written
+        str_mapFile     = os.path.join(self.series_mapDir, '%s.json' % series_uid)
+        if not os.path.exists(str_mapFile):
+            self.mapFile_save( {series_uid : series_directory}, str_mapFile )
+
         # store information as a configuration
         series_info = configparser.ConfigParser()
         series_info['SERIES'] = {
@@ -154,6 +205,24 @@ class Listen():
         }
 
         return series_info
+
+    def mapFile_save(self, ad_json, astr_mapFile):
+        """
+        Save a dictionary <ad_json> in <astr_mapDir>/<astr_mapFile>
+        """
+        b_ret           = False
+        self.dp.qprint('%s' % ad_json)
+        self.dp.qprint(astr_mapFile)
+
+        if not os.path.exists(astr_mapFile):
+            try:
+                with open(astr_mapFile, 'w') as f:
+                    json.dump(ad_json, f)
+                f.close()
+                b_ret   = True
+            except:
+                b_ret   = False
+        return b_ret
 
     def processImage(self, dcm_info, log_file, error_file, series_directory, tmp_file):
         # get information of interest
