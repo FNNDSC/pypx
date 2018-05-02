@@ -12,7 +12,6 @@ import pydicom
 # PYPX modules
 import pypx.utils
 
-import pudb
 import pfmisc
 import pprint
 
