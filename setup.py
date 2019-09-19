@@ -19,6 +19,8 @@ setup(name='pypx',
       license='MIT',
       packages=['pypx'],
       install_requires=[
+          'terminaltables',
+          'py-dateutil',
           'pydicom',
           'pfmisc',
           'pprint',

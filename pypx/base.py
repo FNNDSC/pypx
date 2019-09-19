@@ -26,7 +26,7 @@ class Base():
         if 'executable' in arg:
             self.executable = arg['executable']
         else:
-            self.executable = '/usr/local/bin/echoscu'
+            self.executable = '/usr/bin/echoscu'
 
         self.response = {
             'status': 'error',
