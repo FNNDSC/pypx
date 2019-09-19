@@ -58,12 +58,12 @@ Interactinvg with a PACS requires existing infrastructure on the local computer 
 
 Furthermore, the PACS needs to be configured with information pertaining to the local client process -- such as its AETitle, CalledAETitle, and IP address/port to which the PACS will transmit data. Moreover, the receiving host needs to have a daemon/service listening on the port to which the PACS will transmit.
 
-Details on the nature of PACS communication is beyond the scope of this repo, however, the dockerized version of the repo builds all the local infrastructure necessary for full PACS communication, including the <tt>xinetd</tt> and related service description and mapped ports. Thus for a properly configured remote PACS, the containerized version of this repo provides a complete query/retrieve package.
+Details on the nature of PACS communication is beyond the scope of this repo, however, the dockerized version of the repo builds all the local infrastructure necessary for full PACS communication, including the ``xinetd`` and related service description and mapped ports. Thus for a properly configured remote PACS, the containerized version of this repo provides a complete query/retrieve package.
 
 Local configuration of the container
 ====================================
 
-The container has port <tt>10402</tt> exposed and mapped as the entry point for PACS image reception. Please either set the remote PACS to use this port, or adjust the local port as necessary. Furthermore, the remote PACS needs to be configured with an <tt>AETitle</tt> and <tt>CalledAETitle</tt> which form part of the CLI for each script module call.
+The container has port ``10402`` exposed and mapped as the entry point for PACS image reception. Please either set the remote PACS to use this port, or adjust the local port as necessary. Furthermore, the remote PACS needs to be configured with an ``AETitle`` and ``CalledAETitle`` which form part of the CLI for each script module call.
 
 4. Usage
 *****************
@@ -194,7 +194,7 @@ will return
     └────────────────────────────────┴────────────────────────────────────────────────────┘
     ┌────────────────────────────────┬────────────────────────────────────────────────────┐
     │ SeriesDescription              │ T2 SPC SAG OBL LT IAC                              │
-    │ SeriesDescription              │ T2 SPC AXIAL THRU  IAC'S                           │
+    │ SeriesDescription              │ T2 SPC AXIAL THRU  IAC                             │
     │ SeriesDescription              │ T2 SPC SAG OBL RT IAC                              │
     │ SeriesDescription              │ AAHScout                                           │
     │ SeriesDescription              │ AX MPRAGE RECON                                    │
