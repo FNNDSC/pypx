@@ -1,0 +1,13 @@
+        service dicomlistener 
+        {
+            disable             = no
+            socket_type         = stream
+            wait                = no
+            user                = root
+            server              = /usr/local/bin/px-listen
+            server_args         = -e /usr/bin/storescp -t /dicom/tmp -l /dicom/log -d /dicom/data
+            type                = UNLISTED
+            port                = 10402
+            bind                = 0.0.0.0  
+        } 
+
