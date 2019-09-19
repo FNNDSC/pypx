@@ -1,5 +1,5 @@
 ####################################
-PyPx - 0.13
+pypx - 1.0.0.0
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -16,7 +16,9 @@ PyPx - 0.13
 1. Overview
 *****************
 
-Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple way to interact with the PACS:
+**pypx** is a collection of modules/scripts that performs low-level interactivity with a PACS. While these scripts/modules are typically used by other programs, the script versions can provide some useful stand-alone functionality -- particularly for PACS Query/Retrieve.
+
+Internally, the code wraps around DCMTK utilies as well as the PyDicom module. The following modules/scripts are provided:
 
 - **px-echo:** Ping the PACS to make sure it is online (*echoscu*).
 
@@ -29,6 +31,18 @@ Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple w
 2. Installation
 *****************
 
+2.1 Using docker
+================
+
+Using the dockerized container is the recommended installation vector:
+
+.. code-block:: bash
+
+    docker pull fnndsc/pypx
+
+2.2 pypi
+========
+
 .. code-block:: bash
 
    apt-get update \
@@ -37,7 +51,21 @@ Pypx is a simple Python wrapper around DCMTK and PyDicom. It provides 4 simple w
    && pip3 install --upgrade pip \
    && pip install pypx
 
-3. Usage
+3. Understanding the containerized version
+*******************************************
+
+Interactinvg with a PACS requires existing infrastructure on the local computer performing the interaction -- especially for retrieving image data from the PACS. 
+
+Furthermore, the PACS needs to be configured with information pertaining to the local client process -- such as its AETitle, CalledAETitle, and IP address/port to which the PACS will transmit data. Moreover, the receiving host needs to have a daemon/service listening on the port to which the PACS will transmit.
+
+Details on the nature of PACS communication is beyond the scope of this repo, however, the dockerized version of the repo builds all the local infrastructure necessary for full PACS communication, including the <tt>xinetd</tt> and related service description and mapped ports. Thus for a properly configured remote PACS, the containerized version of this repo provides a complete query/retrieve package.
+
+Local configuration of the container
+====================================
+
+The container has port <tt>10402</tt> exposed and mapped as the entry point for PACS image reception. Please either set the remote PACS to use this port, or adjust the local port as necessary. Furthermore, the remote PACS needs to be configured with an <tt>AETitle</tt> and <tt>CalledAETitle</tt> which form part of the CLI for each script module call.
+
+4. Usage
 *****************
 
 px-echo
@@ -67,7 +95,11 @@ px-echo script
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
    # echoscu executable: /usr/local/bin/echoscu
-   px-echo --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/echoscu
+   px-echo  --aet CHIPS             \ 
+            --aec ORTHANC           \
+            --serverIP 127.0.0.1    \ 
+            --serverPort 4242       \
+            --executable /usr/bin/echoscu
 
    # output
    #   { 'status': 'success',
@@ -107,20 +139,22 @@ about px-find
 -------------------
 ``px-find`` is a wrapper around dcmtk findscu_.
 
-Find series on a PACS server given a vast array of parameters. See ``px-find --help`` for the full list.
+Find series on a PACS server given a vast array of parameters. See ``px-find --help`` for the full list. In stand-alone cases, ``px-find`` will often be used to Query and generate a console friendly formatted report.
 
 ::
 
     It sends query keys to an SCP and awaits responses.
-    The application can be used to test SCPs of the Query/Retrieve and Basic Worklist Management Service Classes.
+    The application can be used to test SCPs of the Query/Retrieve 
+    and Basic Worklist Management Service Classes.
     -- DCMTK, about findscu.
 
 px-find script
 -------------------
+
 .. code-block:: bash
 
    # need some help?
-   px-find --help
+   px-find --synopsis
 
 
    # find data in Orthanc PACS server
@@ -128,9 +162,51 @@ px-find script
    # called aet: ORTHANC
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
-   # findscu executable: /usr/local/bin/findscu
-   px-find --aet CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/findscu \
-     --patientID 32124
+   # findscu executable: /usr/bin/findscu
+
+    docker run                      \
+        --rm -ti                    \
+        fnndsc/pypx                 \
+        --px-find                   \
+        --aet CHIPS                 \
+        --aec ORTHANC               \
+        --serverIP  10.72.76.155    \
+        --serverPort 4242           \
+        --PatientID LILLA-9731      \
+        --printReport tabular       \
+        --colorize dark
+
+will return
+
+.. code-block:: bash
+
+    ┌────────────────────────────────┬────────────────────────────────────────────────────┐
+    │ PatientName                    │ LILLA-9731                                         │
+    │ PatientBirthDate               │ 19000101                                           │
+    │ StudyDate                      │ 20111206                                           │
+    │ PatientAge                     │ 017M                                               │
+    │ PatientSex                     │ M                                                  │
+    │ AccessionNumber                │ 22268454                                           │
+    │ PatientID                      │ LILLA-9731                                         │
+    │ PerformedStationAETitle        │ no value provided                                  │
+    │ StudyDescription               │ anonymized                                         │
+    │ Modality                       │ MR                                                 │
+    └────────────────────────────────┴────────────────────────────────────────────────────┘
+    ┌────────────────────────────────┬────────────────────────────────────────────────────┐
+    │ SeriesDescription              │ T2 SPC SAG OBL LT IAC                              │
+    │ SeriesDescription              │ T2 SPC AXIAL THRU  IAC'S                           │
+    │ SeriesDescription              │ T2 SPC SAG OBL RT IAC                              │
+    │ SeriesDescription              │ AAHScout                                           │
+    │ SeriesDescription              │ AX MPRAGE RECON                                    │
+    │ SeriesDescription              │ mocoMEMPRAGE_192FOV RMS                            │
+    │ SeriesDescription              │ COR MPRAGE RECON                                   │
+    │ SeriesDescription              │ ep_moco_nav_set (move FOV above shoulders)         │
+    │ SeriesDescription              │ AX T2 FLAIR                                        │
+    │ SeriesDescription              │ AAHScout_MPR                                       │
+    │ SeriesDescription              │ AX FSE T2                                          │
+    └────────────────────────────────┴────────────────────────────────────────────────────┘
+
+
 
    # output
    #   {'status': 'success',
@@ -213,7 +289,11 @@ Move series given its SeriesUID. SeriesUID can be retrieved with ``px-find``.
 ::
 
     It sends query keys to an SCP and awaits responses.
-    The application can be used to test SCPs of the Query/Retrieve Service Class. The movescu application can initiate the transfer of images to a third party or can retrieve images to itself.
+    The application can be used to test SCPs of the 
+    Query/Retrieve Service Class. 
+    
+    The movescu application can initiate the transfer of 
+    images to a third party or can retrieve images to itself.
     -- DCMTK, about movescu.
 
 px-move script
@@ -229,8 +309,14 @@ px-move script
    # Orthanc PACS server IP: 127.0.0.1
    # Orthanc PACS server port: 4242
    # movescu executable: /usr/local/bin/movescu
-   px-move --aet CHIPS --aetl CHIPS --aec ORTHANC --serverIP 127.0.0.1 --serverPort 4242 --executable /usr/local/bin/movescu \
-     --seriesUID 1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0
+   px-move                          \
+    --aet CHIPS                     \
+    --aetl CHIPS                    \
+    --aec ORTHANC                   \
+    --serverIP 127.0.0.1            \
+    --serverPort 4242               \
+    --executable /usr/bin/movescu   \
+    --seriesUID 1.3.12.2.1107.5.2.32.35235.2012041417312491079284166.0.0.0
 
    # output
    #   {'status': 'success',
@@ -286,7 +372,9 @@ It should be connected to a daemon/service in order to act as a DICOM_Listener_.
 
 ::
 
-     It listens on a specific TCP/IP port for incoming association requests from a Storage Service Class User (SCU).
+     It listens on a specific TCP/IP port for incoming association
+    requests from a Storage Service Class User (SCU).
+     
      It can receive both DICOM images and other DICOM composite objects.
     -- DCMTK, about storescp.
 
@@ -303,7 +391,7 @@ px-listen script
    # storescp executable: /usr/local/bin/storescp
    px-listen -t /tmp -l /incoming/log -d /incoming/data --executable /usr/local/bin/storescp
 
-4. Local testing
+5. Local testing
 *****************
 
 Uncomment first 2 imports in the binary command to test then run is a below.
@@ -312,7 +400,7 @@ Uncomment first 2 imports in the binary command to test then run is a below.
 
   python3 bin/px-find --aet CHIPS --aec CHIPS --serverIP 192.168.0.1 --serverPort 4242
 
-5. Credits
+6. Credits
 *****************
    
 PyDicom_
