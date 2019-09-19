@@ -12,9 +12,47 @@ from .base import Base
 
 class Find(Base):
 
-    """docstring for Find."""
+    """
+    The Find module provides rather extensive PACS query
+    functionality. 
+
+    See the 'query' method for the space of query parameters
+    that the module offers. Text data pertaining to image sets 
+    that match the pattern of query values are returned by
+    this method to a called as a JSON/dictionary payload.
+
+    The return dictionary contains a field, 'report' that itself
+    contains three report formats: 'tabular', 'rawText', and 'json'.
+    The 'tabular' and 'rawText' reports are for console 
+    consumption/presentation, while the 'json' report is for
+    software agents. 
+
+    This 'json' report also returns a hidden 'bodySeriesUID' 
+    section, with each entry corresponding in order to the
+    seriesDescription that the report returns. These values
+    are the SeriesInstanceUIDs that can actually be retrieved
+    by the pypx/move operation.
+    """
     
     def __init__(self, arg):
+        """
+        Constructor.
+
+        Defines a default report structure, divided into a 
+        "header" and a "body". In each section,  DICOM tags
+        retrieved from either the STUDY or SERIES level are 
+        catalogued.
+
+        Since a given STUDY typically has several SERIES, in
+        most cases only SERIES level tags are included in the 
+        "body". 
+        
+        In some cases, some tags are only available at
+        the SERIES level (such as the Modality). If such a tag 
+        is in the STUDY level, then the corresponding tag from
+        the FIRST series in the STUDY is reported. 
+        """
+
         if len(arg['reportTags']):
             self.d_reportTags   = json.loads(arg['reportTags'])
         else:
@@ -40,11 +78,11 @@ class Find(Base):
                 "body": 
                 {
                     "series" : [ 
-                            "SeriesDescription", 
-                            # "SeriesInstanceUID"
+                            "SeriesDescription"
                             ]
                 }
             }
+
 
         super(Find, self).__init__(arg)
 
