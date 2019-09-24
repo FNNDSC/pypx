@@ -321,6 +321,7 @@ class Listen():
         # cleanup
         try:
             shutil.rmtree(self.uuid_directory)
+            os.remove(self.log_output)
         except OSError as err:
             errorfile = open(self.log_error, 'w')
             errorfile.write('Remove ' + self.uuid_directory + ' tree\n')
