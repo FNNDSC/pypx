@@ -2,13 +2,17 @@
 import  subprocess, re, collections
 import  pudb
 import  json
+import  pfmisc
 from    pfmisc._colors      import  Colors
 from    datetime            import  datetime
 from    dateutil            import  relativedelta
 from    terminaltables      import  SingleTable
+import  time
 
 # PYPX modules
-from .base import Base
+from .base  import Base
+from .move  import Move
+import  pypx
 
 class Find(Base):
 
@@ -69,7 +73,7 @@ class Find(Base):
                             "AccessionNumber",
                             "PatientID",
                             "PerformedStationAETitle",
-                            "StudyDescription",
+                            "StudyDescription"
                             ],
                     "series": [
                             "Modality"
@@ -83,9 +87,17 @@ class Find(Base):
                 }
             }
 
+        if 'movescu' in arg.keys():
+            self.movescu    = arg['movescu']
+        if 'findscu' in arg.keys():
+            self.findscu    = arg['findscu']
 
         super(Find, self).__init__(arg)
-
+        self.dp             = pfmisc.debug(
+                                        verbosity   = self.arg['verbosity'],
+                                        within      = 'Find',
+                                        syslog      = False
+                                        )
 
     def report_generate(self, d_queryResult):
         """
@@ -190,29 +202,30 @@ class Find(Base):
 
             return l_blockTable, str_reportBlock, d_block
 
-        str_colorize        = self.arg['colorize']
-        b_colorize          = bool(len(str_colorize))
-        str_reportHeader    = ""
-        str_reportBody      = ""
-        str_reportSUID      = ""
-        str_reportText      = ""
-        str_reportTable     = ""
+        def colorize_set():
+            CheaderField        = ''
+            CheaderValue        = ''
+            str_colorize        = self.arg['colorize']
+            b_colorize          = bool(len(str_colorize))
+            if b_colorize:
+                if str_colorize == 'dark':
+                    CheaderField    = Colors.LIGHT_BLUE
+                    CheaderValue    = Colors.LIGHT_GREEN
+                if str_colorize == 'light':
+                    CheaderField    = Colors.BLUE
+                    CheaderValue    = Colors.GREEN
+            return CheaderField, CheaderValue
 
-        CheaderField        = ''
-        CheaderValue        = ''
-        if b_colorize:
-            if str_colorize == 'dark':
-                CheaderField    = Colors.LIGHT_BLUE
-                CheaderValue    = Colors.LIGHT_GREEN
-
-        analyze             = None
-        l_studyHits         = []
-        for study in d_queryResult['data']:
-            # Generate the "header"
-            d_study             = {}
+        def header_generate(study):
+            """
+            For a given 'study' structure, generate a header block
+            in various formats.
+            """
+            # Generate the "header" for the given study
             d_headerContents    = {}
-            str_reportHeader    = "\n\n"
+            str_reportHeader    = ""
             l_headerTable       = []
+            analyze             = None
             for k in self.d_reportTags['header']:
                 if k == 'study': 
                     analyze = study
@@ -222,11 +235,20 @@ class Find(Base):
                 l_tags  = self.d_reportTags['header'][k]
                 l_headerTable, str_reportHeader, d_headerContents = \
                     block_build(analyze, l_tags, l_headerTable, str_reportHeader, d_headerContents)
+
             tb_headerInstance   = SingleTable(l_headerTable)
             tb_headerInstance.inner_heading_row_border  = False
-            d_study['header']   = d_headerContents.copy()
+            return tb_headerInstance.table, str_reportHeader, d_headerContents
 
-            # Generate the body
+        def body_generate(study):
+            """
+            For a given 'study' structure, generate a body block
+            in various formats. Typically, the body contains tags
+            from the SERIES level. Note currently STUDY tags in the
+            body are not supported.
+            """
+            str_reportSUID      = ""
+            str_reportBody      = ""
             d_bodyFields        = self.d_reportTags['body']
             for k in d_bodyFields.keys():
                 l_bodyTable     = []
@@ -235,8 +257,6 @@ class Find(Base):
                 d_seriesUID     = {}
                 dl_bodyContents = []
                 dl_seriesUID    = []
-                str_reportBody  += "\n"
-                str_reportSUID  += "\n"
                 l_seriesUIDtag  = ['SeriesInstanceUID']
                 if k == 'series':
                     l_series    = study['series']
@@ -265,30 +285,41 @@ class Find(Base):
 
                     tb_bodyInstance = SingleTable(l_bodyTable)
                     tb_bodyInstance.inner_heading_row_border    = False
-                    d_study['body']             = dl_bodyContents
-                    d_study['bodySeriesUID']    = dl_seriesUID
+
+            return tb_bodyInstance.table, str_reportBody, dl_bodyContents, dl_seriesUID
+
+        CheaderField, CheaderValue = colorize_set()
+
+        l_tabularHits       = []
+        l_rawTextHits       = []
+        l_jsonHits          = []
+        for study in d_queryResult['data']:
+            d_tabular       = {}
+            d_rawText       = {}
+            d_json          = {}
+
+            # Generate the header
+            d_tabular['header'],        \
+            d_rawText['header'],        \
+            d_json['header']   =        \
+                header_generate(study)
+
+            # Generate the body
+            d_tabular['body'],          \
+            d_rawText['body'],          \
+            d_json['body'],             \
+            d_json['bodySeriesUID'] =   \
+                body_generate(study)
      
-            l_studyHits.append(d_study)
-            str_reportText      += str_reportHeader + str_reportBody
-            str_reportTable     += "\n%s\n%s\n\n\n" % (tb_headerInstance.table, tb_bodyInstance.table)
-            str_reportHeader    = ''
-            str_reportBody      = ''
+            l_tabularHits.append(d_tabular)
+            l_rawTextHits.append(d_rawText)
+            l_jsonHits.append(d_json)
 
         return {
-                "tabular":  str_reportTable, 
-                "rawText":  str_reportText,
-                "json":     l_studyHits
+                "tabular":  l_tabularHits, 
+                "rawText":  l_rawTextHits,
+                "json":     l_jsonHits
         }
-
-    def command(self, opt={}):
-        command = '-xi -S'
-        str_cmd     = "%s %s %s %s" % (
-                        self.executable,
-                        command,
-                        self.query(opt),
-                        self.commandSuffix()
-        )
-        return str_cmd
 
     def query(self, opt={}):
         parameters = {
@@ -313,7 +344,7 @@ class Find(Base):
         }
 
         query = ''
-        # we use a sorted dictionnary so we can test generated command 
+        # we use a sorted dictionary so we can test generated command 
         # more easily
         ordered = collections.OrderedDict(
                         sorted( 
@@ -333,19 +364,91 @@ class Find(Base):
 
         return query
 
-    def systemlevel_run(self, opt, d_params):
+    def retrieve(self, d_filteredHits):
         """
-        Run the system command, based on the passed paramter dictionary
+        Perform a request to "move" the image data at SERIES level.
+
+        This essentially loops over all the SeriesInstanceUID in the
+        query space structure.
+
+        For the special case of a dockerized run, this method will attempt
+        to also restart the 'xinet.d' service within the container.
+
+        NOTE: Some PACS servers require the StudyInstanceUID in addition
+        to the SeriesInstanceUID.
+
         """
-        for k,v in d_params.items():
-            opt[k]  = v
-        raw_response= subprocess.run(
-                        self.command(opt), 
-                        stdout  = subprocess.PIPE, 
-                        stderr  = subprocess.STDOUT, 
-                        shell   = True
-            )
-        return self.formatResponse(raw_response)
+        self.systemlevel_run(self.arg, 
+            {
+                'f_commandGen': self.xinetd_command
+            }
+        )
+        studyIndex  = 0
+        l_run       = []
+        for study in d_filteredHits['report']['json']:
+            seriesIndex = 0
+            str_header  = d_filteredHits['report']['rawText'][studyIndex]['header']
+            self.dp.qprint('\n%s' % str_header)
+            for series, seriesUID in zip( study['body'], study['bodySeriesUID']):
+                str_seriesDescription   = series['SeriesDescription']
+                str_seriesUID           = seriesUID['SeriesInstanceUID']
+                str_studyUID            = d_filteredHits['data'][studyIndex]['StudyInstanceUID']['value']
+                self.dp.qprint(
+                    Colors.LIGHT_CYAN + 
+                    'Requesting SeriesDescription... ' +
+                    Colors.YELLOW + 
+                    str_seriesDescription
+                )
+                if self.arg['move']:
+                    self.arg['SeriesInstanceUID']   = str_seriesUID
+                    self.arg['StudyInstanceUID']    = str_studyUID
+                    d_moveRun = pypx.move({
+                            **self.arg,
+                            })                   
+                else:
+                    d_moveRun = self.systemlevel_run(self.arg, 
+                            {
+                                'f_commandGen':         self.movescu_command,
+                                'series_uid':           str_seriesUID,
+                                'study_uid':            str_studyUID
+                            }
+                )
+                l_run.append(d_moveRun)
+                if 'SeriesDescription' in study['body'][seriesIndex]:
+                    study['body'][seriesIndex]['PACS_Retrieve'] = " [ OK ] "
+                seriesIndex += 1
+                time.sleep(1)
+            studyIndex += 1
+            # pudb.set_trace()
+        return l_run
+
+    def xinetd_command(self, opt={}):
+        return "service xinetd restart"
+
+    def movescu_command(self, opt={}):
+        command = '-S --move ' + opt['aet']
+        command += ' --timeout 5'
+        command += ' -k QueryRetrieveLevel=SERIES'
+        command += ' -k SeriesInstanceUID=' + opt['series_uid']
+        command += ' -k StudyInstanceUID='  + opt['study_uid']
+
+        str_cmd     = "%s %s %s" % (
+                        self.movescu,
+                        command,
+                        self.commandSuffix()
+        )
+        return str_cmd
+
+    def findscu_command(self, opt={} ):
+
+        command = '-xi -S'
+        str_cmd     = "%s %s %s %s" % (
+                        self.findscu,
+                        command,
+                        self.query(opt),
+                        self.commandSuffix()
+        )
+        return str_cmd
 
     def run(self, opt={}):
         """
@@ -357,11 +460,19 @@ class Find(Base):
             * Then, given each STUDY, run at the SERIES level to
               receive the SeriesUID
 
+        This method performs the query based on the pattern of 
+        tag specifications given on the CLI.
+
         """
         # pudb.set_trace()
 
         formattedStudiesResponse    = \
-            self.systemlevel_run(opt, {'QueryRetrieveLevel': 'STUDY'})
+            self.systemlevel_run(opt, 
+                    {
+                        'f_commandGen':         self.findscu_command,
+                        'QueryRetrieveLevel':   'STUDY'
+                    }
+            )
 
         filteredStudiesResponse             = {}
         filteredStudiesResponse['status']   = formattedStudiesResponse['status']
@@ -373,6 +484,7 @@ class Find(Base):
             formattedSeriesResponse     = \
                 self.systemlevel_run(opt, 
                         {
+                            'f_commandGen':         self.findscu_command,
                             'QueryRetrieveLevel':   'SERIES',
                             'StudyInstanceUID':     study['StudyInstanceUID']['value']
                         }
@@ -395,7 +507,6 @@ class Find(Base):
 
                 l_seriesResults.append(series)
             
-            # pudb.set_trace()
             if len(l_seriesResults):
                 filteredStudiesResponse['data'].append(study)
                 filteredStudiesResponse['data'][-1]['series']       = l_seriesResults
@@ -406,76 +517,24 @@ class Find(Base):
         # pudb.set_trace()
         d_report  = self.report_generate(filteredStudiesResponse)
         filteredStudiesResponse['report'] = d_report
+        if opt['retrieve']: self.retrieve(filteredStudiesResponse)
+        if len(self.arg['printReport']):
+            if self.arg['printReport'] in filteredStudiesResponse['report'].keys():
+                self.report_print(filteredStudiesResponse['report'])
         return filteredStudiesResponse
 
-    def checkResponse(self, response):
-        std_split = response.split('\n')
-        info_count = 0
-        error_count = 0
-        for line in std_split:
-            if line.startswith('I: '):
-                info_count += 1
-            elif line.startswith('E: '):
-                error_count += 1
-
-        status = 'error'
-        if error_count == 0:
-            status = 'success'
-
-        return status
-
-    def parseResponse(self, response):
-        data = []
-
-        uid = 0
-        std_split = response.split('\n')
-
-        for line in std_split:
-            if line.startswith('I: ---------------------------'):
-                data.append({})
-                data[-1]['uid'] = {}
-                data[-1]['uid']['tag'] = 0
-                data[-1]['uid']['value'] = uid
-                data[-1]['uid']['label'] = 'uid'
-                uid += 1
-
-            elif line.startswith('I: '):
-                lineSplit = line.split()
-                if len(lineSplit) >= 8 and re.search('\((.*?)\)', lineSplit[1]) != None:
-                    # extract DICOM tag
-                    tag = re.search('\((.*?)\)', lineSplit[1]).group(0)[1:-1].strip().replace('\x00', '')
-
-                    # extract value
-                    value = re.search('\[(.*?)\]', line)
-                    if value != None:
-                        value = value.group(0)[1:-1].strip().replace('\x00', '')
-                    else:
-                        value = 'no value provided'
-
-                    # extract label
-                    label = lineSplit[-1].strip()
-
-                    data[-1][label] = {}
-                    data[-1][label]['tag'] = tag
-                    data[-1][label]['value'] = value
-                    data[-1][label]['label'] = label
-
-        return data
-
-    def formatResponse(self, raw_response):
-        std = raw_response.stdout.decode('ascii')
-        response = {
-            'status':   'success',
-            'data':     '',
-            'command':  raw_response.args
-        }
-
-        status = self.checkResponse(std)
-        if status == 'error':
-            response['status']  = 'error'
-            response['data']    = std
+    def report_print(self, d_hits):
+        """
+        Print a report based on one of the <str_field> arguments.
+        """
+        str_field   = self.arg['printReport']
+        if str_field != 'json':
+            for d_hit in d_hits[str_field]:
+                print("%s\n%s\n" % (d_hit['header'], d_hit['body']))
         else:
-            response['status']  = 'success'
-            response['data']    = self.parseResponse(std)
-
-        return response
+            print(
+                json.dumps(
+                    d_hits['json'],
+                    indent = 4
+                )
+            )
