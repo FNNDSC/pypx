@@ -1,47 +1,248 @@
 #!/usr/bin/env python
 #                                                            _
-# Pacs ToolKit Find wrapper
+# PACS ToolKit movescu wrapper
 #
-# (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
+# (c) 2016-2019 Fetal-Neonatal Neuroimaging & Developmental Science Center
 #                   Boston Children's Hospital
 #
 #              http://childrenshospital.org/FNNDSC/
 #                        dev@babyMRI.org
 #
 
-# FOR DEV PURPOSE
-# import sys, os
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import argparse
 import pypx
 
-parser = argparse.ArgumentParser(description='Move data from PACS')
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+from    terminaltables      import SingleTable
+from    pfmisc._colors      import Colors
+import  json
+import  pypx
+import  socket
+import  pudb
+
+str_defIP   = [l for l in (
+                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] 
+                if not ip.startswith("127.")][:1], 
+                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) 
+                for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+
+str_name    = "px-move"
+str_version = "1.0.0.0"
+str_desc    = Colors.CYAN + """
+                    
+
+                                     
+ _ __ __  ___ __ ___   _____   _____ 
+| '_ \\ \/ / '_ ` _ \ / _ \ \ / / _ \
+| |_) |>  <| | | | | | (_) \ V /  __/
+| .__//_/\_\_| |_| |_|\___/ \_/ \___|
+| |                                  
+|_|                                  
+
+                        PACS ToolKit Wrapper
+                            "move" images
+
+                       -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --                          
+
+    ``px-move`` is a module / script that provides functionality for 
+    performing a PACS movescu operation. 
+
+    ``px-move`` is tested against both Orthanc as well as some 
+    commercial PACS offerings.
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - PACS move (retrieve)
+
+    SYNOPSIS
+
+            _script mode_:
+            px-move                                                 \\
+                [--aet <AETitle>]                                   \\
+                [--aec <CalledAETitle>]                             \\
+                [--serverIP <PACSserverIP>]                         \\
+                [--serverPort <PACSserverPort>]                     \\
+                [--executable <movescuAbsolutePath>]                \\
+                [--StudyInstanceUID <studyInstanceUID>]             \\
+                [--SeriesInstanceUID <seriesInstanceUID>]           \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--debugToDir <dir>]                                \\
+                [--verbosity <level>]
+
+    BRIEF EXAMPLE
+
+        px-move                                                     \\
+            --aec CHRIS                                             \\
+            --aet FNNDSC-CHRISDEV                                   \\
+            --serverIP 134.174.12.21                                \\
+            --serverPort 104                                        \\
+            --StudyInstanceUID 1.2.3.435                            \\
+            --SeriesInstanceUID 2.3.5.6.7
+
+    ''' % scriptName + Colors.NO_COLOUR 
+
+    description = Colors.LIGHT_GREEN + '''
+
+        [--aet <AETitle>]
+        The AETitle of *this* entity.
+
+        [--aec <CalledAETitle>]                             
+        The called AETitle of *this* entity. Needed for some PACS systems.
+
+        [--serverIP <PACSserverIP>]
+        The IP of the PACS server.
+
+        [--serverPort <PACSserverPort>]                     
+        The port associated with the PACS server.
+
+        [--executable <movescuAbsolutePath>]                
+        The absolute location of the 'movescu' executable.
+        
+        [--StudyInstanceUID <studyInstanceUID>]             
+        The <studyInstanceUID> to request.
+
+        [--SeriesDescription <seriesInstanceUID>]           
+        The <seriesInstanceUID> to request.
+
+        [--reportTags <JSONdesc>]
+        If specified, print only the JSON specified result tags from either the
+        STUDY or SERIES level.
+
+        [--colorize 'light'|'dark']
+        An optional directive to colorize the report output, either for 'light'
+        or 'dark' consoles.
+
+        [-x|--desc]                                     
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output. Allows for
+        more fine tuned output control as opposed to '--quiet' that effectively
+        silences everything.
+
+    EXAMPLES
+
+        px-move                                                     \\
+            --aec CHRIS                                             \\
+            --aet FNNDSC-CHRISDEV                                   \\
+            --serverIP 134.174.12.21                                \\
+            --serverPort 104                                        \\
+            --StudyInstanceUID 1.2.3.435                            \\
+            --SeriesInstanceUID 2.3.5.6.7
+    ''' + Colors.LIGHT_PURPLE + '''
+
+    DOCKERIZED EXAMPLES
+
+        docker run  --rm -ti                                            \\
+            -v $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx  \\
+            -v $(pwd)/bin/px-echo:/usr/local/bin/px-echo                \\
+            -v $(pwd)/bin/px-find:/usr/local/bin/px-find                \\
+            -v $(pwd)/bin/px-move:/usr/local/bin/px-move                \\
+            -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen            \\
+            local/pypx                                                  \\
+            --px-move                                                   \\
+            --aet CHIPS                                                 \\
+            --aec ORTHANC                                               \\
+            --serverIP  10.72.76.155                                    \\
+            --serverPort 4242                                           \\
+            --colorize dark                                             \\
+            --StudyInstanceUID 1.2.3.435                                \\
+            --SeriesInstanceUID 2.3.5.6.7
+
+
+    ''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
 
 # PACS settings
 parser.add_argument(
-    '--aet', action='store', dest='aet', type=str,
-    default='CHRIS-ULTRON-AET', help='aet')
+    '--aet', 
+    action  = 'store', 
+    dest    = 'aet', 
+    type    = str, 
+    default = 'CHRIS-ULTRON-AET', 
+    help    = 'aet')
 parser.add_argument(
-    '--aec', action='store', dest='aec', type=str,
-    default='CHRIS-ULTRON-AEC', help='aec')
+    '--aec', 
+    action  = 'store', 
+    dest    = 'aec', 
+    type    = str, 
+    default = 'CHRIS-ULTRON-AEC', 
+    help    = 'aec')
 parser.add_argument(
-    '--serverIP', action='store', dest='server_ip', type=str,
-    default='192.168.1.110', help='PACS server IP')
+    '--serverIP', 
+    action  = 'store', 
+    dest    = 'serverIP', 
+    type    = str,
+    default = '192.168.1.110', 
+    help    = 'PACS server IP')
 parser.add_argument(
-    '--serverPort', action='store', dest='server_port', type=str,
-    default='4242', help='PACS server port')
+    '--serverPort', 
+    action  = 'store', 
+    dest    = 'serverPort', 
+    type    = str,
+    default = '4242', 
+    help    = 'PACS server port')
 parser.add_argument(
-    '--executable', action='store', dest='executable', type=str,
-    default='/usr/local/bin/movescu', help='Findscu executable absolute location')
+    '--movescu', 
+    action  = 'store', 
+    dest    = 'movescu', 
+    type    = str,
+    default = '/usr/bin/movescu', 
+    help    = '"movescu"" executable absolute location')
+
 
 # Query settings
 parser.add_argument(
-    '--aetl', action='store', dest='aet_listener', type=str,
-    default='CHRIS-ULTRON-LIS', help='aet of the dicom listener')
+    '--SeriesInstanceUID', 
+    action  = 'store', 
+    dest    = 'SeriesInstanceUID', 
+    type    = str,
+    default = '', 
+    help    = 'Series Instance UID')
 parser.add_argument(
-    '--seriesUID', action='store', dest='series_uid', type=str,
-    default='1.2.392.200036.9125.3.1884891176246156.64786914937.231634', help='Series to be moved')
+    '--StudyInstanceUID', 
+    action  = 'store', 
+    dest    = 'StudyInstanceUID', 
+    type    = str,
+    default = '', 
+    help    = 'Study Instance UID')
 
 opts = parser.parse_args()
 output = pypx.move(vars(opts))
