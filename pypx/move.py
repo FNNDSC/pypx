@@ -1,23 +1,71 @@
 # Global modules
-import subprocess
+import  subprocess
+import  pudb
+import  json
+import  pfmisc
+from    pfmisc._colors      import  Colors
 
 # PYPX modules
 from .base import Base
 
 class Move(Base):
-    """docstring for Move."""
-    def __init__(self, arg):
-        super(Move, self).__init__(arg)
+    """
+    The 'Move' class is essentially a stripped down module that 
+    simply performs a call to the system to run an appropriately
+    constructed 'movescu' command. 
 
-    def command(self, opt={}):
-        command = '--move ' + opt['aet_listener']
+    In some ways, the Move() class replicates/duplicates similar
+    functionality in the Find() class. Future development might
+    address this overlap more intelligently.
+    """
+
+    def __init__(self, arg):
+        """
+        Constructor.
+
+        Largely simple/barebones constructor that calls the Base()
+        and sets up the executable name.
+        """
+
+        if 'movescu' in arg.keys():
+            self.movescu    = arg['movescu']
+
+        super(Move, self).__init__(arg)
+        self.dp = pfmisc.debug(
+                    verbosity   = self.arg['verbosity'],
+                    within      = 'Find',
+                    syslog      = False
+        )
+
+    def movescu_command(self, opt={}):
+        command = '-S --move ' + opt['aet']
         command += ' --timeout 5'
         command += ' -k QueryRetrieveLevel=SERIES'
+        command += ' -k StudyInstanceUID='  + opt['study_uid']
         command += ' -k SeriesInstanceUID=' + opt['series_uid']
 
-        return self.executable + ' ' + command + ' ' + self.commandSuffix()
+        str_cmd     = "%s %s %s" % (
+                        self.movescu,
+                        command,
+                        self.commandSuffix()
+        )
+        return str_cmd
 
     def run(self, opt={}):
-        response = subprocess.run(
-            self.command(opt), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-        return self.handle(response)
+
+        # First, for dockerized run, (re)start the xinetd service
+        self.systemlevel_run(self.arg, 
+            {
+                'executable':   'xinetd'
+            }
+        )
+
+        d_moveRun = self.systemlevel_run(self.arg, 
+                {
+                    'f_commandGen':         self.movescu_command,
+                    'series_uid':           opt['SeriesInstanceUID'],
+                    'study_uid':            opt['StudyInstanceUID']
+                }
+        )
+
+        return d_moveRun
