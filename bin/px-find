@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #                                                            _
-# PACS ToolKit Find Wrapper
+# PACS ToolKit findscu (and possible movescu) Wrapper
 #
-# (c) 2016 Fetal-Neonatal Neuroimaging & Developmental Science Center
+# (c) 2016-2019 Fetal-Neonatal Neuroimaging & Developmental Science Center
 #                   Boston Children's Hospital
 #
 #              http://childrenshospital.org/FNNDSC/
@@ -15,6 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
 from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
+from    terminaltables      import SingleTable
 from    pfmisc._colors      import Colors
 import  json
 import  pypx
@@ -72,15 +73,15 @@ def synopsis(ab_shortOnly = False):
                 [--serverIP <PACSserverIP>]                         \\
                 [--serverPort <PACSserverPort>]                     \\
                 [--executable <findscuAbsolutePath>]                \\
-                [--patientID <MRN>]                                 \\
-                [--patientName <ExactPatientName>]                  \\
-                [--patientSex <M_or_F>]                             \\
-                [--studyDate <YYYY/MM/DD>]                          \\
-                [--modalitiesInStudy <Modalities>]                  \\
-                [--performedStationAETitle <StationTitle>]          \\
-                [--studyDescription <studyDescription>]             \\
-                [--seriesDescription <seriesDescription>]           \\
-                [--reportTags <JSONDesc>]                            \\
+                [--PatientID <MRN>]                                 \\
+                [--PatientName <ExactPatientName>]                  \\
+                [--PatientSex <M_or_F>]                             \\
+                [--StudyDate <YYYY/MM/DD>]                          \\
+                [--ModalitiesInStudy <Modalities>]                  \\
+                [--PerformedStationAETitle <StationTitle>]          \\
+                [--StudyDescription <studyDescription>]             \\
+                [--SeriesDescription <seriesDescription>]           \\
+                [--reportTags <JSONDesc>]                           \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
@@ -95,14 +96,32 @@ def synopsis(ab_shortOnly = False):
             --aet FNNDSC-CHRISDEV                                   \\
             --serverIP 134.174.12.21                                \\
             --serverPort 104                                        \\
-            --patientID 4777764                                     \\
+            --PatientID 4777764                                     \\
             --reportTags '
             {
-                "series": [ 
-                            "SeriesDescription", 
-                            "ScanDate", 
-                            "SeriesUID"
-                        ]
+                "header": 
+                {
+                    "study" : [
+                            "PatientName",
+                            "PatientBirthDate",
+                            "StudyDate",
+                            "PatientAge",
+                            "PatientSex",
+                            "AccessionNumber",
+                            "PatientID",
+                            "PerformedStationAETitle",
+                            "StudyDescription"
+                            ],
+                    "series": [
+                            "Modality"
+                    ]
+                },
+                "body": 
+                {
+                    "series" : [ 
+                            "SeriesDescription"
+                            ]
+                }
             }'
 
         px-find                                                     \\
@@ -110,14 +129,32 @@ def synopsis(ab_shortOnly = False):
             --aec ORTHANC                                           \\
             --serverIP localhost                                    \\
             --serverPort 4242                                       \\
-            --patientID LILLA-9731                                  \\
+            --PatientID LILLA-9731                                  \\
             --reportTags '
             {
-                "series": [ 
-                            "SeriesDescription", 
-                            "ScanDate", 
-                            "SeriesUID"
-                        ]
+                "header": 
+                {
+                    "study" : [
+                            "PatientName",
+                            "PatientBirthDate",
+                            "StudyDate",
+                            "PatientAge",
+                            "PatientSex",
+                            "AccessionNumber",
+                            "PatientID",
+                            "PerformedStationAETitle",
+                            "StudyDescription"
+                            ],
+                    "series": [
+                            "Modality"
+                    ]
+                },
+                "body": 
+                {
+                    "series" : [ 
+                            "SeriesDescription"
+                            ]
+                }
             }'
 
     ''' % scriptName + Colors.NO_COLOUR 
@@ -139,38 +176,46 @@ def synopsis(ab_shortOnly = False):
         [--executable <findscuAbsolutePath>]                
         The absolute location of the 'findscu' executable.
         
-        [--patientID <MRN>]
+        [--PatientID <MRN>]
         The patient ID on which to Query.
 
-        [--patientName <ExactPatientName>]
+        [--PatientName <ExactPatientName>]
         The patient name on which to Query.
 
-        [--patientSex <M_or_F>]                             
+        [--PatientSex <M_or_F>]                             
         The patient sex (largely irrelevant since open ended searches are
         not supported by most PACS servers).
         
-        [--studyDate <YYYY/MM/DD>]                          
+        [--StudyDate <YYYY/MM/DD>]                          
         Filter results by <studyDate>.
         
-        [--modalitiesInStudy <Modalities>]   
+        [--ModalitiesInStudy <Modalities>]   
         Filter by modalities in study.
 
-        [--performedStationAETitle <StationTitle>]          
+        [--PerformedStationAETitle <StationTitle>]          
         Filter by station ID.
 
-        [--studyDescription <studyDescription>]             
+        [--StudyDescription <studyDescription>]             
         Filter by study description.
 
-        [--seriesDescription <seriesDescription>]           
+        [--SeriesDescription <seriesDescription>]           
         Filter by series description.
 
-        [--repotrtTags <JSONdesc>]
+        [--reportTags <JSONdesc>]
         If specified, print only the JSON specified result tags from either the
         STUDY or SERIES level.
 
         [--colorize 'light'|'dark']
         An optional directive to colorize the report output, either for 'light'
         or 'dark' consoles.
+
+        [--retrieve]
+        If set, perform a DICOM movescu on the set of filtered SeriesInstanceUIDs using
+        internal calls.
+
+        [--move]
+        If set, perform a DICOM movescu on the set of filtered SeriesInstanceUIDs using
+        the pypx/move module.
 
         [-x|--desc]                                     
         Provide an overview help page.
@@ -200,7 +245,7 @@ def synopsis(ab_shortOnly = False):
             --aet FNNDSC-CHRISDEV                                   \\
             --serverIP 134.174.12.21                                \\
             --serverPort 104                                        \\
-            --patientID 4777764                                     \\
+            --PatientID 4777764                                     \\
             --colorize dark                                         \\
             --reportTags                                            \\
             '{
@@ -220,8 +265,7 @@ def synopsis(ab_shortOnly = False):
                 "body": 
                 {
                     "series" : [ 
-                            "SeriesDescription", 
-                            "SeriesInstanceUID"
+                            "SeriesDescription"
                             ]
                 }
             }'
@@ -231,7 +275,7 @@ def synopsis(ab_shortOnly = False):
             --aec ORTHANC                                           \\
             --serverIP localhost                                    \\
             --serverPort 4242                                       \\
-            --patientID LILLA-9731                                  \\
+            --PatientID LILLA-9731                                  \\
             --colorize dark
             --reportTags                                            \\
             '{
@@ -251,8 +295,7 @@ def synopsis(ab_shortOnly = False):
                 "body": 
                 {
                     "series" : [ 
-                            "SeriesDescription", 
-                            "SeriesInstanceUID"
+                            "SeriesDescription"
                             ]
                 }
             }'
@@ -273,7 +316,7 @@ def synopsis(ab_shortOnly = False):
             --aec ORTHANC                                               \\
             --serverIP  10.72.76.155                                    \\
             --serverPort 4242                                           \\
-            --patientID LILLA-9731                                      \\
+            --PatientID LILLA-9731                                      \\
             --colorize dark                                             \\
             --reportTags                                                \\
             '{
@@ -293,8 +336,7 @@ def synopsis(ab_shortOnly = False):
                 "body": 
                 {
                     "series" : [ 
-                            "SeriesDescription", 
-                            "SeriesInstanceUID"
+                            "SeriesDescription"
                             ]
                 }
             }'
@@ -312,7 +354,7 @@ def synopsis(ab_shortOnly = False):
             --aet FNNDSC-CHRISDEV                                       \\
             --serverIP 134.174.12.21                                    \\
             --serverPort 104                                            \\
-            --patientID 4777764                                         \\
+            --PatientID 4777764                                         \\
             --colorize dark                                             \\
             --reportTags                                                \\
             '{
@@ -332,8 +374,7 @@ def synopsis(ab_shortOnly = False):
                 "body": 
                 {
                     "series" : [ 
-                            "SeriesDescription", 
-                            "SeriesInstanceUID"
+                            "SeriesDescription"
                             ]
                 }
             }'
@@ -369,14 +410,14 @@ parser.add_argument(
 parser.add_argument(
     '--serverIP', 
     action  = 'store', 
-    dest    = 'server_ip', 
+    dest    = 'serverIP', 
     type    = str,
     default = '192.168.1.110', 
     help    = 'PACS server IP')
 parser.add_argument(
     '--serverPort', 
     action  = 'store', 
-    dest    = 'server_port', 
+    dest    = 'serverPort', 
     type    = str,
     default = '4242', 
     help    = 'PACS server port')
@@ -387,6 +428,22 @@ parser.add_argument(
     type    = str,
     default = '/usr/bin/findscu', 
     help    = 'Findscu executable absolute location')
+parser.add_argument(
+    '--findscu', 
+    action  = 'store', 
+    dest    = 'findscu', 
+    type    = str,
+    default = '/usr/bin/findscu', 
+    help    = '"findscu" executable absolute location')
+parser.add_argument(
+    '--movescu', 
+    action  = 'store', 
+    dest    = 'movescu', 
+    type    = str,
+    default = '/usr/bin/movescu', 
+    help    = '"movescu" executable absolute location')
+
+
 
 # Query settings
 parser.add_argument(
@@ -467,6 +524,20 @@ parser.add_argument(
     default = '', 
     help    = 'Study Instance UID')
 
+# Retrieve settings
+parser.add_argument(
+    '--retrieve', 
+    action  = 'store_true', 
+    dest    = 'retrieve',
+    default = False, 
+    help    = 'If specified, initiate a PACS pull on the set of SeriesUIDs using internal methods')
+parser.add_argument(
+    '--move', 
+    action  = 'store_true', 
+    dest    = 'move',
+    default = False, 
+    help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
+
 # Behavioural settings
 parser.add_argument(
     '--colorize', 
@@ -493,7 +564,8 @@ parser.add_argument(
     "-v", "--verbosity",
     help    = "verbosity level for app",
     dest    = 'verbosity',
-    default = "1")
+    type    = int,
+    default = 1)
 parser.add_argument(
     "-x", "--desc",
     help    = "long synopsis",
@@ -512,6 +584,13 @@ parser.add_argument(
     '--version',
     help    = 'if specified, print version number',
     dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--waitForUserTerminate',
+    help    = 'if specified, wait for user termination',
+    dest    = 'b_waitForUserTerminate',
     action  = 'store_true',
     default = False
 )
@@ -535,15 +614,37 @@ if args.b_version:
 # pudb.set_trace()
 output = pypx.find(vars(args))
 
-if len(args.printReport):
-    if args.printReport in output['report'].keys():
-        str_report  = output['report'][args.printReport]
-        if args.printReport == 'json':
-            print(
-                json.dumps(
-                    str_report, 
-                    indent = 4
-                )
-            )
-        else:
-            print(str_report)
+if args.b_waitForUserTerminate:
+    l_infoWindow =[
+        [Colors.CYAN                                            + 
+        "End of program reached."                               + 
+        Colors.NO_COLOUR],
+        [""],
+        [Colors.PURPLE                                          + 
+        "If a PACS move/pull/retrieve was requested, not all"   +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          + 
+        "image data might have been received since the PACS"    +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          + 
+        "operates in an asynchronous manner."                   +
+        Colors.NO_COLOUR],
+        [""],
+        [Colors.PURPLE                                          + 
+        "If you are running this process containerized, on"     +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          + 
+        "exit the container will close and no additional data"  +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          + 
+        "will be received."                                     +
+        Colors.NO_COLOUR],
+        [""],
+        [Colors.BLINK_RED           + 
+        "ONLY EXIT IF YOU ARE SURE YOU HAVE RECEIVED ALL IMAGES!" +
+        Colors.NO_COLOUR],
+    ]
+    tb_infoWindow = SingleTable(l_infoWindow)
+    tb_infoWindow.inner_heading_row_border  = False
+    print(tb_infoWindow.table)
+    input("\nHit ENTER now to exit.")
