@@ -40,6 +40,13 @@ Using the dockerized container is the recommended installation vector:
 
     docker pull fnndsc/pypx
 
+Alternatively, you can build a local image with
+
+.. code-block:: bash
+
+    PROXY=http://some.proxy.com
+    docker build --build-arg http_proxy=${PROXY} --build-arg UID=$UID -t local/pypx .
+
 2.2 pypi
 ========
 
@@ -58,7 +65,7 @@ Interactinvg with a PACS requires existing infrastructure on the local computer 
 
 Furthermore, the PACS needs to be configured with information pertaining to the local client process -- such as its AETitle, CalledAETitle, and IP address/port to which the PACS will transmit data. Moreover, the receiving host needs to have a daemon/service listening on the port to which the PACS will transmit.
 
-Details on the nature of PACS communication is beyond the scope of this repo, however, the dockerized version of the repo builds all the local infrastructure necessary for full PACS communication, including the ``xinetd`` and related service description and mapped ports. Thus for a properly configured remote PACS, the containerized version of this repo provides a complete query/retrieve package.
+Details on the nature of PACS communication are beyond the scope of this repo, however, the dockerized version of the repo builds all the local infrastructure necessary for full PACS communication, including the ``xinetd`` and related service description and mapped ports. Thus for a properly configured remote PACS, the containerized version of this repo provides a complete query/retrieve package. 
 
 Local configuration of the container
 ====================================
@@ -77,8 +84,8 @@ about px-echo
 
 ::
 
-    It sends a DICOM C-ECHO message to a Service Class Provider (SCP) and waits for a response.
-    The application can be used to verify basic DICOM connectivity.
+    ``px-echo`` sends a DICOM C-ECHO message to a Service Class Provider (SCP) and waits 
+    for a response. The application can be used to verify basic DICOM connectivity.
     -- DCMTK, about echoscu.
 
 px-echo script
@@ -139,11 +146,11 @@ about px-find
 -------------------
 ``px-find`` is a wrapper around dcmtk findscu_.
 
-Find series on a PACS server given a vast array of parameters. See ``px-find --help`` for the full list. In stand-alone cases, ``px-find`` will often be used to Query and generate a console friendly formatted report.
+``px-find`` finds series on a PACS server given a vast array of parameters. See ``px-find --help`` for the full list. In stand-alone cases, ``px-find`` will often be used to Query and generate a console friendly formatted report.
 
 ::
 
-    It sends query keys to an SCP and awaits responses.
+    ``px-find`` sends query keys to an SCP and awaits responses.
     The application can be used to test SCPs of the Query/Retrieve 
     and Basic Worklist Management Service Classes.
     -- DCMTK, about findscu.
@@ -173,38 +180,11 @@ px-find script
         --serverIP  10.72.76.155    \
         --serverPort 4242           \
         --PatientID LILLA-9731      \
-        --printReport tabular       \
+        --printReport rawText       \
         --colorize dark
 
 will return
 
-.. code-block:: bash
-
-    ┌────────────────────────────────┬────────────────────────────────────────────────────┐
-    │ PatientName                    │ LILLA-9731                                         │
-    │ PatientBirthDate               │ 19000101                                           │
-    │ StudyDate                      │ 20111206                                           │
-    │ PatientAge                     │ 017M                                               │
-    │ PatientSex                     │ M                                                  │
-    │ AccessionNumber                │ 22268454                                           │
-    │ PatientID                      │ LILLA-9731                                         │
-    │ PerformedStationAETitle        │ no value provided                                  │
-    │ StudyDescription               │ anonymized                                         │
-    │ Modality                       │ MR                                                 │
-    └────────────────────────────────┴────────────────────────────────────────────────────┘
-    ┌────────────────────────────────┬────────────────────────────────────────────────────┐
-    │ SeriesDescription              │ T2 SPC SAG OBL LT IAC                              │
-    │ SeriesDescription              │ T2 SPC AXIAL THRU  IAC                             │
-    │ SeriesDescription              │ T2 SPC SAG OBL RT IAC                              │
-    │ SeriesDescription              │ AAHScout                                           │
-    │ SeriesDescription              │ AX MPRAGE RECON                                    │
-    │ SeriesDescription              │ mocoMEMPRAGE_192FOV RMS                            │
-    │ SeriesDescription              │ COR MPRAGE RECON                                   │
-    │ SeriesDescription              │ ep_moco_nav_set (move FOV above shoulders)         │
-    │ SeriesDescription              │ AX T2 FLAIR                                        │
-    │ SeriesDescription              │ AAHScout_MPR                                       │
-    │ SeriesDescription              │ AX FSE T2                                          │
-    └────────────────────────────────┴────────────────────────────────────────────────────┘
 
 
 
