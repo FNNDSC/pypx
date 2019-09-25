@@ -113,15 +113,18 @@ class Find(Base):
             """
             str_birthDate   = study['PatientBirthDate']['value']
             str_studyDate   = study['StudyDate']['value']
-            dt_birthDate    = datetime.strptime(str_birthDate, '%Y%m%d') 
-            dt_studyDate    = datetime.strptime(str_studyDate, '%Y%m%d')
-            dt_patientAge   = relativedelta.relativedelta(dt_studyDate, dt_birthDate)
-            str_patientAge  = '%02dY-%02dM-%02dD' % \
-                (
-                    dt_patientAge.years,
-                    dt_patientAge.months,
-                    dt_patientAge.days
-                )
+            try:
+                dt_birthDate    = datetime.strptime(str_birthDate, '%Y%m%d') 
+                dt_studyDate    = datetime.strptime(str_studyDate, '%Y%m%d')
+                dt_patientAge   = relativedelta.relativedelta(dt_studyDate, dt_birthDate)
+                str_patientAge  = '%02dY-%02dM-%02dD' % \
+                    (
+                        dt_patientAge.years,
+                        dt_patientAge.months,
+                        dt_patientAge.days
+                    )
+            except:
+                str_patientAge  = "NaN"
             return str_patientAge
 
         def DICOMtag_lookup(d_DICOMfields, str_DICOMtag):
