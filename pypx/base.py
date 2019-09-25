@@ -1,6 +1,21 @@
-import  subprocess, re, collections
+import  subprocess, re, collections, codecs
 import  pfmisc
+import  pudb
 from    pfmisc._colors      import  Colors
+
+# Credit to Anatoly Techtonik
+# https://stackoverflow.com/questions/606191/convert-bytes-to-a-string/27527728#27527728
+def slashescape(err):
+    """ codecs error handler. err is UnicodeDecode instance. return
+    a tuple with a replacement for the unencodable part of the input
+    and a position where encoding should continue"""
+    #print err, dir(err), err.start, err.end, err.object[:err.start]
+    thebyte = err.object[err.start:err.end]
+    repl = u'\\x'+hex(ord(thebyte))[2:]
+    return (repl, err.end)
+
+codecs.register_error('slashescape', slashescape)
+
 
 class Base():
     """
@@ -149,7 +164,7 @@ class Base():
         return data
 
     def formatResponse(self, raw_response):
-        std = raw_response.stdout.decode('ascii')
+        std = raw_response.stdout.decode('utf-8', 'slashescape')
         response = {
             'status':   'success',
             'data':     '',
@@ -157,6 +172,7 @@ class Base():
         }
 
         status = self.checkResponse(std)
+
         if status == 'error':
             response['status']  = 'error'
             response['data']    = std
