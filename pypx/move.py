@@ -27,9 +27,6 @@ class Move(Base):
         and sets up the executable name.
         """
 
-        if 'movescu' in arg.keys():
-            self.movescu    = arg['movescu']
-
         super(Move, self).__init__(arg)
         self.dp = pfmisc.debug(
                     verbosity   = self.verbosity,
