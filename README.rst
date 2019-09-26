@@ -18,24 +18,24 @@ pypx - 1.0.0.0
 
 ``pypx`` is a *complete* client-side PACS (Picture Archive and Communications System) Query/Retrieve/Storage solution that operates in stand-alone script mode in addition to providing a set of python modules for use in other packages. The modules/API provide a simple mechanism for a python program to interact with an appropriately configured remote PACS, while the stand alone scripts offer a convenient ability to directly Query/Retrieve/Storge images from the command line.
 
-``pypx`` was mostly developed for use in the ChRIS system as part of the ``pfdcm`` microservice; however the CLI scripts of ``pypx`` and the provided docker image offer a convenient and powerful means of accessing a PACS without any additional overhead.
+``pypx`` was mostly developed for use in the ChRIS system as part of the ``pfdcm`` microservice; however the CLI scripts of ``pypx`` and the provided docker image offer a quick and powerful means of accessing a PACS without any additional overhead.
 
 1.1 Complete **Client** Side
 ============================
 
-This solution is **client**-side and cannot operate fully independently of an appropriately configured PACS. Having said, in the dockerized mode (either by building a local container or using the container provided on dockerhub (``fnndsc/pypx``) all the necessary infrastructure is provided to listen for incoming image data. Some minor post configuration might however be required.
+This solution is **client**-side and cannot operate fully independently of an appropriately configured PACS. Having said that, in the dockerized mode (either by building a local container or using the container provided on dockerhub (``fnndsc/pypx``) all the necessary infrastructure is provided to listen for and store incoming image data. Some minor post configuration might however be required.
 
 1.1.1 Quick PACS Primer
 -----------------------
 
 A PACS exists as a separate service on a network, and ``pypx`` communicates with a pre-configured PACS when asking for Query data and when Retrieving images. Importantly, from the client perspective, data is **PUSHED** from the PACS, and not **PULLED** from the client. This means that client software in essence "asks" the PACS for images and the PACS obliges by transmitting the images over the network to a pre-configured location.
 
-Communications with a PACS are for the most insecure and reflected a circa 1990s view/model of internetworking. When a client communicates with a PACS, it sends along with every request string identifiers, unique to the client. Typical identifiers are the ``AETitle`` and sometimes additionally the ``CalledAETitle``. The PACS examines these strings on receipt to identify/authenticate the client and also to identify a destination network ``IP:port`` to which data can be transmitted.
+Communications with a PACS are for the most insecure and reflected a circa 1990s view/model of internetworking. When a client communicates with a PACS, it sends along with every request string identifiers unique to the client and configured in the PACS. Typical identifiers are the ``AETitle`` and sometimes additionally the ``CalledAETitle``. The PACS examines these strings on receipt to identify/authenticate the client and also to identify a destination network ``IP:port`` to which data can be transmitted.
 
 1.1.2 Configuring a PACS
 -------------------------
 
-In order to be fully complete, a destination PACS with which ``pypx`` modules wish to communicate needs to be configured with appriate ``AETitle``, ``CalledAETitle``, as well as the network address IP and port of the ``pypx`` hosting machine. This is obviously outside of the scope of this documentation. Consult your PACS for information on this configuration.
+In order to be fully complete, a destination PACS with which ``pypx`` modules wish to communicate needs to be configured with appriate ``AETitle``, ``CalledAETitle``, as well as the network address IP and port of the ``pypx`` hosting machine. Configuring a PACS is obviously outside of the scope of this documentation. Consult your PACS for information on this configuration.
 
 1.1.3 Configuring ``pypx``
 ---------------------------
@@ -56,13 +56,13 @@ simply add another block reflecting the variables appropriate to your remote PAC
 
 Internally, the code wraps around DCMTK utilies as well as the PyDicom module. The following modules/scripts are provided:
 
-- ``px-echo:`` Ping the PACS to make sure it is online (``echoscu``).
+- px-echo_: Ping the PACS to make sure it is online (``echoscu``).
 
-- ``px-find:`` Find data on the PACS (``findscu``).
+- px-find_: Find data on the PACS (``findscu``).
 
-- ``px-move:`` Move data from the PACS (``movescu``).
+- px-move_: Move data from the PACS (``movescu``).
 
-- ``px-listen:`` Listen for incoming data from the PACS (``storescp``).
+- px-listen_: Listen for incoming data from the PACS (``storescp``).
 
 2. Installation
 *****************
@@ -134,10 +134,10 @@ DCMTK_
 
 -  Author(s): Dicom @ OFFIS Team
 
-.. _px-echo: https://github.com/FNNDSC/pypx/wiki/px-echo
-.. _px-find: https://github.com/FNNDSC/pypx/wiki/px-find
-.. _px-move: https://github.com/FNNDSC/pypx/wiki/px-move
-.. _px-listen: https://github.com/FNNDSC/pypx/wiki/px-listen
+.. _px-echo: https://github.com/FNNDSC/pypx/wiki/1.-px-echo
+.. _px-find: https://github.com/FNNDSC/pypx/wiki/2.-px-find
+.. _px-move: https://github.com/FNNDSC/pypx/wiki/3.-px-move
+.. _px-listen: https://github.com/FNNDSC/pypx/wiki/4.-px-listen
 .. _PyDicom: http://www.python.org/
 .. _darcymason: https://github.com/darcymason
 .. _DCMTK: http://dicom.offis.de/dcmtk.php.en
