@@ -72,90 +72,29 @@ def synopsis(ab_shortOnly = False):
                 [--aec <CalledAETitle>]                             \\
                 [--serverIP <PACSserverIP>]                         \\
                 [--serverPort <PACSserverPort>]                     \\
-                [--executable <findscuAbsolutePath>]                \\
+                [--findscu <findscuAbsolutePath>]                   \\
+                [--movescu <movescuAbsolutePath>]                   \\
                 [--PatientID <MRN>]                                 \\
                 [--PatientName <ExactPatientName>]                  \\
                 [--PatientSex <M_or_F>]                             \\
                 [--StudyDate <YYYY/MM/DD>]                          \\
                 [--ModalitiesInStudy <Modalities>]                  \\
+                [--Modality <ModalityToQuery>]                      \\
                 [--PerformedStationAETitle <StationTitle>]          \\
                 [--StudyDescription <studyDescription>]             \\
                 [--SeriesDescription <seriesDescription>]           \\
+                [--StudyInstanceUID <studyInstanceUID>]             \\
+                [--SeriesInstanceUID <seriesInstanceUID>]           \\
+                [--retrieve [--move]]                               \\
                 [--reportTags <JSONDesc>]                           \\
+                [--colorize light|dark]                             \\
+                [--printReport tabular|rawText|json]                \\
+                [--waitForUserTerminate]                            \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
                 [--debugToDir <dir>]                                \\
                 [--verbosity <level>]
-
-
-    BRIEF EXAMPLE
-
-        px-find                                                     \\
-            --aec CHRIS                                             \\
-            --aet FNNDSC-CHRISDEV                                   \\
-            --serverIP 134.174.12.21                                \\
-            --serverPort 104                                        \\
-            --PatientID 4777764                                     \\
-            --reportTags '
-            {
-                "header": 
-                {
-                    "study" : [
-                            "PatientName",
-                            "PatientBirthDate",
-                            "StudyDate",
-                            "PatientAge",
-                            "PatientSex",
-                            "AccessionNumber",
-                            "PatientID",
-                            "PerformedStationAETitle",
-                            "StudyDescription"
-                            ],
-                    "series": [
-                            "Modality"
-                    ]
-                },
-                "body": 
-                {
-                    "series" : [ 
-                            "SeriesDescription"
-                            ]
-                }
-            }'
-
-        px-find                                                     \\
-            --aec CHIPS                                             \\
-            --aec ORTHANC                                           \\
-            --serverIP localhost                                    \\
-            --serverPort 4242                                       \\
-            --PatientID LILLA-9731                                  \\
-            --reportTags '
-            {
-                "header": 
-                {
-                    "study" : [
-                            "PatientName",
-                            "PatientBirthDate",
-                            "StudyDate",
-                            "PatientAge",
-                            "PatientSex",
-                            "AccessionNumber",
-                            "PatientID",
-                            "PerformedStationAETitle",
-                            "StudyDescription"
-                            ],
-                    "series": [
-                            "Modality"
-                    ]
-                },
-                "body": 
-                {
-                    "series" : [ 
-                            "SeriesDescription"
-                            ]
-                }
-            }'
 
     ''' % scriptName + Colors.NO_COLOUR 
 
@@ -192,6 +131,9 @@ def synopsis(ab_shortOnly = False):
         [--ModalitiesInStudy <Modalities>]   
         Filter by modalities in study.
 
+        [--Modality <Modality>]   
+        The modality to filter.
+
         [--PerformedStationAETitle <StationTitle>]          
         Filter by station ID.
 
@@ -201,6 +143,20 @@ def synopsis(ab_shortOnly = False):
         [--SeriesDescription <seriesDescription>]           
         Filter by series description.
 
+        [--StudyInstanceUID <studyInstanceUID>]             
+        Filter by study instance UID.
+
+        [--SeriesInstanceUID <seriesInstanceUID>]           
+        Filter by series instance UID.
+
+        [--retrieve]
+        If set, perform a DICOM movescu on the set of filtered 
+        SeriesInstanceUIDs using internal calls.
+
+        [--move]
+        If set and called with [--retrieve], perform a DICOM movescu on the 
+        set of filtered SeriesInstanceUIDs using the pypx/move module.
+
         [--reportTags <JSONdesc>]
         If specified, print only the JSON specified result tags from either the
         STUDY or SERIES level.
@@ -209,13 +165,14 @@ def synopsis(ab_shortOnly = False):
         An optional directive to colorize the report output, either for 'light'
         or 'dark' consoles.
 
-        [--retrieve]
-        If set, perform a DICOM movescu on the set of filtered SeriesInstanceUIDs using
-        internal calls.
+        [--printReport tabular|rawText|json]               
+        If specified, pretty print a report in a variety of formats.
 
-        [--move]
-        If set, perform a DICOM movescu on the set of filtered SeriesInstanceUIDs using
-        the pypx/move module.
+        [--waitForUserTerminate]
+        If specified, wait at program conclusion for explicit user termination.
+        This is useful in dockerized runs since PACS data might still be 
+        in flight when the program ends, and terminating the program then
+        will result in non reception of outstanding data.                           
 
         [-x|--desc]                                     
         Provide an overview help page.
@@ -303,14 +260,10 @@ def synopsis(ab_shortOnly = False):
 
     DOCKERIZED EXAMPLES
 
-        docker run  --rm -ti                                        \\
-            -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}')\\
-            -v $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx  \\
-            -v $(pwd)/bin/px-echo:/usr/local/bin/px-echo                \\
-            -v $(pwd)/bin/px-find:/usr/local/bin/px-find                \\
-            -v $(pwd)/bin/px-move:/usr/local/bin/px-move                \\
-            -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen            \\
-            local/pypx                                                  \\
+        docker run  --rm -ti                                            \\
+            -p 10402:10402                                              \\
+            -v /tmp:/dicom                                              \\
+            fnndsc/pypx                                                 \\
             --px-find                                                   \\
             --aet CHIPS                                                 \\
             --aec ORTHANC                                               \\
@@ -341,14 +294,10 @@ def synopsis(ab_shortOnly = False):
                 }
             }'
 
-        docker run  --rm -ti                                        \\
-            -e HOST_IP=$(ip route | grep -v docker | awk '{if(NF==11) print $9}')\\
-            -v $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx  \\
-            -v $(pwd)/bin/px-echo:/usr/local/bin/px-echo                \\
-            -v $(pwd)/bin/px-find:/usr/local/bin/px-find                \\
-            -v $(pwd)/bin/px-move:/usr/local/bin/px-move                \\
-            -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen            \\
-            local/pypx                                                  \\
+        docker run  --rm -ti                                            \\
+            -p 10402:10402                                              \\
+            -v /tmp:/dicom                                              \\
+            fnndsc/pypx                                                 \\
             --px-find                                                   \\
             --aec CHRIS                                                 \\
             --aet FNNDSC-CHRISDEV                                       \\
@@ -421,13 +370,6 @@ parser.add_argument(
     type    = str,
     default = '4242', 
     help    = 'PACS server port')
-parser.add_argument(
-    '--executable', 
-    action  = 'store', 
-    dest    = 'executable', 
-    type    = str,
-    default = '/usr/bin/findscu', 
-    help    = 'Findscu executable absolute location')
 parser.add_argument(
     '--findscu', 
     action  = 'store', 
