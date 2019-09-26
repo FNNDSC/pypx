@@ -4,6 +4,14 @@ source common.bash
 
 let G_DEBUG=0
 G_DICOMDIR=$(pwd)/dicom
+G_AETITLE=CHIPS
+let Gb_AETITLE=0
+G_QUERYHOST=127.0.0.1
+let Gb_QUERYHOST=0
+G_QUERYPORT=4242
+let Gb_QUERYPORT=0
+G_CALLTITLE=ORTHANC
+let Gb_CALLTITLE=0
 G_INSTITUTION=BCH-chrisdev
 G_SYNOPSIS="
 
@@ -15,6 +23,10 @@ G_SYNOPSIS="
   
         PACS_QR.sh                                                      \\
                         [-h <institution>]                              \\
+                        [-P <PACSserver>]                               \\
+                        [-p <PACSport>]                                 \\
+                        [-a <AETitle>]                                  \\
+                        [-c <CalledAETitle>]                            \\
                         [-D]                                            \\  
                         [-d <dicomDir>]                                 \\
                         [-C]                                            \\
@@ -39,7 +51,19 @@ G_SYNOPSIS="
                 'MGH', 
                 'MGH2'
             ]
-            
+
+        [-P <PACSserver>]
+        Explicitly set the PACS IP to <PACSserver>.
+
+        [-p <PACSport>]
+        Explicitly set the PACS port to <PACSport>.
+        
+        [-a <AETitle>]
+        Explicitly set the AETitle of the client to <AETitle>
+
+        [-c <CalledAETitle>]
+        Explicitly set the CalledAETitle to <CalledAETitle>.
+
         -D
         If specified, volume mount source files into the container for
         debugging.
@@ -97,6 +121,12 @@ function institution_set
 
     case "$INSTITUTION" 
     in
+        orthanc)
+          G_AETITLE=CHIPS
+          G_QUERYHOST=127.0.0.1
+          G_QUERYPORT=4242
+          G_CALLTITLE=ORTHANC
+        ;;
         BCH-chris)
           G_AETITLE=FNNDSC-CHRIS
           G_QUERYHOST=134.174.12.21
@@ -130,22 +160,32 @@ function institution_set
     esac
 }
 
-while getopts h:A:DCd: option ; do
+while getopts h:Q:DCd:P:p:a:c: option ; do
     case "$option" 
     in
-        A) ARGS=$OPTARG                 ;;
+        Q) ARGS=$OPTARG                 ;;
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
+        P) QUERYHOST=$OPTARG          
+           Gb_QUERYHOST=1               ;;
+        p) QUERYPORT=$OPTARG          
+           Gb_QUERYPORT=1               ;;
+        a) AETITLE=$OPTARG            
+           Gb_AETITLE=1                 ;;
+        c) CALLTITLE=$OPTARG          
+           Gb_CALLTITLE=1               ;;
         h) G_INSTITUTION=$OPTARG
            let Gb_institution=1         ;;
         *) synopsis_show                ;;
     esac
 done
 
-#shift $(($OPTIND - 1))
-#PXFINDARGS=$*
-
 institution_set $G_INSTITUTION
+
+if (( Gb_QUERYHOST )) ; then  G_QUERYHOST=$QUERYHOST;  fi
+if (( Gb_QUERYPORT )) ; then  G_QUERYPORT=$QUERYPORT;  fi
+if (( Gb_AETITLE )) ;   then  G_AETITLE=$AETITLE;      fi
+if (( Gb_CALLTITLE )) ; then  G_CALLTITLE=$CALLTITLE;  fi
 
 if (( Gb_CLEAR )) ; then
         printf "%60s" "Removing legacy/existing $G_DICOMDIR... "
