@@ -32,7 +32,7 @@ class Move(Base):
 
         super(Move, self).__init__(arg)
         self.dp = pfmisc.debug(
-                    verbosity   = self.arg['verbosity'],
+                    verbosity   = self.verbosity,
                     within      = 'Find',
                     syslog      = False
         )
