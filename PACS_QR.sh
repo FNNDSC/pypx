@@ -9,21 +9,21 @@ G_SYNOPSIS="
 
   NAME
 
-       	PACS_QR.sh 
+        PACS_QR.sh 
 
   SYNOPSIS
   
-        PACS_QR.sh   							\\
+        PACS_QR.sh                                                      \\
                         [-h <institution>]                              \\
                         [-D]                                            \\  
                         [-d <dicomDir>]                                 \\
                         [-C]                                            \\
-			[-A <px-find.py args>]
+                        [-Q <px-find.py args>]
 
   DESC
 
-	PACS_QR.sh is a thin convenience wrapper around a containerized
-	call to \"fnndsc/pypx --px-find\"
+        PACS_QR.sh is a thin convenience wrapper around a containerized
+        call to \"fnndsc/pypx --px-find\"
   ARGS
 
         -h <institution>
@@ -54,6 +54,41 @@ G_SYNOPSIS="
         If specified, delete and recreate the <dicomDir> (assuming appropriate
         file system permissions.
 
+        -Q <px-find args>
+        This flag captures CLI that are passed to the px-find module.
+
+  EXAMPLE
+
+    QUERY
+    PACS_QR.sh -Q \"--PatientID 1234567\"
+
+    Query the PACS on the passed PatientID. Note that the following query terms are
+    accepted by px-find (and returned by the PACS in Query mode):
+
+        parameters = {
+            'AccessionNumber': '',
+            'PatientID': '',                     # PATIENT INFORMATION
+            'PatientName': '',
+            'PatientBirthDate': '',
+            'PatientAge': '',
+            'PatientSex': '',
+            'StudyDate': '',                     # STUDY INFORMATION
+            'StudyDescription': '',
+            'StudyInstanceUID': '',
+            'Modality': '',
+            'ModalitiesInStudy': '',
+            'PerformedStationAETitle': '',
+            'NumberOfSeriesRelatedInstances': '', # SERIES INFORMATION
+            'InstanceNumber': '',
+            'SeriesDate': '',
+            'SeriesDescription': '',
+            'SeriesInstanceUID': '',
+            'QueryRetrieveLevel': 'SERIES'
+        }
+
+  RETRIEVE
+  PACS_QR.sh -Q \"PatientID 1234567 --retrieve --printReport ''\"
+
 "
 
 function institution_set
@@ -62,12 +97,6 @@ function institution_set
 
     case "$INSTITUTION" 
     in
-        BCH)
-          G_AETITLE=rudolphpienaar
-          G_QUERYHOST=134.174.12.21
-          G_QUERYPORT=104
-          G_CALLTITLE=CHRIS
-        ;;
         BCH-chris)
           G_AETITLE=FNNDSC-CHRIS
           G_QUERYHOST=134.174.12.21
@@ -104,9 +133,9 @@ function institution_set
 while getopts h:A:DCd: option ; do
     case "$option" 
     in
-	A) ARGS=$OPTARG			;;
-	C) let Gb_CLEAR=1               ;;
-	D) let Gb_DEBUG=1               ;;
+        A) ARGS=$OPTARG                 ;;
+        C) let Gb_CLEAR=1               ;;
+        D) let Gb_DEBUG=1               ;;
         h) G_INSTITUTION=$OPTARG
            let Gb_institution=1         ;;
         *) synopsis_show                ;;
@@ -137,16 +166,16 @@ if (( Gb_DEBUG )) ; then
                 -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen "
 fi
 
-docker run  --rm -ti	                    	\
+docker run  --rm -ti                            \
             -p 10402:10402                      \
             -v $G_DICOMDIR:/dicom               \
             $DEBUG                              \
-            local/pypx                      	\
-            --px-find                       	\
-            --aec $G_CALLTITLE	            	\
-            --aet $G_AETITLE	            	\
-            --serverIP $G_QUERYHOST         	\
-            --serverPort $G_QUERYPORT       	\
-            --colorize dark                 	\
-            --printReport tabular		\
-	    $ARGS
+            local/pypx                          \
+            --px-find                           \
+            --aec $G_CALLTITLE                  \
+            --aet $G_AETITLE                    \
+            --serverIP $G_QUERYHOST             \
+            --serverPort $G_QUERYPORT           \
+            --colorize dark                     \
+            --printReport tabular               \
+            $ARGS
