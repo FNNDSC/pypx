@@ -57,9 +57,12 @@ class Find(Base):
         the FIRST series in the STUDY is reported. 
         """
 
-        if len(arg['reportTags']):
-            self.d_reportTags   = json.loads(arg['reportTags'])
-        else:
+        b_reportSet = False
+        if 'reportTags' in arg.keys():
+            if len(arg['reportTags']):
+                self.d_reportTags   = json.loads(arg['reportTags'])
+                b_reportSet         = True
+        if not b_reportSet:
             self.d_reportTags = \
             {
                 "header": 
@@ -87,14 +90,9 @@ class Find(Base):
                 }
             }
 
-        if 'movescu' in arg.keys():
-            self.movescu    = arg['movescu']
-        if 'findscu' in arg.keys():
-            self.findscu    = arg['findscu']
-
         super(Find, self).__init__(arg)
         self.dp             = pfmisc.debug(
-                                        verbosity   = self.arg['verbosity'],
+                                        verbosity   = self.verbosity,
                                         within      = 'Find',
                                         syslog      = False
                                         )
@@ -208,7 +206,7 @@ class Find(Base):
         def colorize_set():
             CheaderField        = ''
             CheaderValue        = ''
-            str_colorize        = self.arg['colorize']
+            str_colorize        = self.colorize
             b_colorize          = bool(len(str_colorize))
             if b_colorize:
                 if str_colorize == 'dark':
@@ -367,7 +365,7 @@ class Find(Base):
 
         return query
 
-    def retrieve(self, d_filteredHits):
+    def retrieve_request(self, d_filteredHits):
         """
         Perform a request to "move" the image data at SERIES level.
 
@@ -402,7 +400,7 @@ class Find(Base):
                     Colors.YELLOW + 
                     str_seriesDescription
                 )
-                if self.arg['move']:
+                if self.move:
                     self.arg['SeriesInstanceUID']   = str_seriesUID
                     self.arg['StudyInstanceUID']    = str_studyUID
                     d_moveRun = pypx.move({
@@ -520,9 +518,9 @@ class Find(Base):
         # pudb.set_trace()
         d_report  = self.report_generate(filteredStudiesResponse)
         filteredStudiesResponse['report'] = d_report
-        if opt['retrieve']: self.retrieve(filteredStudiesResponse)
-        if len(self.arg['printReport']):
-            if self.arg['printReport'] in filteredStudiesResponse['report'].keys():
+        if self.retrieve: self.retrieve_request(filteredStudiesResponse)
+        if len(self.printReport):
+            if self.printReport in filteredStudiesResponse['report'].keys():
                 self.report_print(filteredStudiesResponse['report'])
         return filteredStudiesResponse
 
@@ -530,7 +528,7 @@ class Find(Base):
         """
         Print a report based on one of the <str_field> arguments.
         """
-        str_field   = self.arg['printReport']
+        str_field   = self.printReport
         if str_field != 'json':
             for d_hit in d_hits[str_field]:
                 print("%s\n%s\n" % (d_hit['header'], d_hit['body']))
