@@ -74,7 +74,7 @@ def synopsis(ab_shortOnly = False):
                 [--aec <CalledAETitle>]                             \\
                 [--serverIP <PACSserverIP>]                         \\
                 [--serverPort <PACSserverPort>]                     \\
-                [--executable <movescuAbsolutePath>]                \\
+                [--movescu <movescuAbsolutePath>]                   \\
                 [--StudyInstanceUID <studyInstanceUID>]             \\
                 [--SeriesInstanceUID <seriesInstanceUID>]           \\
                 [-x|--desc]                                         \\
@@ -109,7 +109,7 @@ def synopsis(ab_shortOnly = False):
         [--serverPort <PACSserverPort>]                     
         The port associated with the PACS server.
 
-        [--executable <movescuAbsolutePath>]                
+        [--movescu <movescuAbsolutePath>]                
         The absolute location of the 'movescu' executable.
         
         [--StudyInstanceUID <studyInstanceUID>]             
@@ -117,14 +117,6 @@ def synopsis(ab_shortOnly = False):
 
         [--SeriesDescription <seriesInstanceUID>]           
         The <seriesInstanceUID> to request.
-
-        [--reportTags <JSONdesc>]
-        If specified, print only the JSON specified result tags from either the
-        STUDY or SERIES level.
-
-        [--colorize 'light'|'dark']
-        An optional directive to colorize the report output, either for 'light'
-        or 'dark' consoles.
 
         [-x|--desc]                                     
         Provide an overview help page.
@@ -150,9 +142,9 @@ def synopsis(ab_shortOnly = False):
     EXAMPLES
 
         px-move                                                     \\
-            --aec CHRIS                                             \\
-            --aet FNNDSC-CHRISDEV                                   \\
-            --serverIP 134.174.12.21                                \\
+            --aet CHIPS                                             \\
+            --aec ORTHANC                                           \\
+            --serverIP 127.0.0.1                                    \\
             --serverPort 104                                        \\
             --StudyInstanceUID 1.2.3.435                            \\
             --SeriesInstanceUID 2.3.5.6.7
@@ -161,11 +153,8 @@ def synopsis(ab_shortOnly = False):
     DOCKERIZED EXAMPLES
 
         docker run  --rm -ti                                            \\
-            -v $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx  \\
-            -v $(pwd)/bin/px-echo:/usr/local/bin/px-echo                \\
-            -v $(pwd)/bin/px-find:/usr/local/bin/px-find                \\
-            -v $(pwd)/bin/px-move:/usr/local/bin/px-move                \\
-            -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen            \\
+            -P 10402:10402                                              \\
+            -v /tmp:/dicom                                              \\
             local/pypx                                                  \\
             --px-move                                                   \\
             --aet CHIPS                                                 \\
