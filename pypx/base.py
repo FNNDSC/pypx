@@ -27,24 +27,42 @@ class Base():
 
     """
 
-    def __init__(self,arg):
+    def defaults_init(self, d_arg):
+        """
+        Somewhat convoluted initialization that mirrors/duplicates
+        the default initialization when called from CLI
+        """
+
+        for k,v in d_arg.items():
+            if k in self.arg:
+                setattr(self, k, self.arg[k])
+            else:
+                setattr(self, k, v)
+
+    def __init__(self, arg):
         """
         Initialize some core self variables common to all derived classes.
         """
 
         self.arg = arg
 
-        if 'aet' in arg:        self.aet = arg['aet']
-        else:                   self.aet = 'CHRIS-ULTRON-AET'
-
-        if 'aec' in arg:        self.aec = arg['aec']
-        else:                   self.aec = 'CHRIS-ULTRON-AEC'
-
-        if 'serverIP' in arg:   self.serverIP = arg['serverIP']
-        else:                   self.serverIP = '192.168.1.110'
-
-        if 'serverPort' in arg: self.serverPort = arg['serverPort']
-        else:                   self.serverPort = '4242'
+        self.defaults_init(
+            {
+                'aet':          'CHRIS-AET',
+                'aec':          'CHRIS-AEC',
+                'serverIP':     '127.0.0.1',
+                'serverPort':   4242,
+                'findscu':      '/usr/bin/findscu',
+                'movescu':      '/usr/bin/movescu',
+                'storescu':     '/usr/bin/storescu',
+                'echoscu':      '/usr/bin/echoscu',
+                'colorize':     '',
+                'printReport':  '',
+                'verbosity':    1,
+                'retrieve':     False,
+                'move':         False
+            }
+        )
 
         self.response = {
             'status': 'error',
@@ -52,7 +70,7 @@ class Base():
         }
 
         self.dp = pfmisc.debug(
-                    verbosity   = self.arg['verbosity'],
+                    verbosity   = self.verbosity,
                     within      = 'Base',
                     syslog      = False
         )
