@@ -9,23 +9,25 @@ def readme():
     with open('README.rst') as f:
         return f.read()
 
-setup(name='pypx',
-      version='1.0.0.0',
-      description='Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
-      long_description=readme(),
-      url='http://github.com/fnndsc/pypx',
-      author='FNNDSC Developpers',
-      author_email='dev@babymri.com',
-      license='MIT',
-      packages=['pypx'],
-      install_requires=[
-          'terminaltables',
-          'py-dateutil',
-          'pydicom',
-          'pfmisc',
-          'pprint',
-      ],
-      test_suite='nose.collector',
-      tests_require=['nose'],
-      scripts=['bin/px-echo', 'bin/px-find', 'bin/px-listen', 'bin/px-move'],
-      zip_safe=False)
+setup(
+        name                =   'pypx',
+        version             =   '1.0.0.0',
+        description         =   'Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
+        long_description    =   readme(),
+        url                 =   'http://github.com/fnndsc/pypx',
+        author              =   'FNNDSC Developers',
+        author_email        =   'dev@babymri.com',
+        license             =   'MIT',
+        packages            =   ['pypx'],
+        install_requires=[
+            'terminaltables',
+            'py-dateutil',
+            'pydicom',
+            'pfmisc',
+            'pprint',
+        ],
+        test_suite          =   'nose.collector',
+        tests_require       =   ['nose'],
+        scripts             =   ['bin/px-echo', 'bin/px-find', 'bin/px-listen', 'bin/px-move'],
+        zip_safe            =   False
+        )
