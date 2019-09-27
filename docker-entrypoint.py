@@ -32,6 +32,21 @@ def pxfind_do(args, unknown):
     str_CMD = "/usr/local/bin/px-find  %s" % (str_otherArgs)
     return str_CMD
 
+def pxmove_do(args, unknown):
+
+    str_otherArgs   = ' '.join(unknown)
+
+    str_CMD = "/usr/local/bin/px-move  %s" % (str_otherArgs)
+    return str_CMD
+
+def pxecho_do(args, unknown):
+
+    str_otherArgs   = ' '.join(unknown)
+
+    str_CMD = "/usr/local/bin/px-echo  %s" % (str_otherArgs)
+    return str_CMD
+
+
 
 parser  = argparse.ArgumentParser(description = str_desc)
 
@@ -49,15 +64,28 @@ parser.add_argument(
     default = False,
     help    = 'if specified, indicates running px-move.',
 )
+parser.add_argument(
+    '--px-echo',
+    action  = 'store_true',
+    dest    = 'b_pxecho',
+    default = False,
+    help    = 'if specified, indicates running px-echo.',
+)
+
 
 args, unknown   = parser.parse_known_args()
 
 if __name__ == '__main__':
-    if args.b_pxfind:
-        try:
-            fname   = 'pxfind_do(args, unknown)'
-            str_cmd = eval(fname)
-            # print(str_cmd)
-            os.system(str_cmd)
-        except:
-            print("Misunderstood container app... exiting.")
+    fname   = 'pxfind_do(args, unknown)'
+
+    if args.b_pxfind: fname   = 'pxfind_do(args, unknown)'
+    if args.b_pxmove: fname   = 'pxmove_do(args, unknown)'
+    if args.b_pxecho: fname   = 'pxecho_do(args, unknown)'
+
+    try:
+        str_cmd = eval(fname)
+        # print(str_cmd)
+        os.system(str_cmd)
+    except:
+        print("Misunderstood container app... exiting.")
+        
