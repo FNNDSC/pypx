@@ -35,7 +35,7 @@ Communications with a PACS are for the most insecure and reflected a circa 1990s
 1.1.2 Configuring a PACS
 -------------------------
 
-In order to be fully complete, a destination PACS with which ``pypx`` modules wish to communicate needs to be configured with appriate ``AETitle``, ``CalledAETitle``, as well as the network address IP and port of the ``pypx`` hosting machine. Configuring a PACS is obviously outside of the scope of this documentation. Consult your PACS for information on this configuration.
+In order to be fully complete, a destination PACS with which ``pypx`` modules wish to communicate needs to be configured with appropriate ``AETitle``, ``CalledAETitle``, as well as the network address IP and port of the ``pypx`` hosting machine. Configuring a PACS is obviously outside of the scope of this documentation. Consult your PACS for information on this configuration.
 
 1.1.3 Configuring ``pypx``
 ---------------------------
