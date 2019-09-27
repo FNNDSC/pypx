@@ -1,0 +1,29 @@
+# https://docs.docker.com/compose/yml/
+# Each service defined in docker-compose.yml must specify exactly one of
+# image or build. Other keys are optional, and are analogous to their
+# docker run command-line counterparts.
+#
+# As with docker run, options specified in the Dockerfile (e.g., CMD,
+# EXPOSE, VOLUME, ENV) are respected by default - you don't need to
+# specify them again in docker-compose.yml.
+#
+
+version: '3'
+
+services:
+  pypx_dev:
+    image:  ${CREPO}/pypx
+    volumes:
+      # - /var/run/docker.sock:/var/run/docker.sock
+      # - .:/usr/local/pypx
+      - ./pypx:/usr/local/lib/python3.6/dist-packages/pypx
+      - bin/px-echo:/usr/local/bin/px-echo
+      - bin/px-find:/usr/local/bin/px-find
+      - bin/px-move:/usr/local/bin/px-move
+      - bin/px-listen:/usr/local/bin/px-listen
+    ports:
+      - "10402:10402"
+    labels:
+      name: "PACS access wrapper services."
+      role: "PACS access wrapper services."
+

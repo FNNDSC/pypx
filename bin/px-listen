@@ -9,28 +9,201 @@
 #                        dev@babyMRI.org
 #
 
-# FOR DEV PURPOSE
-# import sys, os
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import argparse
-import pypx
+import  sys, os
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+from    terminaltables      import SingleTable
+from    pfmisc._colors      import Colors
+import  pypx
 
-parser = argparse.ArgumentParser(description='Listen for incoming data from PACS')
+str_name    = "px-listen"
+str_version = "1.0.0.0"
+str_desc    = Colors.CYAN + """
+                    
+             _ _     _              
+            | (_)   | |             
+ _ __ __  __| |_ ___| |_  ___ _ __  
+| '_ \\ \/ /| | / __| __|/ _ \ '_ \ 
+| |_) |>  < | | \__ \ |_|  __/ | | |
+| .__//_/\_\|_|_|___/\__|\___|_| |_|
+| |                                 
+|_|                                 
+
+
+                        PACS ToolKit Wrapper
+                             listener
+
+                       -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --                          
+
+    ``px-listen`` is a wrapper script about the DCMTK 'storescu' application
+    that provides functionality for receiving PACS communictaions.
+
+    ``px-listen`` is a core appliucation that operates mostly as a daemon
+    called by a management process (such as ``xinetd`` on Ubuntu systems). It 
+    is not a user-facing application and not called by a user/client process.
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - PACS listener service
+
+    SYNOPSIS
+
+            px-listen                                               \\
+                [--tmpdir <tmpdir>]                                 \\
+                [--logdir <logdir>]                                 \\
+                [--datadir <datadir>]                               \\
+                [--executable <executable>]                         \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--debugToDir <dir>]                                \\
+                [--verbosity <level>]
+
+    ''' % scriptName + Colors.NO_COLOUR 
+
+    description = Colors.LIGHT_GREEN + '''
+
+        [--tmpdir <tmpdir>]
+        A tmp directory that will contain data as it is incoming from a 
+        remote PACS.
+
+        [--logdir <logdir>]                             
+        The directory containing log files relevant to px-listen operation.
+
+        [--datadir <datadir>]
+        The directory that will contain the root of the file tree of received
+        image files.
+
+        [--executable <storescp>]                     
+        The actual 'storescp' absolute location.
+
+        [-x|--desc]                                     
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output. Allows for
+        more fine tuned output control as opposed to '--quiet' that effectively
+        silences everything.
+
+''' + Colors.PURPLE + '''
+
+    EXAMPLES
+
+        px-listen                                                   \\
+                --tmpdir /dicom/tmp                                 \\
+                --logdir /dicom/log                                 \\
+                --datadir /dicom/data                  
+
+''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
 
 # Settings
 parser.add_argument(
-    '-t', '--tmpdir', action='store', dest='tmp_directory', type=str,
-    default='/tmp', help='Directory to store temporary files.')
+    '-t', '--tmpdir', 
+    action  = 'store', 
+    dest    = 'tmp_directory', 
+    type    = str,
+    default = '/tmp', 
+    help    = 'Directory to store temporary files.'
+    )
 parser.add_argument(
-    '-l', '--logdir', action='store', dest='log_directory', type=str,
-    default='/tmp/log', help='Directory to store log files.')
+    '-l', '--logdir', 
+    action  = 'store', 
+    dest    = 'log_directory', 
+    type    = str,
+    default = '/tmp/log', 
+    help    = 'Directory to store log files.'
+    )
 parser.add_argument(
-    '-d', '--datadir', action='store', dest='data_directory', type=str,
-    default='/tmp/data', help='Directory to store DICOM files.')
+    '-d', '--datadir', 
+    action  = 'store', 
+    dest    = 'data_directory', 
+    type    = str,
+    default = '/tmp/data', 
+    help    = 'Directory to store DICOM files.'
+    )
 parser.add_argument(
-    '-e', '--executable', action='store', dest='executable', type=str,
-    default='/usr/local/bin/storescp', help='Storescp executable absolute location')
+    '-e', '--executable', 
+    action  = 'store', 
+    dest    = 'executable', 
+    type    = str,
+    default = '/usr/bin/storescp', 
+    help    = 'storescp executable absolute location'
+    )
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    type    = int,
+    default = 1)
+parser.add_argument(
+    "-x", "--desc",
+    help    = "long synopsis",
+    dest    = 'desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "short synopsis",
+    dest    = 'synopsis',
+    action  = 'store_true',
+    default = False
+) 
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
 
-opts = parser.parse_args()
-pypx.listen(vars(opts))
+args        = parser.parse_args()
+
+if args.desc or args.synopsis:
+    print(str_desc)
+    if args.desc:
+        str_help     = synopsis(False)
+    if args.synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+pypx.listen(vars(args))
