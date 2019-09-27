@@ -54,7 +54,7 @@ class Base():
                 'serverPort':   4242,
                 'findscu':      '/usr/bin/findscu',
                 'movescu':      '/usr/bin/movescu',
-                'storescu':     '/usr/bin/storescu',
+                'storescp':     '/usr/bin/storescp',
                 'echoscu':      '/usr/bin/echoscu',
                 'colorize':     '',
                 'printReport':  '',
@@ -134,7 +134,7 @@ class Base():
         for line in std_split:
             if line.startswith('I: '):
                 info_count += 1
-            elif line.startswith('E: '):
+            elif line.startswith('E: ') or 'error' in line.lower():
                 error_count += 1
 
         status = 'error'
@@ -178,15 +178,19 @@ class Base():
                     data[-1][label]['tag'] = tag
                     data[-1][label]['value'] = value
                     data[-1][label]['label'] = label
+                else:
+                    # Only append the line output for the echo command
+                    if type(self).__name__ == 'Echo': data.append(line)
 
         return data
 
     def formatResponse(self, raw_response):
         std = raw_response.stdout.decode('utf-8', 'slashescape')
         response = {
-            'status':   'success',
-            'data':     '',
-            'command':  raw_response.args
+            'status':       'success',
+            'data':         '',
+            'command':      raw_response.args,
+            'returncode':   raw_response.returncode
         }
 
         status = self.checkResponse(std)
