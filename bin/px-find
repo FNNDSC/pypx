@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "1.0.0.0"
+str_version = "1.0.0.1"
 str_desc    = Colors.CYAN + """
                     
               __ _           _ 
@@ -233,7 +233,7 @@ def synopsis(ab_shortOnly = False):
             --serverIP localhost                                    \\
             --serverPort 4242                                       \\
             --PatientID LILLA-9731                                  \\
-            --colorize dark
+            --colorize dark					    \\
             --reportTags                                            \\
             '{
                 "header": 
