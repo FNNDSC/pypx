@@ -152,7 +152,7 @@ def synopsis(ab_shortOnly = False):
         docker run  --rm -ti                                            \\
             -P 10402:10402                                              \\
             -v /tmp:/dicom                                              \\
-            local/pypx                                                  \\
+            fnndsc/pypx                                                 \\
             --px-move                                                   \\
             --aet CHIPS                                                 \\
             --aec ORTHANC                                               \\
