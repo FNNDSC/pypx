@@ -164,6 +164,7 @@ while getopts h:Q:DCd:P:p:a:c: option ; do
     case "$option" 
     in
         Q) ARGS=$OPTARG                 ;;
+	d) G_DICOMDIR=$OPTARG		;;
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
         P) QUERYHOST=$OPTARG          
@@ -176,7 +177,8 @@ while getopts h:Q:DCd:P:p:a:c: option ; do
            Gb_CALLTITLE=1               ;;
         h) G_INSTITUTION=$OPTARG
            let Gb_institution=1         ;;
-        *) synopsis_show                ;;
+        *) synopsis_show
+           shut_down 1                  ;;
     esac
 done
 
