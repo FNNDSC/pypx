@@ -111,7 +111,7 @@ G_SYNOPSIS="
         }
 
   RETRIEVE
-  PACS_QR.sh -Q \"PatientID 1234567 --retrieve --printReport ''\"
+  PACS_QR.sh -Q \"--PatientID 1234567 --retrieve --printReport ''\"
 
 "
 
