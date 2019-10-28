@@ -72,11 +72,12 @@ G_SYNOPSIS="
               directory!
 
         -d <dicomDir>
-        Set the <dicomDir> in the host that is mounted into the container.
+        Set the <dicomDir> in the host that is mounted into the container. This
+        MUST be an ABSOLUTE directory spec.
         
         -C 
         If specified, delete and recreate the <dicomDir> (assuming appropriate
-        file system permissions.
+        file system permissions).
 
         -Q <px-find args>
         This flag captures CLI that are passed to the px-find module.
