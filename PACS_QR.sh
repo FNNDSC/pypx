@@ -209,7 +209,7 @@ if (( Gb_DEBUG )) ; then
                 -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen "
 fi
 
-docker run  --rm -ti                            \
+docker run  --rm                                \
             -p 10402:10402                      \
             -v $G_DICOMDIR:/dicom               \
             $DEBUG                              \
