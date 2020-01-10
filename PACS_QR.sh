@@ -13,6 +13,7 @@ let Gb_QUERYPORT=0
 G_CALLTITLE=ORTHANC
 let Gb_CALLTITLE=0
 G_INSTITUTION=BCH-chrisdev
+G_DOCKERORG=fnndsc
 G_SYNOPSIS="
 
   NAME
@@ -30,7 +31,8 @@ G_SYNOPSIS="
                         [-D]                                            \\  
                         [-d <dicomDir>]                                 \\
                         [-C]                                            \\
-                        [-Q <px-find.py args>]
+                        [-r <dockerorg>]                                \\
+                         -Q <px-find.py args>
 
   DESC
 
@@ -64,20 +66,32 @@ G_SYNOPSIS="
         [-c <CalledAETitle>]
         Explicitly set the CalledAETitle to <CalledAETitle>.
 
-        -D
+        [-D]
         If specified, volume mount source files into the container for
         debugging.
         
         NOTE: This assumes the script is run from the root github repo
               directory!
 
-        -d <dicomDir>
+        [-d <dicomDir>]
         Set the <dicomDir> in the host that is mounted into the container. This
         MUST be an ABSOLUTE directory spec.
         
-        -C 
+        [-C] 
         If specified, delete and recreate the <dicomDir> (assuming appropriate
         file system permissions).
+
+        [-r <dockerorg>]
+        The docker organization (or 'base' repository). This defauls to 'fnndsc'
+        but if you have built a 'local' version -- with for example:
+        
+            docker build -t local/pypx 
+            
+        use 
+
+          -r local
+
+        to use this 'local' build.
 
         -Q <px-find args>
         This flag captures CLI that are passed to the px-find module.
@@ -161,11 +175,12 @@ function institution_set
     esac
 }
 
-while getopts h:Q:DCd:P:p:a:c: option ; do
+while getopts h:Q:DCd:P:p:a:c:r: option ; do
     case "$option" 
     in
         Q) ARGS=$OPTARG                 ;;
-	d) G_DICOMDIR=$OPTARG		;;
+        d) G_DICOMDIR=$OPTARG           ;;
+        r) G_DOCKERORG=$OPTARG          ;;
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
         P) QUERYHOST=$OPTARG          
@@ -213,7 +228,7 @@ docker run  --rm                                \
             -p 10402:10402                      \
             -v $G_DICOMDIR:/dicom               \
             $DEBUG                              \
-            local/pypx                          \
+            ${G_DOCKERORG}/pypx                 \
             --px-find                           \
             --aec $G_CALLTITLE                  \
             --aet $G_AETITLE                    \
