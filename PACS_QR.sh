@@ -2,6 +2,7 @@
 
 source common.bash
 
+let G_VERBOSE=0
 let G_DEBUG=0
 G_DICOMDIR=$(pwd)/dicom
 G_AETITLE=CHIPS
@@ -32,6 +33,7 @@ G_SYNOPSIS="
                         [-d <dicomDir>]                                 \\
                         [-C]                                            \\
                         [-r <dockerorg>]                                \\
+                        [-v]                                            \\
                          -Q <px-find.py args>
 
   DESC
@@ -92,6 +94,10 @@ G_SYNOPSIS="
           -r local
 
         to use this 'local' build.
+
+        [-v]
+        If specified, toggle verbose output on which essentially just shows
+        the final docker CLI.
 
         -Q <px-find args>
         This flag captures CLI that are passed to the px-find module.
@@ -175,7 +181,7 @@ function institution_set
     esac
 }
 
-while getopts h:Q:DCd:P:p:a:c:r: option ; do
+while getopts h:Q:DCd:P:p:a:c:r:v option ; do
     case "$option" 
     in
         Q) ARGS=$OPTARG                 ;;
@@ -183,6 +189,7 @@ while getopts h:Q:DCd:P:p:a:c:r: option ; do
         r) G_DOCKERORG=$OPTARG          ;;
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
+        v) let G_VERBOSE=1              ;;
         P) QUERYHOST=$OPTARG          
            Gb_QUERYHOST=1               ;;
         p) QUERYPORT=$OPTARG          
@@ -206,10 +213,10 @@ if (( Gb_AETITLE )) ;   then  G_AETITLE=$AETITLE;      fi
 if (( Gb_CALLTITLE )) ; then  G_CALLTITLE=$CALLTITLE;  fi
 
 if (( Gb_CLEAR )) ; then
-        printf "%60s" "Removing legacy/existing $G_DICOMDIR... "
+        printf "%80s" "Removing $G_DICOMDIR... "
         sudo rm -fr $G_DICOMDIR
         printf "[ OK ]\n"
-        printf "%60s" "Creating new $G_DICOMDIR... "
+        printf "%80s" "Creating $G_DICOMDIR... "
         mkdir $G_DICOMDIR
         chmod 777 $G_DICOMDIR
         printf "[ OK ]\n"
@@ -217,23 +224,30 @@ fi
 
 DEBUG=""
 if (( Gb_DEBUG )) ; then
-        DEBUG=" -v $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx \
-                -v $(pwd)/bin/px-echo:/usr/local/bin/px-echo \
-                -v $(pwd)/bin/px-find:/usr/local/bin/px-find \
-                -v $(pwd)/bin/px-move:/usr/local/bin/px-move \
-                -v $(pwd)/bin/px-listen:/usr/local/bin/px-listen "
+        DEBUG=" --volume $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx \
+                --volume $(pwd)/bin/px-echo:/usr/local/bin/px-echo \
+                --volume $(pwd)/bin/px-find:/usr/local/bin/px-find \
+                --volume $(pwd)/bin/px-move:/usr/local/bin/px-move \
+                --volume $(pwd)/bin/px-listen:/usr/local/bin/px-listen "
 fi
 
-docker run  --rm                                \
-            -p 10402:10402                      \
-            -v $G_DICOMDIR:/dicom               \
-            $DEBUG                              \
-            ${G_DOCKERORG}/pypx                 \
-            --px-find                           \
-            --aec $G_CALLTITLE                  \
-            --aet $G_AETITLE                    \
-            --serverIP $G_QUERYHOST             \
-            --serverPort $G_QUERYPORT           \
-            --colorize dark                     \
-            --printReport tabular               \
-            $ARGS
+CLI="docker run                               \
+            --rm                              \
+            --publish 10402:10402             \
+            --volume $G_DICOMDIR:/dicom $DEBUG\
+            ${G_DOCKERORG}/pypx               \
+            --px-find                         \
+            --aec $G_CALLTITLE                \
+            --aet $G_AETITLE                  \
+            --serverIP $G_QUERYHOST           \
+            --serverPort $G_QUERYPORT         \
+            --colorize dark                   \
+            --printReport tabular             \
+            $ARGS"
+            
+if (( G_VERBOSE )) ; then
+    CLIp=$(echo "$CLI" | sed 's/--/\n\t--/g' | sed 's/\(.*\)/\1 \\/' | sed 's/        \+/ /')
+    printf "%s\n" "$CLIp"
+fi
+
+exec $CLI
