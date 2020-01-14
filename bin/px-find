@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "1.0.0.1"
+str_version = "1.0.1.2"
 str_desc    = Colors.CYAN + """
                     
               __ _           _ 
@@ -115,6 +115,9 @@ def synopsis(ab_shortOnly = False):
         [--executable <findscuAbsolutePath>]                
         The absolute location of the 'findscu' executable.
         
+        [--AccessionNumber <AccessionNumber>]
+        The AccessionNumber to Q/R.
+
         [--PatientID <MRN>]
         The patient ID on which to Query.
 
@@ -173,6 +176,11 @@ def synopsis(ab_shortOnly = False):
         This is useful in dockerized runs since PACS data might still be 
         in flight when the program ends, and terminating the program then
         will result in non reception of outstanding data.                           
+
+        Note, if running in a container, e.g. via PACS_QR.sh, be sure to also
+        specify a '-D' for debugging in conjunction with this flag. The '-D'
+        runs the container in interactive tty mode, allowing for user tty 
+        input to be correctly interpreted.
 
         [-x|--desc]                                     
         Provide an overview help page.
@@ -389,6 +397,13 @@ parser.add_argument(
 
 # Query settings
 parser.add_argument(
+    '--AccessionNumber', 
+    action  = 'store', 
+    dest    = 'AccessionNumber', 
+    type    = str, 
+    default = '', 
+    help    = 'Accession Number')
+parser.add_argument(
     '--PatientID', 
     action  = 'store', 
     dest    = 'PatientID', 
@@ -590,3 +605,5 @@ if args.b_waitForUserTerminate:
     tb_infoWindow.inner_heading_row_border  = False
     print(tb_infoWindow.table)
     input("\nHit ENTER now to exit.")
+    
+sys.exit(0)
