@@ -224,7 +224,8 @@ fi
 
 DEBUG=""
 if (( Gb_DEBUG )) ; then
-        DEBUG=" --volume $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx \
+        DEBUG=" --tty --interactive                                \
+                --volume $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx \
                 --volume $(pwd)/bin/px-echo:/usr/local/bin/px-echo \
                 --volume $(pwd)/bin/px-find:/usr/local/bin/px-find \
                 --volume $(pwd)/bin/px-move:/usr/local/bin/px-move \
