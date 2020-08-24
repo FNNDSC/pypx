@@ -11,7 +11,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '1.0.1.2',
+        version             =   '1.0.2.0',
         description         =   'Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
@@ -24,7 +24,7 @@ setup(
             'py-dateutil',
             'pydicom',
             'pfmisc',
-            'pprint',
+            'pretty-py3'
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],
