@@ -26,34 +26,34 @@ import  socket
 import  pudb
 
 str_defIP   = [l for l in (
-                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] 
-                if not ip.startswith("127.")][:1], 
-                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) 
+                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")][:1],
+                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-echo"
-str_version = "1.0.0.1"
+str_version = "1.0.2.0"
 str_desc    = Colors.CYAN + """
-                    
-                      _           
-                     | |          
- _ __ __  __ ___  ___| |__   ___  
+
+                      _
+                     | |
+ _ __ __  __ ___  ___| |__   ___
 | '_ \\\\ \/ // _ \\/ __| '_ \\ / _ \\
 | |_) |>  <|  __/ (__| | | | (_) |
-| .__//_/\_\\\___|\\___|_| |_|\\___/ 
-| |                               
-|_|                               
+| .__//_/\_\\\___|\\___|_| |_|\\___/
+| |
+|_|
 
                         PACS ToolKit Wrapper
                             "echo" service
 
                        -- version """ + \
-             Colors.YELLOW + str_version + Colors.CYAN + """ --                          
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
 
-    ``px-echo`` is a module / script that provides functionality for 
+    ``px-echo`` is a module / script that provides functionality for
     testing connectivity with a remote PACS.
 
-    ``px-echo`` is tested against both Orthanc as well as some 
+    ``px-echo`` is tested against both Orthanc as well as some
     commercial PACS offerings.
 
 """ + Colors.NO_COLOUR
@@ -65,7 +65,7 @@ def synopsis(ab_shortOnly = False):
 
 	    %s
 
-        - PACS echo 
+        - PACS echo
 
     SYNOPSIS
 
@@ -90,26 +90,26 @@ def synopsis(ab_shortOnly = False):
             --serverIP 134.174.12.21                                \\
             --serverPort 104
 
-    ''' % scriptName + Colors.NO_COLOUR 
+    ''' % scriptName + Colors.NO_COLOUR
 
     description = Colors.LIGHT_GREEN + '''
 
         [--aet <AETitle>]
         The AETitle of *this* entity.
 
-        [--aec <CalledAETitle>]                             
+        [--aec <CalledAETitle>]
         The called AETitle of *this* entity. Needed for some PACS systems.
 
         [--serverIP <PACSserverIP>]
         The IP of the PACS server.
 
-        [--serverPort <PACSserverPort>]                     
+        [--serverPort <PACSserverPort>]
         The port associated with the PACS server.
 
-        [--echoscu <echoscuAbsolutePath>]                
+        [--echoscu <echoscuAbsolutePath>]
         The absolute location of the 'movescu' executable.
-        
-        [-x|--desc]                                     
+
+        [-x|--desc]
         Provide an overview help page.
 
         [-y|--synopsis]
@@ -168,43 +168,43 @@ parser = ArgumentParser(
 
 # PACS settings
 parser.add_argument(
-    '--aet', 
-    action  = 'store', 
-    dest    = 'aet', 
-    type    = str, 
-    default = 'CHRIS-ULTRON-AET', 
+    '--aet',
+    action  = 'store',
+    dest    = 'aet',
+    type    = str,
+    default = 'CHRIS-ULTRON-AET',
     help    = 'aet'
 )
 parser.add_argument(
-    '--aec', 
-    action  = 'store', 
-    dest    = 'aec', 
-    type    = str, 
-    default = 'CHRIS-ULTRON-AEC', 
+    '--aec',
+    action  = 'store',
+    dest    = 'aec',
+    type    = str,
+    default = 'CHRIS-ULTRON-AEC',
     help    = 'aec'
 )
 parser.add_argument(
-    '--serverIP', 
-    action  = 'store', 
-    dest    = 'serverIP', 
+    '--serverIP',
+    action  = 'store',
+    dest    = 'serverIP',
     type    = str,
-    default = '192.168.1.110', 
+    default = '192.168.1.110',
     help    = 'PACS server IP'
 )
 parser.add_argument(
-    '--serverPort', 
-    action  = 'store', 
-    dest    = 'serverPort', 
+    '--serverPort',
+    action  = 'store',
+    dest    = 'serverPort',
     type    = str,
-    default = '4242', 
+    default = '4242',
     help    = 'PACS server port'
 )
 parser.add_argument(
-    '--echoscu', 
-    action  = 'store', 
-    dest    = 'echoscu', 
+    '--echoscu',
+    action  = 'store',
+    dest    = 'echoscu',
     type    = str,
-    default = '/usr/bin/echoscu', 
+    default = '/usr/bin/echoscu',
     help    = '"echoscu"" executable absolute location'
 )
 parser.add_argument(
@@ -227,7 +227,7 @@ parser.add_argument(
     dest    = 'synopsis',
     action  = 'store_true',
     default = False
-) 
+)
 parser.add_argument(
     '--version',
     help    = 'if specified, print version number',
