@@ -341,6 +341,9 @@ class Find(Base):
             'SeriesDate': '',
             'SeriesDescription': '',
             'SeriesInstanceUID': '',
+            'ProtocolName': '',
+            'AcquisitionProtocolDescription': '',
+            'AcquisitionProtocolName': '',
             'QueryRetrieveLevel': 'SERIES'
         }
 
