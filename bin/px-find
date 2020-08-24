@@ -23,34 +23,34 @@ import  socket
 import  pudb
 
 str_defIP   = [l for l in (
-                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] 
-                if not ip.startswith("127.")][:1], 
-                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) 
+                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")][:1],
+                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "1.0.1.2"
+str_version = "1.0.2.0"
 str_desc    = Colors.CYAN + """
-                    
-              __ _           _ 
+
+              __ _           _
              / _(_)         | |
  _ __ __  __| |_ _ _ __   __| |
 | '_ \\\\ \\/ /|  _| | '_ \\ / _` |
 | |_) |>  < | | | | | | | (_| |
 | .__//_/\\_\\|_| |_|_| |_|\\__,_|
-| |                            
-|_|                            
+| |
+|_|
 
                         PACS ToolKit Wrapper
                             Query / Find
 
                        -- version """ + \
-             Colors.YELLOW + str_version + Colors.CYAN + """ --                          
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
 
-    ``px-find`` is a module / script that provides functionality for 
-    performing a PACS Query operation. 
+    ``px-find`` is a module / script that provides functionality for
+    performing a PACS Query operation.
 
-    ``px-find`` is tested against both Orthanc as well as some 
+    ``px-find`` is tested against both Orthanc as well as some
     commercial PACS offerings.
 
 """ + Colors.NO_COLOUR
@@ -85,6 +85,10 @@ def synopsis(ab_shortOnly = False):
                 [--SeriesDescription <seriesDescription>]           \\
                 [--StudyInstanceUID <studyInstanceUID>]             \\
                 [--SeriesInstanceUID <seriesInstanceUID>]           \\
+                [--ProtocolName <ProtocolName>]                     \\
+                [--AcquisitionProtocolName <APName>]                \\
+                [--AcquisitionProtocolDescription <APDescription>]  \\
+                [--AcquisitionProtocolName <APName>]                \\
                 [--retrieve [--move]]                               \\
                 [--reportTags <JSONDesc>]                           \\
                 [--colorize light|dark]                             \\
@@ -96,25 +100,25 @@ def synopsis(ab_shortOnly = False):
                 [--debugToDir <dir>]                                \\
                 [--verbosity <level>]
 
-    ''' % scriptName + Colors.NO_COLOUR 
+    ''' % scriptName + Colors.NO_COLOUR
 
     description = Colors.LIGHT_GREEN + '''
 
         [--aet <AETitle>]
         The AETitle of *this* entity.
 
-        [--aec <CalledAETitle>]                             
+        [--aec <CalledAETitle>]
         The called AETitle of *this* entity. Needed for some PACS systems.
 
         [--serverIP <PACSserverIP>]
         The IP of the PACS server.
 
-        [--serverPort <PACSserverPort>]                     
+        [--serverPort <PACSserverPort>]
         The port associated with the PACS server.
 
-        [--executable <findscuAbsolutePath>]                
+        [--executable <findscuAbsolutePath>]
         The absolute location of the 'findscu' executable.
-        
+
         [--AccessionNumber <AccessionNumber>]
         The AccessionNumber to Q/R.
 
@@ -124,40 +128,49 @@ def synopsis(ab_shortOnly = False):
         [--PatientName <ExactPatientName>]
         The patient name on which to Query.
 
-        [--PatientSex <M_or_F>]                             
+        [--PatientSex <M_or_F>]
         The patient sex (largely irrelevant since open ended searches are
         not supported by most PACS servers).
-        
-        [--StudyDate <YYYY/MM/DD>]                          
+
+        [--StudyDate <YYYY/MM/DD>]
         Filter results by <studyDate>.
-        
-        [--ModalitiesInStudy <Modalities>]   
+
+        [--ModalitiesInStudy <Modalities>]
         Filter by modalities in study.
 
-        [--Modality <Modality>]   
+        [--Modality <Modality>]
         The modality to filter.
 
-        [--PerformedStationAETitle <StationTitle>]          
+        [--PerformedStationAETitle <StationTitle>]
         Filter by station ID.
 
-        [--StudyDescription <studyDescription>]             
+        [--StudyDescription <studyDescription>]
         Filter by study description.
 
-        [--SeriesDescription <seriesDescription>]           
+        [--SeriesDescription <seriesDescription>]
         Filter by series description.
 
-        [--StudyInstanceUID <studyInstanceUID>]             
+        [--StudyInstanceUID <studyInstanceUID>]
         Filter by study instance UID.
 
-        [--SeriesInstanceUID <seriesInstanceUID>]           
+        [--SeriesInstanceUID <seriesInstanceUID>]
         Filter by series instance UID.
 
+        [--ProtocolName <ProtocolName>]
+        Filter by protocol name.
+
+        [--AcquisitionProtocolDescription <APDescription>]
+        Filter by acquisition protocol description.
+
+        [--AcquisitionProtocolName <APName>]
+        Filter by acquisition protocol name.
+
         [--retrieve]
-        If set, perform a DICOM movescu on the set of filtered 
+        If set, perform a DICOM movescu on the set of filtered
         SeriesInstanceUIDs using internal calls.
 
         [--move]
-        If set and called with [--retrieve], perform a DICOM movescu on the 
+        If set and called with [--retrieve], perform a DICOM movescu on the
         set of filtered SeriesInstanceUIDs using the pypx/move module.
 
         [--reportTags <JSONdesc>]
@@ -168,21 +181,21 @@ def synopsis(ab_shortOnly = False):
         An optional directive to colorize the report output, either for 'light'
         or 'dark' consoles.
 
-        [--printReport tabular|rawText|json]               
+        [--printReport tabular|rawText|json]
         If specified, pretty print a report in a variety of formats.
 
         [--waitForUserTerminate]
         If specified, wait at program conclusion for explicit user termination.
-        This is useful in dockerized runs since PACS data might still be 
+        This is useful in dockerized runs since PACS data might still be
         in flight when the program ends, and terminating the program then
-        will result in non reception of outstanding data.                           
+        will result in non reception of outstanding data.
 
         Note, if running in a container, e.g. via PACS_QR.sh, be sure to also
         specify a '-D' for debugging in conjunction with this flag. The '-D'
-        runs the container in interactive tty mode, allowing for user tty 
+        runs the container in interactive tty mode, allowing for user tty
         input to be correctly interpreted.
 
-        [-x|--desc]                                     
+        [-x|--desc]
         Provide an overview help page.
 
         [-y|--synopsis]
@@ -214,7 +227,7 @@ def synopsis(ab_shortOnly = False):
             --colorize dark                                         \\
             --reportTags                                            \\
             '{
-                "header": 
+                "header":
                 {
                     "study" : [
                             "PatientName",
@@ -227,9 +240,9 @@ def synopsis(ab_shortOnly = False):
                             "StudyDescription"
                             ]
                 },
-                "body": 
+                "body":
                 {
-                    "series" : [ 
+                    "series" : [
                             "SeriesDescription"
                             ]
                 }
@@ -244,7 +257,7 @@ def synopsis(ab_shortOnly = False):
             --colorize dark					    \\
             --reportTags                                            \\
             '{
-                "header": 
+                "header":
                 {
                     "study" : [
                             "PatientName",
@@ -257,9 +270,9 @@ def synopsis(ab_shortOnly = False):
                             "StudyDescription"
                             ]
                 },
-                "body": 
+                "body":
                 {
-                    "series" : [ 
+                    "series" : [
                             "SeriesDescription"
                             ]
                 }
@@ -281,7 +294,7 @@ def synopsis(ab_shortOnly = False):
             --colorize dark                                             \\
             --reportTags                                                \\
             '{
-                "header": 
+                "header":
                 {
                     "study" : [
                             "PatientName",
@@ -294,9 +307,9 @@ def synopsis(ab_shortOnly = False):
                             "StudyDescription"
                             ]
                 },
-                "body": 
+                "body":
                 {
-                    "series" : [ 
+                    "series" : [
                             "SeriesDescription"
                             ]
                 }
@@ -315,7 +328,7 @@ def synopsis(ab_shortOnly = False):
             --colorize dark                                             \\
             --reportTags                                                \\
             '{
-                "header": 
+                "header":
                 {
                     "study" : [
                             "PatientName",
@@ -328,9 +341,9 @@ def synopsis(ab_shortOnly = False):
                             "StudyDescription"
                             ]
                 },
-                "body": 
+                "body":
                 {
-                    "series" : [ 
+                    "series" : [
                             "SeriesDescription"
                             ]
                 }
@@ -351,171 +364,193 @@ parser = ArgumentParser(
 
 # PACS access settings
 parser.add_argument(
-    '--aet', 
-    action  = 'store', 
-    dest    = 'aet', 
-    type    = str, 
-    default = 'CHRIS-ULTRON-AET', 
+    '--aet',
+    action  = 'store',
+    dest    = 'aet',
+    type    = str,
+    default = 'CHRIS-ULTRON-AET',
     help    = 'aet')
 parser.add_argument(
-    '--aec', 
-    action  = 'store', 
-    dest    = 'aec', 
-    type    = str, 
-    default = 'CHRIS-ULTRON-AEC', 
+    '--aec',
+    action  = 'store',
+    dest    = 'aec',
+    type    = str,
+    default = 'CHRIS-ULTRON-AEC',
     help    = 'aec')
 parser.add_argument(
-    '--serverIP', 
-    action  = 'store', 
-    dest    = 'serverIP', 
+    '--serverIP',
+    action  = 'store',
+    dest    = 'serverIP',
     type    = str,
-    default = '192.168.1.110', 
+    default = '192.168.1.110',
     help    = 'PACS server IP')
 parser.add_argument(
-    '--serverPort', 
-    action  = 'store', 
-    dest    = 'serverPort', 
+    '--serverPort',
+    action  = 'store',
+    dest    = 'serverPort',
     type    = str,
-    default = '4242', 
+    default = '4242',
     help    = 'PACS server port')
 parser.add_argument(
-    '--findscu', 
-    action  = 'store', 
-    dest    = 'findscu', 
+    '--findscu',
+    action  = 'store',
+    dest    = 'findscu',
     type    = str,
-    default = '/usr/bin/findscu', 
+    default = '/usr/bin/findscu',
     help    = '"findscu" executable absolute location')
 parser.add_argument(
-    '--movescu', 
-    action  = 'store', 
-    dest    = 'movescu', 
+    '--movescu',
+    action  = 'store',
+    dest    = 'movescu',
     type    = str,
-    default = '/usr/bin/movescu', 
+    default = '/usr/bin/movescu',
     help    = '"movescu" executable absolute location')
 
 
 
 # Query settings
 parser.add_argument(
-    '--AccessionNumber', 
-    action  = 'store', 
-    dest    = 'AccessionNumber', 
-    type    = str, 
-    default = '', 
+    '--AccessionNumber',
+    action  = 'store',
+    dest    = 'AccessionNumber',
+    type    = str,
+    default = '',
     help    = 'Accession Number')
 parser.add_argument(
-    '--PatientID', 
-    action  = 'store', 
-    dest    = 'PatientID', 
-    type    = str, 
-    default = '', 
+    '--PatientID',
+    action  = 'store',
+    dest    = 'PatientID',
+    type    = str,
+    default = '',
     help    = 'Patient ID')
 parser.add_argument(
-    '--PatientName', 
-    action  = 'store', 
-    dest    = 'PatientName', 
-    type    = str, 
-    default = '', 
+    '--PatientName',
+    action  = 'store',
+    dest    = 'PatientName',
+    type    = str,
+    default = '',
     help    = 'Patient name')
 parser.add_argument(
-    '--PatientSex', 
+    '--PatientSex',
     action  = 'store',
-    dest    = 'PatientSex', 
-    type    = str, 
-    default = '', 
+    dest    = 'PatientSex',
+    type    = str,
+    default = '',
     help    ='Patient sex')
 parser.add_argument(
-    '--StudyDate', 
-    action  = 'store', 
-    dest    = 'StudyDate', 
+    '--StudyDate',
+    action  = 'store',
+    dest    = 'StudyDate',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Study date (YYYY/MM/DD)')
 parser.add_argument(
-    '--ModalitiesInStudy', 
-    action  = 'store', 
+    '--ModalitiesInStudy',
+    action  = 'store',
     dest    = 'ModalitiesInStudy',
-    type    = str, 
-    default = '', 
+    type    = str,
+    default = '',
     help    = 'Modalities in study')
 parser.add_argument(
-    '--Modality', 
-    action  = 'store', 
+    '--Modality',
+    action  = 'store',
     dest    = 'Modality',
-    type    = str, 
-    default = '', 
+    type    = str,
+    default = '',
     help    = 'Study Modality')
 parser.add_argument(
-    '--PerformedStationAETitle', 
+    '--PerformedStationAETitle',
     action  = 'store',
-    dest    = 'PerformedStationAETitle', 
-    type    = str, 
-    default = '', 
+    dest    = 'PerformedStationAETitle',
+    type    = str,
+    default = '',
     help    = 'Performed station aet')
 parser.add_argument(
-    '--StudyDescription', 
+    '--StudyDescription',
     action  = 'store',
-    dest    = 'StudyDescription', 
-    type    = str, 
-    default = '', 
+    dest    = 'StudyDescription',
+    type    = str,
+    default = '',
     help    = 'Study description')
 parser.add_argument(
-    '--SeriesDescription', 
-    action  = 'store', 
-    dest    = 'SeriesDescription', 
+    '--SeriesDescription',
+    action  = 'store',
+    dest    = 'SeriesDescription',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Series Description')
 parser.add_argument(
-    '--SeriesInstanceUID', 
-    action  = 'store', 
-    dest    = 'SeriesInstanceUID', 
+    '--SeriesInstanceUID',
+    action  = 'store',
+    dest    = 'SeriesInstanceUID',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Series Instance UID')
 parser.add_argument(
-    '--StudyInstanceUID', 
-    action  = 'store', 
-    dest    = 'StudyInstanceUID', 
+    '--StudyInstanceUID',
+    action  = 'store',
+    dest    = 'StudyInstanceUID',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Study Instance UID')
+parser.add_argument(
+    '--ProtocolName',
+    action  = 'store',
+    dest    = 'ProtocolName',
+    type    = str,
+    default = '',
+    help    = 'Protocol Name')
+parser.add_argument(
+    '--AcquisitionProtocolName',
+    action  = 'store',
+    dest    = 'AcquisitionProtocolName',
+    type    = str,
+    default = '',
+    help    = 'Acquisition Protocol Description Name')
+
+parser.add_argument(
+    '--AcquisitionProtocolDescription',
+    action  = 'store',
+    dest    = 'AcquisitionProtocolDescription',
+    type    = str,
+    default = '',
+    help    = 'Acquisition Protocol Description')
 
 # Retrieve settings
 parser.add_argument(
-    '--retrieve', 
-    action  = 'store_true', 
+    '--retrieve',
+    action  = 'store_true',
     dest    = 'retrieve',
-    default = False, 
+    default = False,
     help    = 'If specified, initiate a PACS pull on the set of SeriesUIDs using internal methods')
 parser.add_argument(
-    '--move', 
-    action  = 'store_true', 
+    '--move',
+    action  = 'store_true',
     dest    = 'move',
-    default = False, 
+    default = False,
     help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
 
 # Behavioural settings
 parser.add_argument(
-    '--colorize', 
-    action  = 'store', 
-    dest    = 'colorize', 
+    '--colorize',
+    action  = 'store',
+    dest    = 'colorize',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Colorize report output')
 parser.add_argument(
-    '--printReport', 
-    action  = 'store', 
-    dest    = 'printReport', 
+    '--printReport',
+    action  = 'store',
+    dest    = 'printReport',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'The returned report component to print')
 parser.add_argument(
-    '--reportTags', 
+    '--reportTags',
     action  = 'store',
-    dest    = 'reportTags', 
-    type    = str, 
-    default = '', 
+    dest    = 'reportTags',
+    type    = str,
+    default = '',
     help    = 'The tag results to print at the STUDY or SERIES level')
 parser.add_argument(
     "-v", "--verbosity",
@@ -536,7 +571,7 @@ parser.add_argument(
     dest    = 'synopsis',
     action  = 'store_true',
     default = False
-) 
+)
 parser.add_argument(
     '--version',
     help    = 'if specified, print version number',
@@ -568,36 +603,35 @@ if args.b_version:
     sys.exit(1)
 
 
-# pudb.set_trace()
 output = pypx.find(vars(args))
 
 if args.b_waitForUserTerminate:
     l_infoWindow =[
-        [Colors.CYAN                                            + 
-        "End of program reached."                               + 
+        [Colors.CYAN                                            +
+        "End of program reached."                               +
         Colors.NO_COLOUR],
         [""],
-        [Colors.PURPLE                                          + 
+        [Colors.PURPLE                                          +
         "If a PACS move/pull/retrieve was requested, not all"   +
         Colors.NO_COLOUR],
-        [Colors.PURPLE                                          + 
+        [Colors.PURPLE                                          +
         "image data might have been received since the PACS"    +
         Colors.NO_COLOUR],
-        [Colors.PURPLE                                          + 
+        [Colors.PURPLE                                          +
         "operates in an asynchronous manner."                   +
         Colors.NO_COLOUR],
         [""],
-        [Colors.PURPLE                                          + 
+        [Colors.PURPLE                                          +
         "If you are running this process containerized, on"     +
         Colors.NO_COLOUR],
-        [Colors.PURPLE                                          + 
+        [Colors.PURPLE                                          +
         "exit the container will close and no additional data"  +
         Colors.NO_COLOUR],
-        [Colors.PURPLE                                          + 
+        [Colors.PURPLE                                          +
         "will be received."                                     +
         Colors.NO_COLOUR],
         [""],
-        [Colors.BLINK_RED           + 
+        [Colors.BLINK_RED           +
         "ONLY EXIT IF YOU ARE SURE YOU HAVE RECEIVED ALL IMAGES!" +
         Colors.NO_COLOUR],
     ]
@@ -605,5 +639,5 @@ if args.b_waitForUserTerminate:
     tb_infoWindow.inner_heading_row_border  = False
     print(tb_infoWindow.table)
     input("\nHit ENTER now to exit.")
-    
+
 sys.exit(0)
