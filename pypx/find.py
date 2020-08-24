@@ -18,43 +18,43 @@ class Find(Base):
 
     """
     The Find module provides rather extensive PACS query
-    functionality. 
+    functionality.
 
     See the 'query' method for the space of query parameters
-    that the module offers. Text data pertaining to image sets 
+    that the module offers. Text data pertaining to image sets
     that match the pattern of query values are returned by
     this method to a called as a JSON/dictionary payload.
 
     The return dictionary contains a field, 'report' that itself
     contains three report formats: 'tabular', 'rawText', and 'json'.
-    The 'tabular' and 'rawText' reports are for console 
+    The 'tabular' and 'rawText' reports are for console
     consumption/presentation, while the 'json' report is for
-    software agents. 
+    software agents.
 
-    This 'json' report also returns a hidden 'bodySeriesUID' 
+    This 'json' report also returns a hidden 'bodySeriesUID'
     section, with each entry corresponding in order to the
     seriesDescription that the report returns. These values
     are the SeriesInstanceUIDs that can actually be retrieved
     by the pypx/move operation.
     """
-    
+
     def __init__(self, arg):
         """
         Constructor.
 
-        Defines a default report structure, divided into a 
+        Defines a default report structure, divided into a
         "header" and a "body". In each section,  DICOM tags
-        retrieved from either the STUDY or SERIES level are 
+        retrieved from either the STUDY or SERIES level are
         catalogued.
 
         Since a given STUDY typically has several SERIES, in
-        most cases only SERIES level tags are included in the 
-        "body". 
-        
+        most cases only SERIES level tags are included in the
+        "body".
+
         In some cases, some tags are only available at
-        the SERIES level (such as the Modality). If such a tag 
+        the SERIES level (such as the Modality). If such a tag
         is in the STUDY level, then the corresponding tag from
-        the FIRST series in the STUDY is reported. 
+        the FIRST series in the STUDY is reported.
         """
 
         b_reportSet = False
@@ -65,7 +65,7 @@ class Find(Base):
         if not b_reportSet:
             self.d_reportTags = \
             {
-                "header": 
+                "header":
                 {
                     "study" : [
                             "PatientName",
@@ -82,9 +82,9 @@ class Find(Base):
                             "Modality"
                     ]
                 },
-                "body": 
+                "body":
                 {
-                    "series" : [ 
+                    "series" : [
                             "SeriesDescription"
                             ]
                 }
@@ -99,20 +99,20 @@ class Find(Base):
 
     def report_generate(self, d_queryResult):
         """
-        Generate a nicely formatted report string, 
+        Generate a nicely formatted report string,
         suitable for tty/consoles.
         """
 
         def patientAge_calculate(study):
             """
-            Explicitly calculate the age from the 
+            Explicitly calculate the age from the
                     PatientBirthDate
                     StudyDate
             """
             str_birthDate   = study['PatientBirthDate']['value']
             str_studyDate   = study['StudyDate']['value']
             try:
-                dt_birthDate    = datetime.strptime(str_birthDate, '%Y%m%d') 
+                dt_birthDate    = datetime.strptime(str_birthDate, '%Y%m%d')
                 dt_studyDate    = datetime.strptime(str_studyDate, '%Y%m%d')
                 dt_patientAge   = relativedelta.relativedelta(dt_studyDate, dt_birthDate)
                 str_patientAge  = '%02dY-%02dM-%02dD' % \
@@ -144,9 +144,9 @@ class Find(Base):
             return str_value
 
         def block_build(
-                l_DICOMtag, 
-                l_blockFields, 
-                l_blockTable, 
+                l_DICOMtag,
+                l_blockFields,
+                l_blockTable,
                 str_reportBlock,
                 d_block
             ):
@@ -154,35 +154,35 @@ class Find(Base):
             Essentially create a text/table of rows each of 2 columns.
             """
 
-            def tableRow_add2Col(str_left, 
-                                str_right, 
-                                leftColWidth   = 30, 
+            def tableRow_add2Col(str_left,
+                                str_right,
+                                leftColWidth   = 30,
                                 rightColWidth  = 50):
                 """
-                Add 2 columns to a table 
+                Add 2 columns to a table
                 """
                 nonlocal CheaderField, CheaderValue
                 return [
                             CheaderField        +
                             f"{str_left:<30}"   +
-                            Colors.NO_COLOUR, 
+                            Colors.NO_COLOUR,
                             CheaderValue        +
                             f"{str_right:<50}"  +
                             Colors.NO_COLOUR
                         ]
 
-            def row_add2Col(str_left, 
-                            str_right, 
-                            leftColWidth    = 30, 
+            def row_add2Col(str_left,
+                            str_right,
+                            leftColWidth    = 30,
                             rightColWidth   = 50):
                 """
                 Add 2 columns to a string text
                 """
                 nonlocal CheaderField, CheaderValue
                 return "%s%30s%s%50s%s\n" % \
-                        (   
+                        (
                             CheaderField,
-                            str_left, 
+                            str_left,
                             CheaderValue,
                             str_right,
                             Colors.NO_COLOUR
@@ -191,7 +191,7 @@ class Find(Base):
             for str_tag  in l_blockFields:
                 l_blockTable.append(
                     tableRow_add2Col(
-                        str_tag, 
+                        str_tag,
                         DICOMtag_lookup(l_DICOMtag, str_tag))
                 )
                 str_reportBlock += \
@@ -228,7 +228,7 @@ class Find(Base):
             l_headerTable       = []
             analyze             = None
             for k in self.d_reportTags['header']:
-                if k == 'study': 
+                if k == 'study':
                     analyze = study
                 if k == 'series':
                     if len(study['series']):
@@ -266,20 +266,20 @@ class Find(Base):
                         # pudb.set_trace()
                         l_bodyTable, str_reportBody, d_bodyContents     = \
                             block_build(
-                                    series, 
-                                    l_tags, 
-                                    l_bodyTable, 
-                                    str_reportBody, 
+                                    series,
+                                    l_tags,
+                                    l_bodyTable,
+                                    str_reportBody,
                                     d_bodyContents
                             )
                         dl_bodyContents.append(d_bodyContents.copy())
                         # capture a hidden SeriesInstanceUID for the JSON return
                         l_suidTable, str_reportSUID, d_seriesUID    = \
                             block_build(
-                                    series, 
-                                    l_seriesUIDtag, 
-                                    l_suidTable, 
-                                    str_reportSUID, 
+                                    series,
+                                    l_seriesUIDtag,
+                                    l_suidTable,
+                                    str_reportSUID,
                                     d_seriesUID
                             )
                         dl_seriesUID.append(d_seriesUID.copy())
@@ -311,13 +311,13 @@ class Find(Base):
             d_json['body'],             \
             d_json['bodySeriesUID'] =   \
                 body_generate(study)
-     
+
             l_tabularHits.append(d_tabular)
             l_rawTextHits.append(d_rawText)
             l_jsonHits.append(d_json)
 
         return {
-                "tabular":  l_tabularHits, 
+                "tabular":  l_tabularHits,
                 "rawText":  l_rawTextHits,
                 "json":     l_jsonHits
         }
@@ -348,11 +348,11 @@ class Find(Base):
         }
 
         query = ''
-        # we use a sorted dictionary so we can test generated command 
+        # we use a sorted dictionary so we can test generated command
         # more easily
         ordered = collections.OrderedDict(
-                        sorted( 
-                                parameters.items(), 
+                        sorted(
+                                parameters.items(),
                                 key=lambda t: t[0]
                                 )
                         )
@@ -382,7 +382,7 @@ class Find(Base):
         to the SeriesInstanceUID.
 
         """
-        self.systemlevel_run(self.arg, 
+        self.systemlevel_run(self.arg,
             {
                 'f_commandGen': self.xinetd_command
             }
@@ -398,9 +398,9 @@ class Find(Base):
                 str_seriesUID           = seriesUID['SeriesInstanceUID']
                 str_studyUID            = d_filteredHits['data'][studyIndex]['StudyInstanceUID']['value']
                 self.dp.qprint(
-                    Colors.LIGHT_CYAN + 
+                    Colors.LIGHT_CYAN +
                     'Requesting SeriesDescription... ' +
-                    Colors.YELLOW + 
+                    Colors.YELLOW +
                     str_seriesDescription
                 )
                 if self.move:
@@ -408,9 +408,9 @@ class Find(Base):
                     self.arg['StudyInstanceUID']    = str_studyUID
                     d_moveRun = pypx.move({
                             **self.arg,
-                            })                   
+                            })
                 else:
-                    d_moveRun = self.systemlevel_run(self.arg, 
+                    d_moveRun = self.systemlevel_run(self.arg,
                             {
                                 'f_commandGen':         self.movescu_command,
                                 'series_uid':           str_seriesUID,
@@ -456,7 +456,7 @@ class Find(Base):
 
     def run(self, opt={}):
         """
-        Main entry method. 
+        Main entry method.
 
         For some PACS, a query needs to be run in two phases:
 
@@ -464,14 +464,14 @@ class Find(Base):
             * Then, given each STUDY, run at the SERIES level to
               receive the SeriesUID
 
-        This method performs the query based on the pattern of 
+        This method performs the query based on the pattern of
         tag specifications given on the CLI.
 
         """
         # pudb.set_trace()
 
         formattedStudiesResponse    = \
-            self.systemlevel_run(opt, 
+            self.systemlevel_run(opt,
                     {
                         'f_commandGen':         self.findscu_command,
                         'QueryRetrieveLevel':   'STUDY'
@@ -486,7 +486,7 @@ class Find(Base):
         for study in formattedStudiesResponse['data']:
             l_seriesResults = []
             formattedSeriesResponse     = \
-                self.systemlevel_run(opt, 
+                self.systemlevel_run(opt,
                         {
                             'f_commandGen':         self.findscu_command,
                             'QueryRetrieveLevel':   'SERIES',
@@ -510,7 +510,7 @@ class Find(Base):
                 series['status']['label']   = 'status'
 
                 l_seriesResults.append(series)
-            
+
             if len(l_seriesResults):
                 filteredStudiesResponse['data'].append(study)
                 filteredStudiesResponse['data'][-1]['series']       = l_seriesResults

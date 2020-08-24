@@ -22,34 +22,34 @@ import  socket
 import  pudb
 
 str_defIP   = [l for l in (
-                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] 
-                if not ip.startswith("127.")][:1], 
-                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) 
+                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")][:1],
+                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-move"
-str_version = "1.0.0.0"
+str_version = "1.0.2.0"
 str_desc    = Colors.CYAN + """
-                    
 
-                                     
- _ __ __  ___ __ ___   _____   _____ 
+
+
+ _ __ __  ___ __ ___   _____   _____
 | '_ \\\ \\/ / '_ ` _ \\ / _ \\ \\ / / _ \\
 | |_) |>  <| | | | | | (_) \ V /  __/
 | .__//_/\_\_| |_| |_|\___/ \_/ \___|
-| |                                  
-|_|                                  
+| |
+|_|
 
                         PACS ToolKit Wrapper
                             "move" images
 
                        -- version """ + \
-             Colors.YELLOW + str_version + Colors.CYAN + """ --                          
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
 
-    ``px-move`` is a module / script that provides functionality for 
-    performing a PACS movescu operation. 
+    ``px-move`` is a module / script that provides functionality for
+    performing a PACS movescu operation.
 
-    ``px-move`` is tested against both Orthanc as well as some 
+    ``px-move`` is tested against both Orthanc as well as some
     commercial PACS offerings.
 
 """ + Colors.NO_COLOUR
@@ -90,32 +90,32 @@ def synopsis(ab_shortOnly = False):
             --StudyInstanceUID 1.2.3.435                            \\
             --SeriesInstanceUID 2.3.5.6.7
 
-    ''' % scriptName + Colors.NO_COLOUR 
+    ''' % scriptName + Colors.NO_COLOUR
 
     description = Colors.LIGHT_GREEN + '''
 
         [--aet <AETitle>]
         The AETitle of *this* entity.
 
-        [--aec <CalledAETitle>]                             
+        [--aec <CalledAETitle>]
         The called AETitle of *this* entity. Needed for some PACS systems.
 
         [--serverIP <PACSserverIP>]
         The IP of the PACS server.
 
-        [--serverPort <PACSserverPort>]                     
+        [--serverPort <PACSserverPort>]
         The port associated with the PACS server.
 
-        [--movescu <movescuAbsolutePath>]                
+        [--movescu <movescuAbsolutePath>]
         The absolute location of the 'movescu' executable.
-        
-        [--StudyInstanceUID <studyInstanceUID>]             
+
+        [--StudyInstanceUID <studyInstanceUID>]
         The <studyInstanceUID> to request.
 
-        [--SeriesDescription <seriesInstanceUID>]           
+        [--SeriesDescription <seriesInstanceUID>]
         The <seriesInstanceUID> to request.
 
-        [-x|--desc]                                     
+        [-x|--desc]
         Provide an overview help page.
 
         [-y|--synopsis]
@@ -178,56 +178,56 @@ parser = ArgumentParser(
 
 # PACS settings
 parser.add_argument(
-    '--aet', 
-    action  = 'store', 
-    dest    = 'aet', 
-    type    = str, 
-    default = 'CHRIS-ULTRON-AET', 
+    '--aet',
+    action  = 'store',
+    dest    = 'aet',
+    type    = str,
+    default = 'CHRIS-ULTRON-AET',
     help    = 'aet')
 parser.add_argument(
-    '--aec', 
-    action  = 'store', 
-    dest    = 'aec', 
-    type    = str, 
-    default = 'CHRIS-ULTRON-AEC', 
+    '--aec',
+    action  = 'store',
+    dest    = 'aec',
+    type    = str,
+    default = 'CHRIS-ULTRON-AEC',
     help    = 'aec')
 parser.add_argument(
-    '--serverIP', 
-    action  = 'store', 
-    dest    = 'serverIP', 
+    '--serverIP',
+    action  = 'store',
+    dest    = 'serverIP',
     type    = str,
-    default = '192.168.1.110', 
+    default = '192.168.1.110',
     help    = 'PACS server IP')
 parser.add_argument(
-    '--serverPort', 
-    action  = 'store', 
-    dest    = 'serverPort', 
+    '--serverPort',
+    action  = 'store',
+    dest    = 'serverPort',
     type    = str,
-    default = '4242', 
+    default = '4242',
     help    = 'PACS server port')
 parser.add_argument(
-    '--movescu', 
-    action  = 'store', 
-    dest    = 'movescu', 
+    '--movescu',
+    action  = 'store',
+    dest    = 'movescu',
     type    = str,
-    default = '/usr/bin/movescu', 
+    default = '/usr/bin/movescu',
     help    = '"movescu"" executable absolute location')
 
 
 # Query settings
 parser.add_argument(
-    '--SeriesInstanceUID', 
-    action  = 'store', 
-    dest    = 'SeriesInstanceUID', 
+    '--SeriesInstanceUID',
+    action  = 'store',
+    dest    = 'SeriesInstanceUID',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Series Instance UID')
 parser.add_argument(
-    '--StudyInstanceUID', 
-    action  = 'store', 
-    dest    = 'StudyInstanceUID', 
+    '--StudyInstanceUID',
+    action  = 'store',
+    dest    = 'StudyInstanceUID',
     type    = str,
-    default = '', 
+    default = '',
     help    = 'Study Instance UID')
 
 parser.add_argument(
@@ -249,7 +249,7 @@ parser.add_argument(
     dest    = 'synopsis',
     action  = 'store_true',
     default = False
-) 
+)
 parser.add_argument(
     '--version',
     help    = 'if specified, print version number',
