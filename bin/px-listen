@@ -20,30 +20,30 @@ from    pfmisc._colors      import Colors
 import  pypx
 
 str_name    = "px-listen"
-str_version = "1.0.0.0"
+str_version = "1.0.2.0"
 str_desc    = Colors.CYAN + """
-                    
-             _ _     _              
-            | (_)   | |             
- _ __ __  __| |_ ___| |_  ___ _ __  
-| '_ \\ \/ /| | / __| __|/ _ \ '_ \ 
-| |_) |>  < | | \__ \ |_|  __/ | | |
-| .__//_/\_\|_|_|___/\__|\___|_| |_|
-| |                                 
-|_|                                 
+
+             _ _     _
+            | (_)   | |
+ _ __ __  __| |_ ___| |_  ___ _ __
+| '_ \\ \\/ / | | / __| __|/ _ \\ '_ \\
+| |_) |>  < | | \\__ \\ |_|  __/ | | |
+| .__//_/\\_\\| |_|___/\\__|\\___|_| |_|
+| |
+|_|
 
 
                         PACS ToolKit Wrapper
                              listener
 
                        -- version """ + \
-             Colors.YELLOW + str_version + Colors.CYAN + """ --                          
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
 
     ``px-listen`` is a wrapper script about the DCMTK 'storescu' application
     that provides functionality for receiving PACS communictaions.
 
     ``px-listen`` is a core appliucation that operates mostly as a daemon
-    called by a management process (such as ``xinetd`` on Ubuntu systems). It 
+    called by a management process (such as ``xinetd`` on Ubuntu systems). It
     is not a user-facing application and not called by a user/client process.
 
 """ + Colors.NO_COLOUR
@@ -70,25 +70,25 @@ def synopsis(ab_shortOnly = False):
                 [--debugToDir <dir>]                                \\
                 [--verbosity <level>]
 
-    ''' % scriptName + Colors.NO_COLOUR 
+    ''' % scriptName + Colors.NO_COLOUR
 
     description = Colors.LIGHT_GREEN + '''
 
         [--tmpdir <tmpdir>]
-        A tmp directory that will contain data as it is incoming from a 
+        A tmp directory that will contain data as it is incoming from a
         remote PACS.
 
-        [--logdir <logdir>]                             
+        [--logdir <logdir>]
         The directory containing log files relevant to px-listen operation.
 
         [--datadir <datadir>]
         The directory that will contain the root of the file tree of received
         image files.
 
-        [--executable <storescp>]                     
+        [--executable <storescp>]
         The actual 'storescp' absolute location.
 
-        [-x|--desc]                                     
+        [-x|--desc]
         Provide an overview help page.
 
         [-y|--synopsis]
@@ -116,7 +116,7 @@ def synopsis(ab_shortOnly = False):
         px-listen                                                   \\
                 --tmpdir /dicom/tmp                                 \\
                 --logdir /dicom/log                                 \\
-                --datadir /dicom/data                  
+                --datadir /dicom/data
 
 ''' + Colors.NO_COLOUR
 
@@ -132,35 +132,35 @@ parser = ArgumentParser(
 
 # Settings
 parser.add_argument(
-    '-t', '--tmpdir', 
-    action  = 'store', 
-    dest    = 'tmp_directory', 
+    '-t', '--tmpdir',
+    action  = 'store',
+    dest    = 'tmp_directory',
     type    = str,
-    default = '/tmp', 
+    default = '/tmp',
     help    = 'Directory to store temporary files.'
     )
 parser.add_argument(
-    '-l', '--logdir', 
-    action  = 'store', 
-    dest    = 'log_directory', 
+    '-l', '--logdir',
+    action  = 'store',
+    dest    = 'log_directory',
     type    = str,
-    default = '/tmp/log', 
+    default = '/tmp/log',
     help    = 'Directory to store log files.'
     )
 parser.add_argument(
-    '-d', '--datadir', 
-    action  = 'store', 
-    dest    = 'data_directory', 
+    '-d', '--datadir',
+    action  = 'store',
+    dest    = 'data_directory',
     type    = str,
-    default = '/tmp/data', 
+    default = '/tmp/data',
     help    = 'Directory to store DICOM files.'
     )
 parser.add_argument(
-    '-e', '--executable', 
-    action  = 'store', 
-    dest    = 'executable', 
+    '-e', '--executable',
+    action  = 'store',
+    dest    = 'executable',
     type    = str,
-    default = '/usr/bin/storescp', 
+    default = '/usr/bin/storescp',
     help    = 'storescp executable absolute location'
     )
 parser.add_argument(
@@ -182,7 +182,7 @@ parser.add_argument(
     dest    = 'synopsis',
     action  = 'store_true',
     default = False
-) 
+)
 parser.add_argument(
     '--version',
     help    = 'if specified, print version number',
