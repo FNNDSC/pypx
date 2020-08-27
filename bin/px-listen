@@ -20,7 +20,7 @@ from    pfmisc._colors      import Colors
 import  pypx
 
 str_name    = "px-listen"
-str_version = "1.0.2.0"
+str_version = "1.1.0.0"
 str_desc    = Colors.CYAN + """
 
              _ _     _
