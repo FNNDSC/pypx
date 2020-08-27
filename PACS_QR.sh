@@ -19,17 +19,17 @@ G_SYNOPSIS="
 
   NAME
 
-        PACS_QR.sh 
+        PACS_QR.sh
 
   SYNOPSIS
-  
+
         PACS_QR.sh                                                      \\
                         [-h <institution>]                              \\
                         [-P <PACSserver>]                               \\
                         [-p <PACSport>]                                 \\
                         [-a <AETitle>]                                  \\
                         [-c <CalledAETitle>]                            \\
-                        [-D]                                            \\  
+                        [-D]                                            \\
                         [-d <dicomDir>]                                 \\
                         [-C]                                            \\
                         [-r <dockerorg>]                                \\
@@ -46,13 +46,13 @@ G_SYNOPSIS="
         If specified, assigns some default AETITLE and PACS variables
         appropriate to the <institution>. Valid <institutions> are
 
-            [   
+            [
                 'Orthanc',
-                'BCH', 
-                'BCH-chris', 
-                'BCH-chrisdev', 
-                'BCH-christest', 
-                'MGH', 
+                'BCH',
+                'BCH-chris',
+                'BCH-chrisdev',
+                'BCH-christest',
+                'MGH',
                 'MGH2'
             ]
 
@@ -61,7 +61,7 @@ G_SYNOPSIS="
 
         [-p <PACSport>]
         Explicitly set the PACS port to <PACSport>.
-        
+
         [-a <AETitle>]
         Explicitly set the AETitle of the client to <AETitle>
 
@@ -71,25 +71,25 @@ G_SYNOPSIS="
         [-D]
         If specified, volume mount source files into the container for
         debugging.
-        
+
         NOTE: This assumes the script is run from the root github repo
               directory!
 
         [-d <dicomDir>]
         Set the <dicomDir> in the host that is mounted into the container. This
         MUST be an ABSOLUTE directory spec.
-        
-        [-C] 
+
+        [-C]
         If specified, delete and recreate the <dicomDir> (assuming appropriate
         file system permissions).
 
         [-r <dockerorg>]
         The docker organization (or 'base' repository). This defauls to 'fnndsc'
         but if you have built a 'local' version -- with for example:
-        
-            docker build -t local/pypx 
-            
-        use 
+
+            docker build -t local/pypx
+
+        use
 
           -r local
 
@@ -140,7 +140,7 @@ function institution_set
 {
     local INSTITUTION=$1
 
-    case "$INSTITUTION" 
+    case "$INSTITUTION"
     in
         orthanc)
           G_AETITLE=CHIPS
@@ -182,7 +182,7 @@ function institution_set
 }
 
 while getopts h:Q:DCd:P:p:a:c:r:v option ; do
-    case "$option" 
+    case "$option"
     in
         Q) ARGS=$OPTARG                 ;;
         d) G_DICOMDIR=$OPTARG           ;;
@@ -190,13 +190,13 @@ while getopts h:Q:DCd:P:p:a:c:r:v option ; do
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
         v) let G_VERBOSE=1              ;;
-        P) QUERYHOST=$OPTARG          
+        P) QUERYHOST=$OPTARG
            Gb_QUERYHOST=1               ;;
-        p) QUERYPORT=$OPTARG          
+        p) QUERYPORT=$OPTARG
            Gb_QUERYPORT=1               ;;
-        a) AETITLE=$OPTARG            
+        a) AETITLE=$OPTARG
            Gb_AETITLE=1                 ;;
-        c) CALLTITLE=$OPTARG          
+        c) CALLTITLE=$OPTARG
            Gb_CALLTITLE=1               ;;
         h) G_INSTITUTION=$OPTARG
            let Gb_institution=1         ;;
@@ -225,7 +225,7 @@ fi
 DEBUG=""
 if (( Gb_DEBUG )) ; then
         DEBUG=" --tty --interactive                                \
-                --volume $(pwd)/pypx:/usr/local/lib/python3.6/dist-packages/pypx \
+                --volume $(pwd)/pypx:/usr/local/lib/python3.8/dist-packages/pypx \
                 --volume $(pwd)/bin/px-echo:/usr/local/bin/px-echo \
                 --volume $(pwd)/bin/px-find:/usr/local/bin/px-find \
                 --volume $(pwd)/bin/px-move:/usr/local/bin/px-move \
@@ -245,7 +245,7 @@ CLI="docker run                               \
             --colorize dark                   \
             --printReport tabular             \
             $ARGS"
-            
+
 if (( G_VERBOSE )) ; then
     CLIp=$(echo "$CLI" | sed 's/--/\n\t--/g' | sed 's/\(.*\)/\1 \\/' | sed 's/        \+/ /')
     printf "%s\n" "$CLIp"
