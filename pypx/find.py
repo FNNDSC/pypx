@@ -179,7 +179,7 @@ class Find(Base):
                 Add 2 columns to a string text
                 """
                 nonlocal CheaderField, CheaderValue
-                return "%s%30s%s%50s%s\n" % \
+                return "%s%30s%s  %-50s%s\n" % \
                         (
                             CheaderField,
                             str_left,
