@@ -23,8 +23,7 @@ setup(
             'terminaltables',
             'py-dateutil',
             'pydicom',
-            'pfmisc',
-            'pretty-py3'
+            'pfmisc'
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],
