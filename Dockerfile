@@ -66,7 +66,6 @@ docker run  --rm -ti                                                    \
 ARG UID=1001
 ENV UID=$UID
 
-ARG APPROOT="/usr/src/pfdcm"  
 COPY . /tmp/pypx
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 
@@ -82,7 +81,7 @@ RUN apt-get update \
   && pip install --upgrade pip                                        \
   && pip3 install /tmp/pypx                                           \
   && rm -fr /tmp/pypx
-  
+
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 COPY ./dicomlistener /etc/xinetd.d 
 RUN chmod 777 /dock                                                   \
