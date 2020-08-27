@@ -1,19 +1,25 @@
-# Global modules
-import os
-import subprocess
-import uuid
-import shutil
-import configparser
-import json
+# Turn off all logging for modules in this libary!!
+# Any log noise from pydicom will BREAK receiving
+# DICOM data from the remote PACS since the log messages
+# will pollute and destroy the DICOM storescp protocol.
+import logging
+logging.disable(logging.CRITICAL)
 
+# Global modules
+import  os
+import  subprocess
+import  uuid
+import  shutil
+import  configparser
+import  json
+from    pathlib         import Path
 # PyDicom module
-import pydicom
+import  pydicom
 
 # PYPX modules
-import pypx.utils
+import  pypx.utils
 
-import pfmisc
-import pprint
+import  pfmisc
 
 class Listen():
     """docstring for Listen."""
@@ -21,25 +27,25 @@ class Listen():
 
         self.__name__           = 'Listen'
 
-        self.tmp_directory = args['tmp_directory']
-        self.log_directory = args['log_directory']
-        self.data_directory = args['data_directory']
-        self.executable = args['executable']
+        self.tmp_directory      = args['tmp_directory']
+        self.log_directory      = args['log_directory']
+        self.data_directory     = args['data_directory']
+        self.executable         = args['executable']
 
         # Debugging control
         self.b_useDebug         = True
         self.str_debugFile      = '%s/listen.run.log' % self.log_directory
         self.b_quiet            = True
-        self.dp                 = pfmisc.debug(    
+        self.dp                 = pfmisc.debug(
                                             verbosity   = 0,
                                             level       = -1,
                                             within      = self.__name__,
                                             debugToFile = self.b_useDebug,
                                             debugFile   = self.str_debugFile
                                             )
-        self.pp                 = pprint.PrettyPrinter(indent=4)
 
-        self.dp.qprint('Called!')
+        self.dp.qprint('───────────────────────────────────────────────────────────────────────────', level = -1)
+        self.dp.qprint('Incoming DICOM data arriving...', level = -1)
 
         # maybe it should not create it, as it is a requirement
         os.makedirs(self.tmp_directory,     exist_ok=True)
@@ -54,11 +60,15 @@ class Listen():
         os.makedirs(self.patient_mapDir,    exist_ok=True)
 
         # create unique directory to store inconming data
-        self.uuid = str(uuid.uuid4())
+        self.uuid           = str(uuid.uuid4())
         self.uuid_directory = os.path.join(self.tmp_directory, self.uuid)
-        self.log_error = os.path.join(self.log_directory, 'err-' + self.uuid + '.txt')
-        self.log_output = os.path.join(self.log_directory, 'out-' + self.uuid + '.txt')
+        self.log_error      = os.path.join(self.log_directory,
+                                            'err-' + self.uuid + '.txt')
+        self.log_output     = os.path.join(self.log_directory,
+                                            'out-' + self.uuid + '.txt')
 
+        self.dp.qprint('Creating temp holding dir:  %s' % self.uuid_directory,
+                        level = -1)
         self.mkdir(self.uuid_directory, self.log_error)
 
     def mkdir(self, path, log_file):
@@ -109,16 +119,19 @@ class Listen():
 
     def processPatient(self, dcm_info, log_file, data_directory):
         # get information of interest
-        patient_id = self.processDicomField(dcm_info, "PatientID")
-        patient_name = self.processDicomField(dcm_info, "PatientName")
-        self.dp.qprint('Processing %s...' % patient_id)
+        patient_id      = self.processDicomField(dcm_info, "PatientID")
+        patient_name    = self.processDicomField(dcm_info, "PatientName")
+        # self.dp.qprint('Processing PatientID %s...' % patient_id, level = -1)
 
         # log it
         log_file.write('    PatientID: ' + patient_id + '\n')
         log_file.write('    PatientName: ' + patient_name + '\n')
 
         # create patient directory
-        patient_directory = pypx.utils.patientPath(data_directory, patient_id, patient_name)
+        patient_directory = pypx.utils.patientPath(
+                                data_directory,
+                                patient_id,
+                                patient_name)
         self.mkdir(patient_directory, self.log_error)
 
         # Save a mapping from this series_uid to the acutal FS location
@@ -139,10 +152,10 @@ class Listen():
 
     def processStudy(self, dcm_info, log_file, patient_directory):
         # get information of interest
-        study_description = self.processDicomField(dcm_info, "StudyDescription")
-        study_date = self.processDicomField(dcm_info, "StudyDate")
-        study_uid = self.processDicomField(dcm_info, "StudyInstanceUID")
-        self.dp.qprint('Processing %s...' % study_uid)
+        study_description   = self.processDicomField(dcm_info, "StudyDescription")
+        study_date          = self.processDicomField(dcm_info, "StudyDate")
+        study_uid           = self.processDicomField(dcm_info, "StudyInstanceUID")
+        # self.dp.qprint('Processing Study %s...' % study_uid, level = -1)
 
         # log it
         log_file.write('      StudyDescription: ' + study_description + '\n')
@@ -173,10 +186,10 @@ class Listen():
 
     def processSeries(self, dcm_info, log_file, study_directory):
         # get information of interest
-        series_description = self.processDicomField(dcm_info, "SeriesDescription")
-        series_date = self.processDicomField(dcm_info, "SeriesDate")
-        series_uid = self.processDicomField(dcm_info, "SeriesInstanceUID")
-        self.dp.qprint('Processing %s' % series_uid)
+        series_description  = self.processDicomField(dcm_info, "SeriesDescription")
+        series_date         = self.processDicomField(dcm_info, "SeriesDate")
+        series_uid          = self.processDicomField(dcm_info, "SeriesInstanceUID")
+        # self.dp.qprint('Processing Series %s' % series_uid, level = -1)
 
         # log it
         log_file.write('        SeriesDescription: ' + series_description + '\n')
@@ -210,8 +223,6 @@ class Listen():
         Save a dictionary <ad_json> in <astr_mapDir>/<astr_mapFile>
         """
         b_ret           = False
-        self.dp.qprint('%s' % ad_json)
-        self.dp.qprint(astr_mapFile)
 
         if not os.path.exists(astr_mapFile):
             try:
@@ -225,8 +236,8 @@ class Listen():
 
     def processImage(self, dcm_info, log_file, error_file, series_directory, tmp_file):
         # get information of interest
-        image_uid = self.processDicomField(dcm_info, "SOPInstanceUID")
-        image_instance_number = self.processDicomField(dcm_info, "InstanceNumber")
+        image_uid               = self.processDicomField(dcm_info, "SOPInstanceUID")
+        image_instance_number   = self.processDicomField(dcm_info, "InstanceNumber")
 
         # log it
         log_file.write('          SOPInstanceUID: ' + image_uid + '\n')
@@ -253,11 +264,76 @@ class Listen():
 
     def run(self):
 
+        def transmission_summarise():
+            """
+            Log a summary of transmission data to listen log file.
+            """
+
+            study_description   = self.processDicomField(dcm_info, "StudyDescription")
+            study_date          = self.processDicomField(dcm_info, "StudyDate")
+            series_description  = self.processDicomField(dcm_info, "SeriesDescription")
+            patient_id          = self.processDicomField(dcm_info, "PatientID")
+            patient_name        = self.processDicomField(dcm_info, "PatientName")
+            protocol_name       = self.processDicomField(dcm_info, "ProtocolName")
+            d_fileInfo          = filesInSeries_determine()
+            self.dp.qprint('Summary report:')
+            self.dp.qprint('PatientID:                  %s' % patient_id, level = -1)
+            self.dp.qprint('PatientName:                %s' % patient_name, level = -1)
+            self.dp.qprint('StudyDate:                  %s' % study_date, level = -1)
+            self.dp.qprint('StudyDescription:           %s' % study_description, level = -1)
+            self.dp.qprint('SeriesDescription:          %s' % series_description, level = -1)
+            self.dp.qprint('ProtocolName:               %s' % protocol_name, level = -1)
+            if d_fileInfo['status']:
+                self.dp.qprint('Number of files in Series:  %d' % d_fileInfo['fileCount'], level = -1)
+                self.dp.qprint('Directory size (raw):       %d' % d_fileInfo['dirSizeRaw'], level = -1)
+                self.dp.qprint('Directory size (human):     %s' % d_fileInfo['str_dirSize'], level = -1)
+
+        def filesInSeries_determine():
+            """
+            Determine the number of files in a given series and some
+            dir info
+            """
+            def du(path):
+                """disk usage in human readable format (e.g. '2,1GB')"""
+                return subprocess.check_output(['du','-sh', path]).split()[0].decode('utf-8')
+
+            def duRaw(path):
+                root    = Path(path)
+                return  sum(f.stat().st_size for f in root.glob('**/*') if f.is_file())
+
+            series_uid          = self.processDicomField(dcm_info, "SeriesInstanceUID")
+            str_seriesMapFile   = os.path.join(self.series_mapDir, '%s.json' % series_uid)
+
+            try:
+                with open(str_seriesMapFile, 'r') as f:
+                    d_seriesInfo    = json.load(f)
+                str_path            = d_seriesInfo[series_uid]
+                fileCount           = len([n for n in os.listdir(str_path) \
+                                        if os.path.isfile(os.path.join(str_path, n))])
+                str_dirSize         = du(str_path)
+                dirSizeRaw          = duRaw(str_path)
+                d_ret               = {
+                    'status':       True,
+                    'fileCount':    fileCount,
+                    'str_dirSize':  str_dirSize,
+                    'dirSizeRaw':   dirSizeRaw
+                }
+            except:
+                d_ret               = {
+                    'status':       False,
+                    'fileCount':    -1,
+                    'str_dirSize':  "unknown",
+                    'dirSizeRaw':   -1
+                }
+
+            return d_ret
+
         # start listening to incoming data
-        command = self.executable + ' -id -od "' + \
-          self.uuid_directory + '" -xcr "touch ' + \
-          self.uuid_directory + '/#c;touch ' + \
-          self.uuid_directory + '/#a" -pm -sp;'
+        self.dp.qprint("Listening for and parsing incoming data...", level = -1)
+        command = self.executable   + ' -id -od "'      + \
+          self.uuid_directory       + '" -xcr "touch '  + \
+          self.uuid_directory       + '/#c;touch '      + \
+          self.uuid_directory       + '/#a" -pm -sp;'
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
         abs_files = [os.path.join(self.uuid_directory,f) for f in os.listdir(self.uuid_directory)]
@@ -318,6 +394,9 @@ class Listen():
             target = series[:last_index] + 'series.info'
             os.rename(series, target)
 
+        self.dp.qprint('All images processed.', level = -1)
+        transmission_summarise()
+
         # cleanup
         try:
             shutil.rmtree(self.uuid_directory)
@@ -332,5 +411,7 @@ class Listen():
 
         # what about log files?
         # import logger?
+
+        self.dp.qprint('DICOM transmission complete.', level = -1)
 
         stdout_file.close()
