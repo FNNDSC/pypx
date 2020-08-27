@@ -22,9 +22,8 @@ setup(
         install_requires=[
             'terminaltables',
             'py-dateutil',
-            'pydicom',
-            'pfmisc',
-            'pprint',
+            'pydicom==1.3.0',
+            'pfmisc'
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],
