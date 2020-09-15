@@ -1,10 +1,9 @@
 #!/bin/bash
 
 source common.bash
-
 let G_VERBOSE=0
 let G_DEBUG=0
-G_DICOMDIR=$(pwd)/dicom
+G_DICOMDIR=/neuro/users/chris/data-ng
 G_AETITLE=CHIPS
 let Gb_AETITLE=0
 G_QUERYHOST=127.0.0.1
@@ -14,6 +13,8 @@ let Gb_QUERYPORT=0
 G_CALLTITLE=ORTHANC
 let Gb_CALLTITLE=0
 G_INSTITUTION=BCH-chrisdev
+G_HOST=titan
+G_USER=chris-local
 G_DOCKERORG=fnndsc
 G_SYNOPSIS="
 
@@ -29,6 +30,8 @@ G_SYNOPSIS="
                         [-p <PACSport>]                                 \\
                         [-a <AETitle>]                                  \\
                         [-c <CalledAETitle>]                            \\
+                        [-H <hostCheck>]                                \\
+                        [-U <userCheck>]                                \\
                         [-D]                                            \\
                         [-d <dicomDir>]                                 \\
                         [-C]                                            \\
@@ -39,7 +42,29 @@ G_SYNOPSIS="
   DESC
 
         PACS_QR.sh is a thin convenience wrapper around a containerized
-        call to \"fnndsc/pypx --px-find\"
+        call to \"fnndsc/pypx --px-find\".
+
+        Given the very strong and very implicit dependencies of this script
+        on an appropriately configured PACS server, as well a valid path
+        from the PACS transmission to a specific 'host', the following
+        pre-requesites are required:
+
+  PRE-REQUISITES
+
+        In the BCH network, if you are running this script stand-alone, you
+        MUST:
+
+        * BE ABLE TO RUN DOCKER COMMANDS!
+        * have an ssh tunnel from 'pretoria:10402' to '$G_HOST:10402' (**)
+        * make sure you are running this on host 'titan'
+        * make note that any pulled DICOMs are saved to
+
+                /neuro/users/chris/data/dicom-ng
+
+        (**) typical cmd for setting up a tunnel (on host 'pretoria'):
+
+        ssh -g -f -N -X -L 10402:localhost:10402 rudolphpienaar@titan
+
   ARGS
 
         -h <institution>
@@ -67,6 +92,18 @@ G_SYNOPSIS="
 
         [-c <CalledAETitle>]
         Explicitly set the CalledAETitle to <CalledAETitle>.
+
+        [-H <hostCheck>]
+        Check that *this* host is the same as the <hostCheck>. This is
+        a convenient way to check that the script runs only on a host
+        that has appropriate ssh tunnel connections configured for
+        receiving DICOM data transimission.
+
+        [-U <userCheck>]
+        Check that *this* user is the same as <userCheck>. Since this
+        script calls the docker daemon, the user running the script
+        needs to in the docker group. This is convenient method of
+        making sure that a docker approved user is executing this script.
 
         [-D]
         If specified, volume mount source files into the container for
@@ -105,7 +142,10 @@ G_SYNOPSIS="
   EXAMPLE
 
     QUERY
-    PACS_QR.sh -Q \"--PatientID 1234567\"
+
+        PACS_QR.sh -Q \"--PatientID 1234567\"
+
+    NOTE: 1234567 is a fake PatientID. Please do not actually use that!
 
     Query the PACS on the passed PatientID. Note that the following query terms are
     accepted by px-find (and returned by the PACS in Query mode):
@@ -131,10 +171,68 @@ G_SYNOPSIS="
             'QueryRetrieveLevel': 'SERIES'
         }
 
-  RETRIEVE
-  PACS_QR.sh -Q \"--PatientID 1234567 --retrieve --printReport ''\"
+    RETRIEVE
+
+        PACS_QR.sh -Q \"--PatientID 1234567 --retrieve --printReport ''\"
+
+    NOTE: 1234567 is a fake PatientID. Please do not actually use that!
 
 "
+
+A_hostCheck="checking on this host"
+EM_hostCheck="This must be run as user '$G_USER' and on host '$G_HOST'!
+
+                ┌─────────────────────────────────────────┐
+                │  ssh chris-local@titan.tch.harvard.edu  │
+                └─────────────────────────────────────────┘
+"
+EC_hostCheck="10"
+
+A_userCheck="checking on user, you are '$(whoami)'"
+EM_userCheck="This must be run as user '$G_USER' and on host '$G_HOST'!
+
+                ┌─────────────────────────────────────────┐
+                │  ssh chris-local@titan.tch.harvard.edu  │
+                └─────────────────────────────────────────┘
+"
+EC_userCheck="12"
+
+function host_check
+{
+    local HOST=$(hostname)
+    local b_retrieve=0
+    local b_move=0
+
+    if [[ "$ARGS" == *"retrieve"* ]] ; then
+        b_retrieve=1
+    fi
+    if [[ "$ARGS" == *"move"* ]] ; then
+        b_move=1
+    fi
+
+    if (( $b_move || $b_retrieve )) ; then
+        if [[ $HOST != $G_HOST ]] ; then
+            fatal hostCheck
+        fi
+        echo "
+┌────────────────│ PACS PULL │─────────────────┐
+│       A PACS PULL has been specified.        │
+│                                              │
+│   Any retrieved results will be saved here:  │
+└──────────────────────────────────────────────┘
+    $G_DICOMDIR
+
+        "
+        exit 1
+    fi
+}
+
+function user_check
+{
+    if [[ $(whoami) != "$G_USER" ]] ; then
+        fatal userCheck
+    fi
+}
 
 function institution_set
 {
@@ -181,12 +279,13 @@ function institution_set
     esac
 }
 
-while getopts h:Q:DCd:P:p:a:c:r:v option ; do
+while getopts h:Q:DCd:H:P:p:a:c:r:v option ; do
     case "$option"
     in
-        Q) ARGS=$OPTARG                 ;;
+        Q) ARGS="$OPTARG"               ;;
         d) G_DICOMDIR=$OPTARG           ;;
         r) G_DOCKERORG=$OPTARG          ;;
+        H) G_HOST=$OPTARG               ;;
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
         v) let G_VERBOSE=1              ;;
@@ -205,6 +304,8 @@ while getopts h:Q:DCd:P:p:a:c:r:v option ; do
     esac
 done
 
+user_check
+host_check
 institution_set $G_INSTITUTION
 
 if (( Gb_QUERYHOST )) ; then  G_QUERYHOST=$QUERYHOST;  fi
@@ -224,26 +325,28 @@ fi
 
 DEBUG=""
 if (( Gb_DEBUG )) ; then
-        DEBUG=" --tty --interactive                                \
-                --volume $(pwd)/pypx:/usr/local/lib/python3.8/dist-packages/pypx \
+        DEBUG=" --volume $(pwd)/pypx:/usr/local/lib/python3.8/dist-packages/pypx \
                 --volume $(pwd)/bin/px-echo:/usr/local/bin/px-echo \
                 --volume $(pwd)/bin/px-find:/usr/local/bin/px-find \
                 --volume $(pwd)/bin/px-move:/usr/local/bin/px-move \
                 --volume $(pwd)/bin/px-listen:/usr/local/bin/px-listen "
 fi
 
-CLI="docker run                               \
-            --rm                              \
-            --publish 10402:10402             \
-            --volume $G_DICOMDIR:/dicom $DEBUG\
-            ${G_DOCKERORG}/pypx               \
-            --px-find                         \
-            --aec $G_CALLTITLE                \
-            --aet $G_AETITLE                  \
-            --serverIP $G_QUERYHOST           \
-            --serverPort $G_QUERYPORT         \
-            --colorize dark                   \
-            --printReport tabular             \
+# The --tty --interactive is necessary to allow for realtime
+# logging of activity
+CLI="docker run                                 \
+            --tty --interactive                 \
+            --rm                                \
+            --publish 10402:10402               \
+            --volume $G_DICOMDIR:/dicom $DEBUG  \
+            ${G_DOCKERORG}/pypx                 \
+            --px-find                           \
+            --aec $G_CALLTITLE                  \
+            --aet $G_AETITLE                    \
+            --serverIP $G_QUERYHOST             \
+            --serverPort $G_QUERYPORT           \
+            --colorize dark                     \
+            --printReport tabular               \
             $ARGS"
 
 if (( G_VERBOSE )) ; then
