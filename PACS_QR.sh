@@ -223,7 +223,6 @@ function host_check
     $G_DICOMDIR
 
         "
-        exit 1
     fi
 }
 
