@@ -11,7 +11,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '1.1.0.0',
+        version             =   '1.1.1.0',
         description         =   'Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
