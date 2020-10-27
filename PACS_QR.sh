@@ -59,7 +59,7 @@ G_SYNOPSIS="
         * make sure you are running this on host 'titan'
         * make note that any pulled DICOMs are saved to
 
-                /neuro/users/chris/data/dicom-ng
+		/neuro/users/chris/data-ng/data
 
         (**) typical cmd for setting up a tunnel (on host 'pretoria'):
 
