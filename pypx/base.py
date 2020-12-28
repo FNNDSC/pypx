@@ -110,7 +110,7 @@ class Base():
         command_suffix =    ' -aec '    + self.aec
         command_suffix +=   ' -aet '    + self.aet
         command_suffix +=   ' '         + self.serverIP
-        command_suffix +=   ' '         + self.serverPort
+        command_suffix +=   ' '         + str(self.serverPort)
 
         return command_suffix
 
