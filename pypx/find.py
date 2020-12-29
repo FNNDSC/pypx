@@ -382,11 +382,14 @@ class Find(Base):
         to the SeriesInstanceUID.
 
         """
-        self.systemlevel_run(self.arg,
-            {
-                'f_commandGen': self.xinetd_command
-            }
-        )
+        xinetdRun = self.systemlevel_run(self.arg,
+                {
+                    'f_commandGen': self.xinetd_command
+                }
+            )
+        if xinetdRun['status'] == 'error':
+            return list(xinetdRun)
+
         studyIndex  = 0
         l_run       = []
         for study in d_filteredHits['report']['json']:
@@ -478,6 +481,9 @@ class Find(Base):
                     }
             )
 
+        if formattedStudiesResponse['status'] == 'error':
+            return formattedStudiesResponse
+
         filteredStudiesResponse             = {}
         filteredStudiesResponse['status']   = formattedStudiesResponse['status']
         filteredStudiesResponse['command']  = formattedStudiesResponse['command']
@@ -493,6 +499,9 @@ class Find(Base):
                             'StudyInstanceUID':     study['StudyInstanceUID']['value']
                         }
                 )
+            if formattedSeriesResponse['status'] == 'error':
+                continue
+
             for series in formattedSeriesResponse['data']:
                 series['label']             = {}
                 series['label']['tag']      = 0
