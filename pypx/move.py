@@ -51,11 +51,13 @@ class Move(Base):
     def run(self, opt={}):
 
         # First, for dockerized run, (re)start the xinetd service
-        self.systemlevel_run(self.arg, 
+        xinetdRun = self.systemlevel_run(self.arg,
             {
                 'executable':   'xinetd'
             }
         )
+        if xinetdRun['status'] == 'error':
+            return xinetdRun
 
         d_moveRun = self.systemlevel_run(self.arg, 
                 {
