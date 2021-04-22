@@ -19,6 +19,10 @@ import  pydicom
 # PYPX modules
 import  pypx.utils
 
+import  pudb
+from    pudb.remote         import set_trace
+
+import  rpudb
 import  pfmisc
 
 class Listen():
@@ -330,10 +334,19 @@ class Listen():
 
         # start listening to incoming data
         self.dp.qprint("Listening for and parsing incoming data...", level = -1)
-        command = self.executable   + ' -id -od "'      + \
-          self.uuid_directory       + '" -xcr "touch '  + \
-          self.uuid_directory       + '/#c;touch '      + \
-          self.uuid_directory       + '/#a" -pm -sp;'
+
+        # command = self.executable   + ' -id -od "'              + \
+        #   self.uuid_directory       + '" -xcr "touch '          + \
+        #   self.uuid_directory       + '/#f;touch '              + \
+        #   self.uuid_directory       + '/#c;touch '              + \
+        #   self.uuid_directory       + '/#a" -pm -sp -d -lc '    + \
+        #   self.uuid_directory       + '/debug.log'
+
+        command = self.executable   + ' -id -od '               + \
+          self.uuid_directory       + ' -pm -sp -d >'        + \
+          self.uuid_directory       + '/debug.log'
+
+        self.dp.qprint("Listener command:... \n'%s'" % command, level = -1)
         subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
         abs_files = [os.path.join(self.uuid_directory,f) for f in os.listdir(self.uuid_directory)]
@@ -398,16 +411,16 @@ class Listen():
         transmission_summarise()
 
         # cleanup
-        try:
-            shutil.rmtree(self.uuid_directory)
-            os.remove(self.log_output)
-        except OSError as err:
-            errorfile = open(self.log_error, 'w')
-            errorfile.write('Remove ' + self.uuid_directory + ' tree\n')
-            errorfile.write('Error number: ' + str(err.errno) + '\n')
-            errorfile.write('File name: ' + err.filename + '\n')
-            errorfile.write('Error message: ' + err.strerror + '\n')
-            errorfile.close()
+        # try:
+        #     shutil.rmtree(self.uuid_directory)
+        #     os.remove(self.log_output)
+        # except OSError as err:
+        #     errorfile = open(self.log_error, 'w')
+        #     errorfile.write('Remove ' + self.uuid_directory + ' tree\n')
+        #     errorfile.write('Error number: ' + str(err.errno) + '\n')
+        #     errorfile.write('File name: ' + err.filename + '\n')
+        #     errorfile.write('Error message: ' + err.strerror + '\n')
+        #     errorfile.close()
 
         # what about log files?
         # import logger?
