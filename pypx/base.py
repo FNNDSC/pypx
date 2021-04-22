@@ -20,9 +20,9 @@ codecs.register_error('slashescape', slashescape)
 class Base():
     """
     A Base class for pypx.
-    
+
     This class is somewhat abstract/virtual in as much as it
-    provides a substrate for derived classes and in and of 
+    provides a substrate for derived classes and in and of
     itself does very little.
 
     """
@@ -46,12 +46,21 @@ class Base():
 
         self.arg = arg
 
+        # For lint sanity, the following are explicitly set
+        # (note that they are implicitly created in the call
+        # to defaults_init):
+        self.verbosity      = 1
+        self.aec            = ''
+        self.aet            = ''
+        self.serverIP       = ''
+        self.serverPort     = ''
+
         self.defaults_init(
             {
                 'aet':          'CHRIS-AET',
                 'aec':          'CHRIS-AEC',
                 'serverIP':     '127.0.0.1',
-                'serverPort':   4242,
+                'serverPort':   '4242',
                 'findscu':      '/usr/bin/findscu',
                 'movescu':      '/usr/bin/movescu',
                 'storescp':     '/usr/bin/storescp',
@@ -88,7 +97,7 @@ class Base():
         for k,v in d_params.items():
             if k == 'f_commandGen':
                 f_commandGen    = v
-                b_commandGen    = True 
+                b_commandGen    = True
             else:
                 opt[k]  = v
 
@@ -96,9 +105,9 @@ class Base():
             str_cmd         = f_commandGen(opt)
             self.dp.qprint("\n%s" % str_cmd, level = 5, type = 'status')
             raw_response    = subprocess.run(
-                                str_cmd, 
-                                stdout  = subprocess.PIPE, 
-                                stderr  = subprocess.STDOUT, 
+                                str_cmd,
+                                stdout  = subprocess.PIPE,
+                                stderr  = subprocess.STDOUT,
                                 shell   = True
             )
             d_ret   = self.formatResponse(raw_response)
@@ -169,7 +178,7 @@ class Base():
                     if value != None:
                         value = value.group(0)[1:-1].strip().replace('\x00', '')
                     else:
-                        value = 'no value provided'
+                        value = 'no value provided for %s' % tag
 
                     # extract label
                     label = lineSplit[-1].strip()
