@@ -1,0 +1,388 @@
+#!/usr/bin/env python3
+#                                                            _
+# DICOM storescp exec-on-reception processor
+#
+# (c) 2021 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import      sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from        argparse            import RawTextHelpFormatter
+from        argparse            import ArgumentParser
+from        pfmisc._colors      import Colors
+import      pypx
+from        pypx                import repack
+
+import      json
+
+import      pudb
+from        pudb.remote         import set_trace
+
+str_name    = "px-repack"
+str_version = "1.2.0"
+str_desc    = Colors.CYAN + """
+                                                              _
+                                                             | |
+         _ __  __  __ ______  _ __   ___  _ __    __ _   ___ | | __
+        | '_ \ \ \/ /|______|| '__| / _ \| '_ \  / _` | / __|| |/ /
+        | |_) | >  <         | |   |  __/| |_) || (_| || (__ |   <
+        | .__/ /_/\_\        |_|    \___|| .__/  \__,_| \___||_|\_\.
+        | |                              | |
+        |_|                              |_|
+
+
+                                PACS ToolKit Wrapper
+                                    px-repack
+
+                               -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+    ``px-repack``   is  an  end-of-(DICOM)reception  processing  script and
+    module. It is designed to be called by some initiator program and works
+    on a directory and file to process.
+
+    The typical initiator is a ``storescp`` "listener" (often under control
+    of an  xinetd servce). Usually xinetd will fire up ``storescp`` on  the
+    receipt  of traffic on a  listening port.  Assuming these are DICOM data
+    stream files, ``storescp`` will save the DICOM file on success, and then
+    call ``px-repack`` which will repack the file in a filesystem expressive
+    location. This organization pattern can be specified by a set of string
+    templates.
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - DICOM file "repack" to FS location based on various
+          DICOM tag values.
+
+    SYNOPSIS
+
+            px-repack                                               \\
+                [--xcrdir|-p <xcrdir>]                              \\
+                [--xcrfile|-f <xcrfile>]                            \\
+                [--xcrdirfile <xcrdirfile>]                         \\
+                [--parseAllFilesWithSubStr <substr>]                \\
+                [--logdir|-l <logdir>]                              \\
+                [--datadir|-d <datadir>]                            \\
+                [--rootDirTemplate <rootTemplate>]                  \\
+                [--studyDirTemplate <studyTemplate>]                \\
+                [--seriesDirTemplate <seriesTemplate>]              \\
+                [--imageFileTemplate <imageTemplate>]               \\
+                [--cleanup]                                         \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--debug]                                           \\
+                [--verbosity <level>]
+
+    ''' % scriptName + Colors.NO_COLOUR
+
+    description = Colors.LIGHT_GREEN + '''
+
+    ARGS
+
+        [--xcrdir|-p <xcrdir>]
+        A directory that contains a DICOM file to process.
+
+        [--xcrfile|-f <xcrfile>]
+        A specific DICOM file in the <xcrdir>.
+
+        [--xcrdirfile <xcrdirfile>]
+        A fully qualified dir and file specifier. If passed, the script
+        will separate into dir and file parts.
+
+        [--parseAllFilesWithSubStr <substr>]
+        If passed, process all the files in the <xcrdir> that contain the
+        <substr> in their filename in one sweep.
+
+        [--logdir|-l <logdir>]
+        The directory containing log files relevant to px-repack operation.
+
+        [--datadir|-d <datadir>]
+        The directory that will contain the root of the file tree of packed
+        image files.
+
+        [--cleanup]
+        If specified, clean up nicely like a good little script should. This
+        removes the originally received DICOM files that are stored in the
+        initial holding directory.
+
+        [-x|--desc]
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--debug]
+        If specified, then log any debugging noise also to the <logdir>.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level:
+
+            * "0"   :   no output -- quiet
+            * "1"   :   JSON dump output from the run call
+            * "2"   :   Dump internal intermediary output
+
+        [--rootDirTemplate <rootTemplate>]
+        A string template for the root directory name in which to pack a
+        given DICOM.
+
+        Default: "%PatientID-%PatientName-%PatientAge"
+
+        [--studyDirTemplate <studyTemplate>]
+        A string template for the study directory name in which to pack a
+        given DICOM.
+
+        Default: "%StudyDescription-%StudyDate"
+
+        [--seriesDirTemplate <seriesTemplate>]
+        A string template for the series directory name in which to pack a
+        given DICOM.
+
+        Default: "%SeriesDescription"
+
+        [--imageFileTemplate <imageTemplate>]
+        A string template for the image file name in which to copy a
+        given DICOM.
+
+        Default: "%_pad|4,0_InstanceNumber-%SOPInstanceUID"
+
+    DESCRIPTION
+
+        This script and module are used to process (typically) single
+        DICOM files from one location on a filesystem and pack them to
+        a different location.
+
+        Essentially, ``px-repack`` is meant to operate on a single DICOM
+        file, and based on the meta/header information, save that same file
+        elsewhere in the filesystem under the following structure:
+
+        <dataDir>
+            |
+            └─<rootTemplate>
+                    |
+                    └─<studyTemplate>
+                             |
+                             └─<seriesTemplate>
+                                      |
+                                      └─<imageTemplate>.dcm
+
+        The purpose of course is to provide some meaningful structure to
+        what would otherwise be an opaque and flat set of meaningless DICOM
+        file names.
+
+        ``px-repack`` is designed to be called by an different process,
+        usually a ``storescp`` listener, on a per-file-received basis.
+
+        However, as a convenience, ``px-repack`` can also be called directly
+        on a single directory containing DICOMS and be instructed to repack
+        all the files in the above template structure.
+
+    TEMPLATES
+
+        A template is a pattern for a string, based on DICOM tags. For example,
+        a template that is specified as the following string:
+
+            %PatientAge-%PatientID-output.txt
+
+        will be parsed to
+
+            006Y-4412364-ouptut.txt
+
+        It is also possible to apply certain permutations/functions
+        to a tag. For example, a function is identified by an underscore
+        prefixed and suffixed string as part of the DICOM tag. If
+        found, this function is applied to the tag value. For example,
+
+            %PatientAge-%_md5|4_PatientID-output.txt
+
+        will apply an md5 hash to the PatientID and use the first 4
+        characters:
+
+            006Y-7f38-output.txt
+
+''' + Colors.PURPLE + '''
+
+    EXAMPLES
+
+        px-repack                                                   \\
+                --xcrdir /dicom/tmp                                 \\
+                --xcrfile file0001.dcm                              \\
+                --logdir /dicom/log                                 \\
+                --datadir /dicom/data                               \\
+                --debug
+
+''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
+
+# Settings
+parser.add_argument(
+    '-p', '--xcrdir',
+    action  = 'store',
+    dest    = 'str_xcrdir',
+    type    = str,
+    default = '/tmp',
+    help    = 'Directory containing a received study'
+    )
+parser.add_argument(
+    '-f', '--xcrfile',
+    action  = 'store',
+    dest    = 'str_xcrfile',
+    type    = str,
+    default = '',
+    help    = 'File in <xcrdir> to process'
+    )
+parser.add_argument(
+    '--xcrdirfile',
+    action  = 'store',
+    dest    = 'str_xcrdirfile',
+    type    = str,
+    default = '',
+    help    = 'Fully qualified file to process'
+    )
+parser.add_argument(
+    '--parseAllFilesWithSubStr',
+    action  = 'store',
+    dest    = 'str_filesubstr',
+    type    = str,
+    default = '',
+    help    = 'Parse all files in <xcrdir> that contain <substr>'
+    )
+parser.add_argument(
+    '-l', '--logdir',
+    action  = 'store',
+    dest    = 'str_logDir',
+    type    = str,
+    default = '/tmp/log',
+    help    = 'Directory to store log files'
+    )
+parser.add_argument(
+    '-d', '--datadir',
+    action  = 'store',
+    dest    = 'str_dataDir',
+    type    = str,
+    default = '/tmp/data',
+    help    = 'Directory in which to pack final DICOM files'
+    )
+
+parser.add_argument(
+    '--rootDirTemplate',
+    action  = 'store',
+    dest    = 'str_rootDirTemplate',
+    type    = str,
+    default = '%PatientID-%PatientName-%PatientAge',
+    help    = 'Template pattern for root unpack directory'
+    )
+parser.add_argument(
+    '--studyDirTemplate',
+    action  = 'store',
+    dest    = 'str_studyDirTemplate',
+    type    = str,
+    default = '%StudyDescription-%StudyDate-%StudyInstanceUID',
+    help    = 'Template pattern for study unpack directory'
+    )
+parser.add_argument(
+    '--seriesDirTemplate',
+    action  = 'store',
+    dest    = 'str_seriesDirTemplate',
+    type    = str,
+    default = '%SeriesDescription-%SeriesInstanceUID',
+    help    = 'Template pattern for series unpack directory'
+    )
+parser.add_argument(
+    '--imageTemplate',
+    action  = 'store',
+    dest    = 'str_imageTemplate',
+    type    = str,
+    default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
+    help    = 'Template pattern for image file'
+    )
+
+parser.add_argument(
+    '--cleanup',
+    action  = 'store_true',
+    dest    = 'b_cleanup',
+    default = False,
+    help    = 'If specified, then cleanup temporary files'
+    )
+parser.add_argument(
+    '--debug',
+    action  = 'store_true',
+    dest    = 'b_debug',
+    default = False,
+    help    = 'If specified, then also log debug info to <logdir>'
+    )
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    type    = int,
+    default = 1)
+parser.add_argument(
+    "-x", "--desc",
+    help    = "show long synopsis",
+    dest    = 'b_desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "show short synopsis",
+    dest    = 'b_synopsis',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+
+args        = parser.parse_args()
+
+# set_trace(host = "0.0.0.0", port = 5555, term_size = (252, 63))
+# rpudb.set_trace(addr='0.0.0.0', port=5555)
+
+if args.b_desc or args.b_synopsis:
+    print(str_desc)
+    if args.b_desc:
+        str_help     = synopsis(False)
+    if args.b_synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+handler     = repack.Process(args)
+d_handler   = handler.run()
+
+if args.verbosity:
+    print(json.dumps(d_handler, indent = 4))

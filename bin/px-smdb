@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+#                                                            _
+# DICOM storescp exec-on-reception processor
+#
+# (c) 2021 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import      sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from        argparse            import RawTextHelpFormatter
+from        argparse            import ArgumentParser
+from        pfmisc._colors      import Colors
+import      pypx
+from        pypx                import smdb
+
+import      json
+
+import      pudb
+from        pudb.remote         import set_trace
+
+str_name    = "px-smdb"
+str_version = "1.0.0"
+str_desc    = Colors.CYAN + """
+                                         _  _
+                                        | || |
+                     ___  _ __ ___    __| || |__
+                    / __|| '_ ` _ \  / _` || '_ \.
+                    \__ \| | | | | || (_| || |_) |
+                    |___/|_| |_| |_| \__,_||_.__/
+
+
+            A simple map database of JSON "table" objects/files.
+
+                               -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+    This module provides support for  a  simple file-system database of
+    JSON file tables that define/track the state, description, location,
+    and other meta data associated with received DICOM files.
+
+    Three core map file/table groups exist:
+
+    <dataLogDir>/patientMap/patientMap-<%PatientID>.json
+    <dataLogDir>/studyMap/studyMap-<%StudyInstanceUID>.json
+    <dataLogDir>/seriesMap/<%SeriesInstanceUID>/seriesMap-%%imageFile.json
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - SiMpleDB analog for filesystem-based tracking of received
+          DICOM file / series / study / patient data
+
+    SYNOPSIS
+
+            smdb                                                    \\
+                [--xcrdir|-p <xcrdir>]                              \\
+                [--xcrfile|-f <xcrfile>]                            \\
+                [--xcrdirfile <xcrdirfile>]                         \\
+                [--logdir|-l <logdir>]                              \\
+                [--action <action>]                                 \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--debug]                                           \\
+                [--verbosity <level>]
+
+    ''' % scriptName + Colors.NO_COLOUR
+
+    description = Colors.LIGHT_GREEN + '''
+
+    ARGS
+
+        [--xcrdir|-p <xcrdir>]
+        A directory that contains a repacked DICOM file.
+
+        [--xcrfile|-f <xcrfile>]
+        A specific DICOM file in the <xcrdir>.
+
+        [--xcrdirfile <xcrdirfile>]
+        A fully qualified dir and file specifier. If passed, the script
+        will separate into dir and file parts.
+
+        [--action <action>]
+        Some action to perform. Valid actions include:
+
+            * mapsUpdateForFile
+            * endOfStudy
+            * seriesMap_DBtablesGet
+
+        [--logdir|-l <logdir>]
+        The directory containing log files relevant to smdb operation.
+
+        [--cleanup]
+        If specified, clean up nicely like a good script should.
+
+        [-x|--desc]
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--debug]
+        If specified, then log any debugging noise also to the <logdir>.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level:
+
+            * "0"   :   no output -- quiet
+            * "1"   :   JSON dump output from the run call
+            * "2"   :   Dump internal intermediary output
+
+    DESCRIPTION
+
+        This script and module are used to record information pertinent
+        to a single DICOM file reception or the end of study trigger.
+
+
+''' + Colors.PURPLE + '''
+
+    EXAMPLES
+        px-smdb                                                     \\
+                --xcrdir /dicom/tmp                                 \\
+                --xcrfile file0001.dcm                              \\
+                --action endOfStudy                                 \\
+                --logdir /dicom/log                                 \\
+                --datadir /dicom/data                               \\
+                --debug
+
+''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
+
+# Settings
+parser.add_argument(
+    '-p', '--xcrdir',
+    action  = 'store',
+    dest    = 'str_xcrdir',
+    type    = str,
+    default = '/tmp',
+    help    = 'Directory containing a received study'
+    )
+parser.add_argument(
+    '-f', '--xcrfile',
+    action  = 'store',
+    dest    = 'str_xcrfile',
+    type    = str,
+    default = '',
+    help    = 'File in <xcrdir> to process'
+    )
+parser.add_argument(
+    '--xcrdirfile',
+    action  = 'store',
+    dest    = 'str_xcrdirfile',
+    type    = str,
+    default = '',
+    help    = 'Fully qualified file to process'
+    )
+parser.add_argument(
+    '--action',
+    action  = 'store',
+    dest    = 'str_action',
+    type    = str,
+    default = '',
+    help    = 'DB action to perform'
+    )
+parser.add_argument(
+    '-l', '--logdir',
+    action  = 'store',
+    dest    = 'str_logDir',
+    type    = str,
+    default = '/tmp/log',
+    help    = 'Directory to store log files'
+    )
+
+parser.add_argument(
+    '--cleanup',
+    action  = 'store_true',
+    dest    = 'b_cleanup',
+    default = False,
+    help    = 'If specified, then cleanup temporary files'
+    )
+parser.add_argument(
+    '--debug',
+    action  = 'store_true',
+    dest    = 'b_debug',
+    default = False,
+    help    = 'If specified, then also log debug info to <logdir>'
+    )
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    type    = int,
+    default = 1)
+parser.add_argument(
+    "-x", "--desc",
+    help    = "show long synopsis",
+    dest    = 'b_desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "show short synopsis",
+    dest    = 'b_synopsis',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+
+args        = parser.parse_args()
+
+if args.b_desc or args.b_synopsis:
+    print(str_desc)
+    if args.b_desc:
+        str_help     = synopsis(False)
+    if args.b_synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+handler     = smdb.SMDB(args)
+d_handler   = handler.run()
+
+if args.verbosity:
+    print(json.dumps(d_handler, indent = 4))
