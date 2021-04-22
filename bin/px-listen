@@ -19,8 +19,13 @@ from    terminaltables      import SingleTable
 from    pfmisc._colors      import Colors
 import  pypx
 
+import  pudb
+from    pudb.remote         import set_trace
+import  rpudb
+import  pfmisc
+
 str_name    = "px-listen"
-str_version = "1.1.2.0"
+str_version = "1.2.0"
 str_desc    = Colors.CYAN + """
 
              _ _     _
@@ -42,8 +47,8 @@ str_desc    = Colors.CYAN + """
     ``px-listen`` is a wrapper script about the DCMTK 'storescu' application
     that provides functionality for receiving PACS communictaions.
 
-    ``px-listen`` is a core appliucation that operates mostly as a daemon
-    called by a management process (such as ``xinetd`` on Ubuntu systems). It
+    ``px-listen`` is a core application that operates mostly as a daemon
+    called by a management process (such as ``xinetd`` on Linux systems). It
     is not a user-facing application and not called by a user/client process.
 
 """ + Colors.NO_COLOUR
@@ -55,37 +60,37 @@ def synopsis(ab_shortOnly = False):
 
 	    %s
 
-        - PACS listener service
+        - PACS listener / interpreter service
 
     SYNOPSIS
 
             px-listen                                               \\
-                [--tmpdir <tmpdir>]                                 \\
-                [--logdir <logdir>]                                 \\
-                [--datadir <datadir>]                               \\
+                [--tmpdir|-t <tmpdir>]                              \\
+                [--logdir|-l <logdir>]                              \\
+                [--datadir|-d <datadir>]                            \\
                 [--executable <executable>]                         \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
-                [--debugToDir <dir>]                                \\
+                [--debug]                                           \\
                 [--verbosity <level>]
 
     ''' % scriptName + Colors.NO_COLOUR
 
     description = Colors.LIGHT_GREEN + '''
 
-        [--tmpdir <tmpdir>]
+        [--tmpdir|-t <tmpdir>]
         A tmp directory that will contain data as it is incoming from a
         remote PACS.
 
-        [--logdir <logdir>]
+        [--logdir|-l <logdir>]
         The directory containing log files relevant to px-listen operation.
 
-        [--datadir <datadir>]
+        [--datadir|-d <datadir>]
         The directory that will contain the root of the file tree of received
         image files.
 
-        [--executable <storescp>]
+        [--executable|-e <storescp>]
         The actual 'storescp' absolute location.
 
         [-x|--desc]
@@ -97,12 +102,8 @@ def synopsis(ab_shortOnly = False):
         [--version]
         Print internal version number and exit.
 
-        [--debugToDir <dir>]
-        A directory to contain various debugging output -- these are typically
-        JSON object strings capturing internal state. If empty string (default)
-        then no debugging outputs are captured/generated. If specified, then
-        ``pfcon`` will check for dir existence and attempt to create if
-        needed.
+        [--debug]
+        If specified, then log any debugging noise also to the <logdir>.
 
         [-v|--verbosity <level>]
         Set the verbosity level. "0" typically means no/minimal output. Allows for
@@ -164,6 +165,13 @@ parser.add_argument(
     help    = 'storescp executable absolute location'
     )
 parser.add_argument(
+    '--debug',
+    action  = 'store_true',
+    dest    = 'b_debug',
+    default = False,
+    help    = 'If specified, then also log debug info to <logdir>'
+    )
+parser.add_argument(
     "-v", "--verbosity",
     help    = "verbosity level for app",
     dest    = 'verbosity',
@@ -191,7 +199,19 @@ parser.add_argument(
     default = False
 )
 
+# set_trace(host = "0.0.0.0", port = 5555, term_size = (252, 63))
+
 args        = parser.parse_args()
+
+if args.b_debug:
+    debug   = pfmisc.debug(
+                verbosity   = 5,
+                level       = 1,
+                within      = 'px-listen::base module',
+                debugToFile = True,
+                debugFile   = '/tmp/startup.log'
+    )
+    debug.qprint("Starting...")
 
 if args.desc or args.synopsis:
     print(str_desc)
