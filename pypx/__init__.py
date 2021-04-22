@@ -2,6 +2,7 @@ from .echo   import Echo
 from .find   import Find
 from .listen import Listen
 from .move   import Move
+from .report import Report
 
 def echo(opt={}):
     return Echo(opt).run()
@@ -14,3 +15,6 @@ def listen(opt={}):
 
 def move(opt={}):
     return Move(opt).run(opt)
+
+def report(opt={}):
+    return Report(opt).run(opt)
