@@ -240,7 +240,7 @@ function institution_set
     case "$INSTITUTION"
     in
         orthanc)
-          G_AETITLE=CHIPS
+          G_AETITLE=CHRISLOCAL
           G_QUERYHOST=127.0.0.1
           G_QUERYPORT=4242
           G_CALLTITLE=ORTHANC
@@ -278,12 +278,13 @@ function institution_set
     esac
 }
 
-while getopts h:Q:DCd:H:P:p:a:c:r:v option ; do
+while getopts h:Q:DCd:U:H:P:p:a:c:r:v option ; do
     case "$option"
     in
         Q) ARGS="$OPTARG"               ;;
         d) G_DICOMDIR=$OPTARG           ;;
         r) G_DOCKERORG=$OPTARG          ;;
+        U) G_USER=$OPTARG               ;;
         H) G_HOST=$OPTARG               ;;
         C) let Gb_CLEAR=1               ;;
         D) let Gb_DEBUG=1               ;;
