@@ -29,17 +29,18 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "1.1.2.0"
+str_version = "1.2.0"
 str_desc    = Colors.CYAN + """
 
-              __ _           _
-             / _(_)         | |
- _ __ __  __| |_ _ _ __   __| |
-| '_ \\\\ \\/ /|  _| | '_ \\ / _` |
-| |_) |>  < | | | | | | | (_| |
-| .__//_/\\_\\|_| |_|_| |_|\\__,_|
-| |
-|_|
+                                   __  _             _ 
+                                  / _|(_)           | |
+             _ __  __  __ ______ | |_  _  _ __    __| |
+            | '_ \ \ \/ /|______||  _|| || '_ \  / _` |
+            | |_) | >  <         | |  | || | | || (_| |
+            | .__/ /_/\_\        |_|  |_||_| |_| \__,_|
+            | |                                        
+            |_|                                        
+
 
                         PACS ToolKit Wrapper
                             Query / Find
@@ -67,7 +68,8 @@ def synopsis(ab_shortOnly = False):
     SYNOPSIS
 
             _script mode_:
-            px-find                                                 \\
+            px-find
+                [--db <dblogbasepath>]                              \\
                 [--aet <AETitle>]                                   \\
                 [--aec <CalledAETitle>]                             \\
                 [--serverIP <PACSserverIP>]                         \\
@@ -89,10 +91,8 @@ def synopsis(ab_shortOnly = False):
                 [--AcquisitionProtocolName <APName>]                \\
                 [--AcquisitionProtocolDescription <APDescription>]  \\
                 [--AcquisitionProtocolName <APName>]                \\
-                [--retrieve [--move]]                               \\
-                [--reportTags <JSONDesc>]                           \\
-                [--colorize light|dark]                             \\
-                [--printReport tabular|rawText|json]                \\
+                [--retrieve [--move] [--retrieveFeedBack]]          \\
+                [--json]                                            \\
                 [--waitForUserTerminate]                            \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
@@ -103,6 +103,26 @@ def synopsis(ab_shortOnly = False):
     ''' % scriptName + Colors.NO_COLOUR
 
     description = Colors.LIGHT_GREEN + '''
+
+    DESCRIPTION
+
+        ``px-find`` is the main entry point to executing a PACS
+        Query. Optional additional behaviours include requesting
+        a Retrieve and Status -- these latter two behaviours operate
+        on the series space that the find / query returns.
+
+        Typically, the results of the ``px-find`` are piped to
+        a ``px-report`` script for report generation.
+
+    ARGS
+
+        [--db <dblogbasepath>]
+        A path to the base directory of the DB contents/files that track
+        received files. This is typically the <logDir> of the `px-repack`
+        process that repacks incoming DICOM files. Specifying this path
+        allows `px-find` to access db tables needed to track the number
+        of DICOM files that are received in the case of a 'retrieve'
+        event.
 
         [--aet <AETitle>]
         The AETitle of *this* entity.
@@ -169,20 +189,19 @@ def synopsis(ab_shortOnly = False):
         If set, perform a DICOM movescu on the set of filtered
         SeriesInstanceUIDs using internal calls.
 
+        [--retrieveFeedBack]
+        If specified, provide console level feedback on retrieves as they
+        happen. Note, if part of a chained/piped workflow, the feedback
+        CLI output could corrupt downstream apps, especially if these
+        apps want to consume JSON from stdin.
+
         [--move]
         If set and called with [--retrieve], perform a DICOM movescu on the
         set of filtered SeriesInstanceUIDs using the pypx/move module.
 
-        [--reportTags <JSONdesc>]
-        If specified, print only the JSON specified result tags from either the
-        STUDY or SERIES level.
-
-        [--colorize 'light'|'dark']
-        An optional directive to colorize the report output, either for 'light'
-        or 'dark' consoles.
-
-        [--printReport tabular|rawText|json]
-        If specified, pretty print a report in a variety of formats.
+        [--json]
+        If specified, print the JSON structure related to the find event. If
+        piping results to a report module, you MUST specify this.
 
         [--waitForUserTerminate]
         If specified, wait at program conclusion for explicit user termination.
@@ -215,17 +234,20 @@ def synopsis(ab_shortOnly = False):
         Set the verbosity level. "0" typically means no/minimal output. Allows for
         more fine tuned output control as opposed to '--quiet' that effectively
         silences everything.
+    ''' + Colors.LIGHT_PURPLE + '''
 
     EXAMPLES
 
-        px-find                                                     \\
-            --aec CHRIS                                             \\
-            --aet FNNDSC-CHRISDEV                                   \\
-            --serverIP 134.174.12.21                                \\
-            --serverPort 104                                        \\
-            --PatientID 4777764                                     \\
-            --colorize dark                                         \\
-            --reportTags                                            \\
+        px-find                                                         \\
+            --aec CHRIS                                                 \\
+            --aet FNNDSC-CHRISDEV                                       \\
+            --serverIP 134.174.12.21                                    \\
+            --serverPort 104                                            \\
+            --PatientID 4777764                                         \\
+            --json                                                      \\
+            --colorize dark                                            |\\
+        px-report                                                       \\
+            --reportTags                                                \\
             '{
                 "header":
                 {
@@ -247,37 +269,20 @@ def synopsis(ab_shortOnly = False):
                             ]
                 }
             }'
+            --printReport tabular --colorize dark
 
-        px-find                                                     \\
-            --aec CHIPS                                             \\
-            --aec ORTHANC                                           \\
-            --serverIP localhost                                    \\
-            --serverPort 4242                                       \\
-            --PatientID LILLA-9731                                  \\
-            --colorize dark					    \\
-            --reportTags                                            \\
-            '{
-                "header":
-                {
-                    "study" : [
-                            "PatientName",
-                            "ScanDate",
-                            "AccessionNumber",
-                            "PatientID",
-                            "PatientSex",
-                            "PatientAge",
-                            "PerformedStationAETitle",
-                            "StudyDescription"
-                            ]
-                },
-                "body":
-                {
-                    "series" : [
-                            "SeriesDescription"
-                            ]
-                }
-            }'
-    ''' + Colors.LIGHT_PURPLE + '''
+        # Or, more succinctly
+        px-find                                                         \\
+            --aec CHIPS                                                 \\
+            --aec ORTHANC                                               \\
+            --serverIP localhost                                        \\
+            --serverPort 4242                                           \\
+            --json                                                      \\
+            --PatientID LILLA-9731                                     |\\
+        px-report                                                       \\
+            --colorize dark					                            \\
+            --printReport tabular                                       \\
+            --reportHeaderStudyTags 'PatientName,PatientID'
 
     DOCKERIZED EXAMPLES
 
@@ -362,6 +367,15 @@ parser = ArgumentParser(
             formatter_class     = RawTextHelpFormatter
         )
 
+# db access settings
+parser.add_argument(
+    '--dblogbasepath',
+    action  = 'store',
+    dest    = 'dblogbasepath',
+    type    = str,
+    default = '/tmp/log',
+    help    = 'path to base dir of receipt database')
+
 # PACS access settings
 parser.add_argument(
     '--aet',
@@ -405,8 +419,6 @@ parser.add_argument(
     type    = str,
     default = '/usr/bin/movescu',
     help    = '"movescu" executable absolute location')
-
-
 
 # Query settings
 parser.add_argument(
@@ -518,6 +530,12 @@ parser.add_argument(
 
 # Retrieve settings
 parser.add_argument(
+    '--retrieveFeedBack',
+    action  = 'store_true',
+    dest    = 'retrieveFeedBack',
+    default = False,
+    help    = 'If specified, print retrieve events as they happen')
+parser.add_argument(
     '--retrieve',
     action  = 'store_true',
     dest    = 'retrieve',
@@ -530,28 +548,13 @@ parser.add_argument(
     default = False,
     help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
 
-# Behavioural settings
 parser.add_argument(
-    '--colorize',
-    action  = 'store',
-    dest    = 'colorize',
-    type    = str,
-    default = '',
-    help    = 'Colorize report output')
-parser.add_argument(
-    '--printReport',
-    action  = 'store',
-    dest    = 'printReport',
-    type    = str,
-    default = '',
-    help    = 'The returned report component to print')
-parser.add_argument(
-    '--reportTags',
-    action  = 'store',
-    dest    = 'reportTags',
-    type    = str,
-    default = '',
-    help    = 'The tag results to print at the STUDY or SERIES level')
+    '--json',
+    action  = 'store_true',
+    dest    = 'json',
+    default = False,
+    help    = 'If specified, dump the JSON structure relating to the query')
+
 parser.add_argument(
     "-v", "--verbosity",
     help    = "verbosity level for app",
@@ -602,8 +605,18 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
-
+# Return the JSON result as a serialized string:
 output = pypx.find(vars(args))
+
+if args.verbosity:
+    if args.json:
+        try:
+            print(json.dumps(output, indent = 4))
+        except Exception as e:
+            print(json.dumps({
+                'status'    : False,
+                'error'     : '%s' % e
+            }))
 
 if args.b_waitForUserTerminate:
     l_infoWindow =[
