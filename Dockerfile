@@ -79,7 +79,7 @@ RUN apt-get update \
   && apt-get install -y netcat-openbsd xinetd                         \
   && apt-get install -y dcmtk                                         \
   && pip install --upgrade pip                                        \
-  && pip3 install /tmp/pypx                                           \
+  && pip install /tmp/pypx                                            \
   && rm -fr /tmp/pypx
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
