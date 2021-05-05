@@ -1,0 +1,232 @@
+# Global modules
+import  subprocess, re, collections
+import  pudb
+import  json
+
+from    datetime            import  datetime
+from    dateutil            import  relativedelta
+from    terminaltables      import  SingleTable
+from    argparse            import  Namespace
+import  time
+
+import  pfmisc
+from    pfmisc._colors      import  Colors
+
+from    dask                import  delayed, compute
+
+# PYPX modules
+from    .base               import Base
+from    .move               import Move
+import  pypx
+from    pypx                import smdb
+from    pypx                import report
+
+class Do(Base):
+
+    """
+    The Do module provides a convient and centralised location
+    from which to dispatch processing to a variety of additional
+    operations.
+
+    All these operations work on a study/series tuple, and this
+    module iterates over structures that define this space.
+
+    In many cases, the operations append to the JSON stream that
+    "flows" through this module, adding some operation-specific
+    information, which in turn can be consumed by a downstream
+    process.
+
+    """
+
+    def __init__(self, arg):
+        """
+        Constructor. Nothing too fancy. Just a parent init
+        and a class logging function.
+
+        Most of the "complexity" here is "merging" upstream
+        arg values with this specific app's arg values.
+
+        """
+        d_argCopy           = arg.copy()
+        # "merge" these 'arg's with upstream.
+        arg.update(arg['reportData']['args'])
+        # Since this might overwrite some args specific to this
+        # app, we update again to the copy.
+        arg.update(d_argCopy)
+
+        super(Do, self).__init__(arg)
+        self.dp             = pfmisc.debug(
+                                        verbosity   = self.verbosity,
+                                        within      = 'Do',
+                                        syslog      = False
+                                        )
+        self.log            = self.dp.qprint
+
+    def run(self, opt={}) -> dict:
+        """
+        If a '--next' request has been specified in the class / module,
+        perform additional actions on the space of find hits.
+
+        These actions are typically either:
+
+            * retrieve images
+            * status query on retrieved images
+            * find query on the internal smdb "database"
+            * push images to a swift/CUBE
+
+        and are performed with additional processing on the STUDY/SERIES
+        level. This essentially loops over all the SeriesInstanceUID in the
+        query space structure.
+
+        For the special case of a dockerized run, this method will attempt
+        to also restart the 'xinet.d' service within the container.
+
+        NOTE: The architecture/infrastructure could be overwhelmed if
+        too many concurrent requests are presented. Note that a separate
+        `storescp` is spawned for EACH incoming DICOM file. Thus requesting
+        multiple series (each with multiple DICOM files) in multiple studies
+        all at once could result in thousands of `storescp` being spawned
+        to try and handle the flood.
+        """
+
+        def retrieve_do() -> dict:
+            """
+            Nested retrieve handler
+            """
+            nonlocal series, studyIndex, seriesIndex
+            seriesInstances : int   = series['NumberOfSeriesRelatedInstances']['value']
+            d_then          : dict  = {}
+            d_db            : dict  = db.seriesMapMeta(
+                                        'NumberOfSeriesRelatedInstances',
+                                        seriesInstances
+                                    )
+            str_line        = presenter.seriesRetrieve_print(
+                studyIndex  = studyIndex, seriesIndex = seriesIndex
+            )
+            if self.arg['withFeedBack']: self.log(str_line)
+            series['SeriesMetaDescription']  = {
+                                    'tag'   : "0,0",
+                                    'value' : str_line,
+                                    'label' : 'inlineRetrieveText'
+                                }
+            if self.move:
+                d_then      = pypx.move({
+                                **self.arg,
+                            })
+            else:
+                d_then = self.systemlevel_run(self.arg,
+                        {
+                            'f_commandGen'      : self.movescu_command,
+                            'series_uid'        : str_seriesUID,
+                            'study_uid'         : str_studyUID
+                        }
+                )
+            series['PACS_retrieve'] = {
+                'requested' :   '%s' % datetime.now()
+            }
+            d_db    = db.seriesMapMeta('retrieve', d_then)
+            return d_then
+
+        def status_do() -> dict:
+            """
+            Nested status handler
+            """
+            nonlocal    series
+            d_then      : dict  = {}
+
+            # pudb.set_trace()
+            self.arg['verifySeriesInStudy']   = True
+            d_then      = pypx.status({
+                            **self.arg,
+                        })
+
+            str_line    = presenter.seriesStatus_print(
+                studyIndex  = studyIndex,
+                seriesIndex = seriesIndex,
+                status      = d_then
+            )
+            series['SeriesMetaDescription']    = {
+                                    'tag'   : "0,0",
+                                    'value' : str_line,
+                                    'label' : 'inlineStatusText'
+                                }
+            if self.arg['withFeedBack']: self.log(str_line)
+
+            return d_then
+
+
+        self.systemlevel_run(self.arg,
+            {
+                'f_commandGen': self.xinetd_command
+            }
+        )
+
+        db              = smdb.SMDB(
+                            Namespace(str_logDir = self.arg['dblogbasepath'])
+                        )
+        db.housingDirs_create()
+        d_filteredHits  = self.arg['reportData']
+
+        # In the case of in-line updates on the progress of the
+        # postprocess, we need to create a presentation/report object
+        # which we can use for the reporting.
+        # pudb.set_trace()
+        presenter   = report.Report({
+                                        'colorize' :    'dark',
+                                        'reportData':   d_filteredHits
+                                    })
+        presenter.run()
+        l_run           = []
+        d_ret           = {
+            'do'        : False
+        }
+        l_then          = self.arg['then'].split(',')
+        b_headerPrinted = False
+        for then in l_then:
+            studyIndex  = 0
+            d_ret['status'] = False
+            for study in d_filteredHits['data']:
+                l_run       = []
+                seriesIndex = 0
+                if self.arg['withFeedBack']:
+                    if not b_headerPrinted:
+                        presenter.studyHeader_print(
+                            studyIndex  = studyIndex, reportType = 'rawText'
+                        )
+                        b_headerPrinted = True
+                    print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ %s ]" % then +\
+                            Colors.NO_COLOUR)
+                for series in study['series']:
+                    str_seriesDescription   = series['SeriesDescription']['value']
+                    str_seriesUID           = series['SeriesInstanceUID']['value']
+                    str_studyUID            = study['StudyInstanceUID']['value']
+                    db.d_DICOM['SeriesInstanceUID'] = str_seriesUID
+                    self.arg['SeriesInstanceUID']   = str_seriesUID
+                    self.arg['StudyInstanceUID']    = str_studyUID
+                    if then == "retrieve":  d_then  = retrieve_do()
+                    if then == "status"  :  d_then  = status_do()
+                    l_run.append(d_then)
+                    seriesIndex += 1
+                d_ret[then]             = { 'study' : []}
+                d_ret[then]['study'].append({ study['StudyInstanceUID']['value'] : l_run})
+                studyIndex += 1
+                d_ret['do'] = True
+        return d_ret
+
+    def xinetd_command(self, opt={}):
+        return "service xinetd restart"
+
+    def movescu_command(self, opt={}):
+        command = '-S --move ' + opt['aet']
+        command += ' --timeout 5'
+        command += ' -k QueryRetrieveLevel=SERIES'
+        command += ' -k SeriesInstanceUID=' + opt['series_uid']
+        command += ' -k StudyInstanceUID='  + opt['study_uid']
+
+        str_cmd     = "%s %s %s" % (
+                        self.movescu,
+                        command,
+                        self.commandSuffix()
+        )
+        return str_cmd
+

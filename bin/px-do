@@ -1,0 +1,361 @@
+#!/usr/bin/env python
+#                                                            _
+# PACS ToolKit findscu (and possible movescu) Wrapper
+#
+# (c) 2016-2019 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+
+
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+from    terminaltables      import SingleTable
+from    pfmisc._colors      import Colors
+import  json
+import  pypx
+import  socket
+import  pudb
+
+str_defIP   = [l for l in (
+                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")][:1],
+                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
+                for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+
+str_name    = "px-do"
+str_version = "1.2.0"
+str_desc    = Colors.CYAN + """
+
+
+                                         _       
+                                        | |      
+                     _ ____  ________ __| | ___  
+                    | '_ \ \/ /______/ _` |/ _ \ 
+                    | |_) >  <      | (_| | (_) |
+                    | .__/_/\_\      \__,_|\___/ 
+                    | |                          
+                    |_|                          
+
+
+                        PACS ToolKit Wrapper
+                               do
+
+                       -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+    ``px-do`` is a module / script that provides functionality for
+    looping over a typical study/series structure and performing
+    several dispatching operations. These include, but are not limited
+    to:
+
+        * move/retrieve requests from a PACS
+        * local smdb find/search
+        * local smdb status
+        * push-to-swift storage
+
+    This script/module is mostly used as an iterator that loops over
+    a study/series structure and at each study/series tuple executes
+    some specified behaviour.
+
+    The most common use case is as part of pipe of CLI operations.
+
+    NOTE that several upstream CLI args might be used/needed by this
+    module and these are often read from the `args`  key in the
+    upstream JSON.
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - PACS find (query)
+
+    SYNOPSIS
+
+            _script mode_:
+            px-do
+                [--db <dblogbasepath>]                              \\
+                [--reportData <JSONdump>]                           \\
+                [--reportDataFile <file>]                           \\
+                [--then retrieve|status] [--withFeedBack]           \\
+                [--json]                                            \\
+                [--waitForUserTerminate]                            \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--debugToDir <dir>]                                \\
+                [--verbosity <level>]
+
+    ''' % scriptName + Colors.NO_COLOUR
+
+    description = Colors.LIGHT_GREEN + '''
+
+    DESCRIPTION
+
+        ``px-do`` is a dispatching module that loops over a space of
+        study/series constructs and at each tuple calls some additional
+        processing. Typical dispatching modules:
+
+                * move/retrieve requests from a PACS
+                * local smdb find/search
+                * local smdb status
+                * push-to-swift storage
+
+    ARGS
+
+        [--db <dblogbasepath>]
+        A path to the base directory of the DB contents/files that track
+        received files. This is typically the <logDir> of the `px-repack`
+        process that repacks incoming DICOM files. Specifying this path
+        allows `px-find` to access db tables needed to track the number
+        of DICOM files that are received in the case of a 'retrieve'
+        event.
+
+        [--reportData <JSONdump>]
+        This argument is used to store JSON data that is either read from
+        stdin or from the [--reportDataFile]. It is not really meant to
+        be a usable CLI.
+
+        [--reportDataFile <file>]
+        A file containing (typically upstream) JSON report data.
+
+        [--then retrieve|status|search|push]
+        If specified, define an operation to do "next". This can be a comma
+        separated string of actions, in which case each action will be
+        executed in turn over the input space.
+
+        [--withFeedBack]
+        If specified, provide console level feedback on the next operation as
+        it happens. Note, if part of a chained/piped workflow, the feedback
+        CLI output could corrupt downstream apps, especially if these
+        apps want to consume JSON from stdin. So only use --nextFeedBack in
+        cases where additional JSON assuming pipe operations are not
+        pending.
+
+        [--json]
+        If specified, print the JSON structure related to the find event. If
+        piping results to a report module, you MUST specify this.
+
+        [--waitForUserTerminate]
+        If specified, wait at program conclusion for explicit user termination.
+        This is useful in dockerized runs since PACS data might still be
+        in flight when the program ends, and terminating the program then
+        will result in non reception of outstanding data.
+
+        Note, if running in a container, e.g. via PACS_QR.sh, be sure to also
+        specify a '-D' for debugging in conjunction with this flag. The '-D'
+        runs the container in interactive tty mode, allowing for user tty
+        input to be correctly interpreted.
+
+        [-x|--desc]
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output. Allows for
+        more fine tuned output control as opposed to '--quiet' that effectively
+        silences everything.
+    ''' + Colors.LIGHT_PURPLE + '''
+
+    EXAMPLES
+
+
+    ''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
+
+# the main report data to interpret
+parser.add_argument(
+    '--reportData',
+    action  = 'store',
+    dest    = 'reportData',
+    type    = str,
+    default = '',
+    help    = 'JSON report from upstream process')
+
+parser.add_argument(
+    '--reportDataFile',
+    action  = 'store',
+    dest    = 'reportDataFile',
+    type    = str,
+    default = '',
+    help    = 'JSON report contained in file from upstream process')
+
+# db access settings
+parser.add_argument(
+    '--db',
+    action  = 'store',
+    dest    = 'dblogbasepath',
+    type    = str,
+    default = '/tmp/log',
+    help    = 'path to base dir of receipt database')
+
+# Behaviour settings
+parser.add_argument(
+    '--withFeedBack',
+    action  = 'store_true',
+    dest    = 'withFeedBack',
+    default = False,
+    help    = 'If specified, print the "then" events as they happen')
+parser.add_argument(
+    '--then',
+    action  = 'store',
+    dest    = 'then',
+    default = "",
+    help    = 'If specified, then perform the set of operations')
+parser.add_argument(
+    '--move',
+    action  = 'store_true',
+    dest    = 'move',
+    default = False,
+    help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
+
+parser.add_argument(
+    '--json',
+    action  = 'store_true',
+    dest    = 'json',
+    default = False,
+    help    = 'If specified, dump the JSON structure relating to the query')
+
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    type    = int,
+    default = 1)
+parser.add_argument(
+    "-x", "--desc",
+    help    = "long synopsis",
+    dest    = 'desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "short synopsis",
+    dest    = 'synopsis',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--waitForUserTerminate',
+    help    = 'if specified, wait for user termination',
+    dest    = 'b_waitForUserTerminate',
+    action  = 'store_true',
+    default = False
+)
+
+args        = parser.parse_args()
+
+if args.desc or args.synopsis:
+    print(str_desc)
+    if args.desc:
+        str_help     = synopsis(False)
+    if args.synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+# pudb.set_trace()
+
+if len(args.reportDataFile):
+    with open(args.reportDataFile, 'r') as f:
+        args.reportData = json.load(f)
+else:
+    # Or, more conveniently, read from input stream
+    str_inputPipe           = ''
+    for line in sys.stdin:
+        str_inputPipe += line
+    args.reportData         = json.loads(str_inputPipe)
+
+# Return the JSON result as a serialized string:
+output = pypx.do(vars(args))
+
+if args.verbosity:
+    if args.json:
+        try:
+            print(json.dumps(output, indent = 4))
+        except Exception as e:
+            print(json.dumps({
+                'status'    : False,
+                'error'     : '%s' % e
+            }))
+
+if args.b_waitForUserTerminate:
+    l_infoWindow =[
+        [Colors.CYAN                                            +
+        "End of program reached."                               +
+        Colors.NO_COLOUR],
+        [""],
+        [Colors.PURPLE                                          +
+        "If a PACS move/pull/retrieve was requested, not all"   +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          +
+        "image data might have been received since the PACS"    +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          +
+        "operates in an asynchronous manner."                   +
+        Colors.NO_COLOUR],
+        [""],
+        [Colors.PURPLE                                          +
+        "If you are running this process containerized, on"     +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          +
+        "exit the container will close and no additional data"  +
+        Colors.NO_COLOUR],
+        [Colors.PURPLE                                          +
+        "will be received."                                     +
+        Colors.NO_COLOUR],
+        [""],
+        [Colors.BLINK_RED           +
+        "ONLY EXIT IF YOU ARE SURE YOU HAVE RECEIVED ALL IMAGES!" +
+        Colors.NO_COLOUR],
+    ]
+    tb_infoWindow = SingleTable(l_infoWindow)
+    tb_infoWindow.inner_heading_row_border  = False
+    print(tb_infoWindow.table)
+    input("\nHit ENTER now to exit.")
+
+sys.exit(0)

@@ -1,0 +1,253 @@
+#!/usr/bin/env python
+#                                                            _
+# PACS ToolKit status wrapper
+#
+# (c) 2021 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                    Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+from    terminaltables      import SingleTable
+from    pfmisc._colors      import Colors
+import  json
+import  pypx
+import  pudb
+
+str_name    = "px-status"
+str_version = "1.0.0"
+str_desc    = Colors.CYAN + """
+
+                                      _        _
+                                     | |      | |
+                 _ ____  ________ ___| |_ __ _| |_ _   _ ___
+                | '_ \ \/ /______/ __| __/ _` | __| | | / __|
+                | |_) >  <       \__ \ || (_| | |_| |_| \__ \.
+                | .__/_/\_\      |___/\__\__,_|\__|\__,_|___/
+                | |
+                |_|
+
+
+
+                        PACS ToolKit Wrapper
+                              "status"
+
+                       -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+    ``px-status`` is a module / script that provides functionality for
+    determining the status of a series request within the pypx ecosystem.
+
+    The status is returned as a JSON object, suitable for downstream
+    processing.
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - PACS status (of retrieved series)
+
+    SYNOPSIS
+
+            _script mode_:
+            px-status                                               \\
+                [--db <baseLogDirDB>]                               \\
+                [--StudyInstanceUID <studyInstanceUID>]             \\
+                [--SeriesInstanceUID <seriesInstanceUID>]           \\
+                [--verifySeriesInStudy]                             \\
+                [--json]                                            \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--version]                                         \\
+                [--debugToDir <dir>]                                \\
+                [--verbosity <level>]
+
+    BRIEF EXAMPLE
+
+        px-status                                                   \\
+            --db /home/dicom/log                                    \\
+            --StudyInstanceUID 1.2.3.435                            \\
+            --SeriesInstanceUID 2.3.5.6.7
+
+    ''' % scriptName + Colors.NO_COLOUR
+
+    description = Colors.LIGHT_GREEN + '''
+
+        [--db <dblogbasepath>]
+        A path to the base directory of the DB contents/files that track
+        received files. This is typically the <logDir> of the `px-repack`
+        process that repacks incoming DICOM files. Specifying this path
+        allows `px-find` to access db tables needed to track the number
+        of DICOM files that are received in the case of a 'retrieve'
+        event.
+
+        [--StudyInstanceUID <studyInstanceUID>]
+        The <studyInstanceUID> to request.
+
+        [--SeriesDescription <seriesInstanceUID>]
+        The <seriesInstanceUID> to request.
+
+        [--verifySeriesInStudy]
+        If passed, perform an extra check that the passed SeriesInstanceUID
+        is actually part of the StudyInstanceUID. This check is performed
+        on the `smdb` database layer.
+
+        [-x|--desc]
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--json]
+        If specified, print the JSON structure related to the find event. If
+        piping results to a report module, you MUST specify this.
+
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output.
+
+    EXAMPLES
+
+        px-status                                                       \\
+            --db /home/dicom/log                                        \\
+            --StudyInstanceUID 1.2.3.435                                \\
+            --SeriesInstanceUID 2.3.5.6.7
+    ''' + Colors.LIGHT_PURPLE + '''
+
+    DOCKERIZED EXAMPLES
+
+        docker run  --rm -ti                                            \\
+            fnndsc/pypx                                                 \\
+            --px-status                                                 \\
+            --db /dicom/log                                             \\
+            --StudyInstanceUID 1.2.3.435                                \\
+            --SeriesInstanceUID 2.3.5.6.7
+
+
+    ''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
+
+# db access settings
+parser.add_argument(
+    '--dblogbasepath',
+    action  = 'store',
+    dest    = 'dblogbasepath',
+    type    = str,
+    default = '/tmp/log',
+    help    = 'path to base dir of receipt database')
+
+# Series settings
+parser.add_argument(
+    '--SeriesInstanceUID',
+    action  = 'store',
+    dest    = 'SeriesInstanceUID',
+    type    = str,
+    default = '',
+    help    = 'Series Instance UID')
+parser.add_argument(
+    '--StudyInstanceUID',
+    action  = 'store',
+    dest    = 'StudyInstanceUID',
+    type    = str,
+    default = '',
+    help    = 'Study Instance UID')
+parser.add_argument(
+    '--verifySeriesInStudy',
+    action  = 'store_true',
+    dest    = 'verifySeriesInStudy',
+    default = False,
+    help    = 'If specified, check that the passed Series actually belongs to the Study')
+
+# behaviour settings
+parser.add_argument(
+    '--json',
+    action  = 'store_true',
+    dest    = 'json',
+    default = False,
+    help    = 'If specified, dump the JSON structure relating to the query')
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    type    = int,
+    default = 1)
+parser.add_argument(
+    "-x", "--desc",
+    help    = "long synopsis",
+    dest    = 'desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "short synopsis",
+    dest    = 'synopsis',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+
+
+args        = parser.parse_args()
+
+if args.desc or args.synopsis:
+    print(str_desc)
+    if args.desc:
+        str_help     = synopsis(False)
+    if args.synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+opts    = parser.parse_args()
+output  = pypx.status(vars(opts))
+
+if args.verbosity:
+    if args.json:
+        try:
+            print(json.dumps(output, indent = 4))
+        except Exception as e:
+            print(json.dumps({
+                'status'    : False,
+                'error'     : '%s' % e
+            }))
