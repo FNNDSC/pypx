@@ -634,7 +634,7 @@ class Report(Base):
             if seriesIndex >= 0:
                 str_receivedCount       = '%03d' % d_status['images']['received']['count']
                 str_requestedCount      = '%03d' % d_status['images']['requested']['count']
-                str_status              = '%20s : %20s : %20s ' % \
+                str_status              = '%25s : %20s : %20s ' % \
                     (
                         d_status['state']['study'],
                         d_status['state']['series'],
@@ -645,7 +645,7 @@ class Report(Base):
                                             'SeriesDescription')
                 if d_status['status']:
                     str_line                = str_status               +\
-                        ' [ %s/%s ] images for ' %                      \
+                        ' [ %s/%s ] for ' %                             \
                             (str_receivedCount, str_requestedCount)
                 else:
                     str_line                =  str_status
