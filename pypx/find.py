@@ -20,6 +20,7 @@ from    .move               import Move
 import  pypx
 from    pypx                import smdb
 from    pypx                import report
+from    pypx                import do
 
 class Find(Base):
 
@@ -70,6 +71,7 @@ class Find(Base):
                                         syslog      = False
                                         )
         self.log            = self.dp.qprint
+        self.then           = do.Do(self.arg)
 
     def query(self, opt={}):
         parameters = {
@@ -122,110 +124,8 @@ class Find(Base):
 
         return query
 
-    def retrieve_request(self, d_filteredHits):
-        """
-        Perform a request to "move" the image data at SERIES level.
-
-        This essentially loops over all the SeriesInstanceUID in the
-        query space structure.
-
-        For the special case of a dockerized run, this method will attempt
-        to also restart the 'xinet.d' service within the container.
-
-        NOTE: Some PACS servers require the StudyInstanceUID in addition
-        to the SeriesInstanceUID, hence this method provides both in
-        the movescu request.
-
-        NOTE: The architecture/infrastructure could be overwhelmed if
-        too many concurrent requests are presented. Note that a separate
-        `storescp` is spawned for EACH incoming DICOM file. Thus requesting
-        multiple series (each with multiple DICOM files) in multiple studies
-        all at once could result in thousands of `storescp` being spawned
-        to try and handle the flood.
-        """
-
-        self.systemlevel_run(self.arg,
-            {
-                'f_commandGen': self.xinetd_command
-            }
-        )
-
-        db          = smdb.SMDB(
-                        Namespace(str_logDir = self.arg['dblogbasepath'])
-                    )
-        db.housingDirs_create()
-        studyIndex  = 0
-        l_run       = []
-
-        # In the case of in-line updates on the progress of the
-        # retrieve, we need to create a presentation/report object
-        # which we can use for the reporting.
-        presenter   = report.Report({
-                                        'colorize' :    'dark',
-                                        'reportData':   d_filteredHits
-                                    })
-        presenter.run()
-        for study in d_filteredHits['data']:
-            seriesIndex = 0
-            if self.arg['retrieveFeedBack']:
-                presenter.studyHeader_print(
-                    studyIndex  = studyIndex, reportType = 'rawText'
-                )
-            for series in study['series']:
-                str_seriesDescription   = series['SeriesDescription']['value']
-                str_seriesUID           = series['SeriesInstanceUID']['value']
-                seriesInstances         = series['NumberOfSeriesRelatedInstances']['value']
-                str_studyUID            = study['StudyInstanceUID']['value']
-                db.d_DICOM['SeriesInstanceUID'] = str_seriesUID
-                d_db                    = db.seriesMapMeta(
-                                                'NumberOfSeriesRelatedInstances',
-                                                seriesInstances
-                                        )
-                if self.arg['retrieveFeedBack']:
-                    presenter.seriesRetrieve_print(
-                        studyIndex  = studyIndex, seriesIndex = seriesIndex
-                    )
-                if self.move:
-                    self.arg['SeriesInstanceUID']   = str_seriesUID
-                    self.arg['StudyInstanceUID']    = str_studyUID
-                    d_moveRun = pypx.move({
-                            **self.arg,
-                            })
-                else:
-                    d_moveRun = self.systemlevel_run(self.arg,
-                            {
-                                'f_commandGen'      : self.movescu_command,
-                                'series_uid'        : str_seriesUID,
-                                'study_uid'         : str_studyUID
-                            }
-                    )
-                d_db    = db.seriesMapMeta(
-                    'retrieve', d_moveRun
-                )
-                l_run.append(d_moveRun)
-                series['PACS_retrieve'] = {
-                    'requested' :   '%s' % datetime.now()
-                }
-                seriesIndex += 1
-            studyIndex += 1
-        return l_run
-
     def xinetd_command(self, opt={}):
         return "service xinetd restart"
-
-    def movescu_command(self, opt={}):
-        command = '-S --move ' + opt['aet']
-        command += ' --timeout 5'
-        command += ' -k QueryRetrieveLevel=SERIES'
-        command += ' -k SeriesInstanceUID=' + opt['series_uid']
-        command += ' -k StudyInstanceUID='  + opt['study_uid']
-
-        str_cmd     = "%s %s %s" % (
-                        self.movescu,
-                        command,
-                        self.commandSuffix()
-        )
-        return str_cmd
 
     def findscu_command(self, opt={} ):
 
@@ -242,16 +142,21 @@ class Find(Base):
         """
         Main entry method.
 
-        For some PACS, a query needs to be run in two phases:
+        In order to accommodate the widest range of PACS dialects,
+        a query occurs in two phases/passes:
 
-            * First, at the STUDY level to receive the StudyUID
+            * First, at the STUDY level to receive the set of possible
+              StudyUIDs
             * Then, given each STUDY, run at the SERIES level to
-              receive the SeriesUID
+              receive the set of SeriesUID information
 
-        This method performs the query based on the pattern of
-        tag specifications given on the CLI.
+        The query itself is based on the pattern of DICOM tag specifications
+        given used to instantiate this class.
 
         """
+
+        # First we execute on a STUDY level to determine all the
+        # STUDIES related to this query
         formattedStudiesResponse    = \
             self.systemlevel_run(opt,
                     {
@@ -265,9 +170,12 @@ class Find(Base):
             filteredStudiesResponse['status']   = formattedStudiesResponse['status']
             filteredStudiesResponse['command']  = formattedStudiesResponse['command']
             filteredStudiesResponse['data']     = []
+            filteredStudiesResponse['args']     = self.arg
             studyIndex                          = 0
             for study in formattedStudiesResponse['data']:
                 l_seriesResults = []
+                # For each study, we now execute a query on a SERIES
+                # level to complete the picture.
                 formattedSeriesResponse     = \
                     self.systemlevel_run(opt,
                             {
@@ -302,8 +210,10 @@ class Find(Base):
                 formattedStudiesResponse['data'][studyIndex]['series']      \
                     = l_seriesResults
                 studyIndex+=1
-
-            if self.retrieve: self.retrieve_request(filteredStudiesResponse)
+            if len(self.arg['then']):
+                self.then.arg['reportData']     = filteredStudiesResponse
+                d_then                          = self.then.run()
+                filteredStudiesResponse['then'] = d_then
             return filteredStudiesResponse
         else:
             return formattedStudiesResponse
