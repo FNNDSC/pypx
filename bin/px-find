@@ -91,7 +91,7 @@ def synopsis(ab_shortOnly = False):
                 [--AcquisitionProtocolName <APName>]                \\
                 [--AcquisitionProtocolDescription <APDescription>]  \\
                 [--AcquisitionProtocolName <APName>]                \\
-                [--retrieve [--move] [--retrieveFeedBack]]          \\
+                [--then <actionlist>] [--withFeedBack]              \\
                 [--json]                                            \\
                 [--waitForUserTerminate]                            \\
                 [-x|--desc]                                         \\
@@ -185,15 +185,25 @@ def synopsis(ab_shortOnly = False):
         [--AcquisitionProtocolName <APName>]
         Filter by acquisition protocol name.
 
-        [--retrieve]
-        If set, perform a DICOM movescu on the set of filtered
-        SeriesInstanceUIDs using internal calls.
+        [--then <actionlist>]
+        If specified, define an operation to do "next", i.e. after the find
+        has completed. The <actionlist> is a comma separate list of verbs,
+        including but not necessarily limited to
 
-        [--retrieveFeedBack]
-        If specified, provide console level feedback on retrieves as they
-        happen. Note, if part of a chained/piped workflow, the feedback
+            * "retrieve"    (request the remote PACS to send the
+                             study/series data)
+            * "status"      (ask the internal database on the status
+                             of retrieved study/series data).
+            * "push"        (push study/series data to some destination
+                             node)
+
+        [--withFeedBack]
+        If specified, provide console level feedback on the next operation as
+        it happens. Note, if part of a chained/piped workflow, the feedback
         CLI output could corrupt downstream apps, especially if these
-        apps want to consume JSON from stdin.
+        apps want to consume JSON from stdin. So only use --withFeedBack in
+        cases where additional downstream JSON assuming pipe operations are not
+        pending.
 
         [--move]
         If set and called with [--retrieve], perform a DICOM movescu on the
@@ -369,7 +379,7 @@ parser = ArgumentParser(
 
 # db access settings
 parser.add_argument(
-    '--dblogbasepath',
+    '--db',
     action  = 'store',
     dest    = 'dblogbasepath',
     type    = str,
@@ -530,17 +540,17 @@ parser.add_argument(
 
 # Retrieve settings
 parser.add_argument(
-    '--retrieveFeedBack',
+    '--withFeedBack',
     action  = 'store_true',
-    dest    = 'retrieveFeedBack',
+    dest    = 'withFeedBack',
     default = False,
-    help    = 'If specified, print retrieve events as they happen')
+    help    = 'If specified, print the "then" events as they happen')
 parser.add_argument(
-    '--retrieve',
-    action  = 'store_true',
-    dest    = 'retrieve',
-    default = False,
-    help    = 'If specified, initiate a PACS pull on the set of SeriesUIDs using internal methods')
+    '--then',
+    action  = 'store',
+    dest    = 'then',
+    default = "",
+    help    = 'If specified, perform another set operations "next" after the find')
 parser.add_argument(
     '--move',
     action  = 'store_true',
