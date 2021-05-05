@@ -86,7 +86,7 @@ class Base():
 
     def systemlevel_run(self, opt, d_params):
         """
-        Run the system command, based on the passed paramter dictionary
+        Run the system command, based on the passed parameter dictionary
         """
         b_commandGen    = False
         str_cmd         = ''
