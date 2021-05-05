@@ -80,15 +80,6 @@ class Report(Base):
                         if len(self.arg[k]):
                             self.d_reportTags[v[0]][v[1]] = \
                                 self.arg[k].split(',')
-            # if len(self.arg['reportHeaderStudyTags']):
-            #     self.d_reportTags['header']['study'] = \
-            #         self.arg['reportHeaderStudyTags'].split(',')
-            # if len(self.arg['reportHeaderSeriesTags']):
-            #     self.d_reportTags['header']['series'] = \
-            #         self.arg['reportHeaderSeriesTags'].split(',')
-            # if len(self.arg['reportBodySeriesTags']):
-            #     self.d_reportTags['body']['series'] = \
-            #         self.arg['reportBodySeriesTags'].split(',')
 
     def __init__(self, arg):
         """
@@ -289,6 +280,10 @@ class Report(Base):
                                 ]
                 if k == 'series':
                     l_series    = study['series']
+                    # if len(self.arg['reportBodySeriesTags']):
+                    #     l_tags  = self.arg['reportBodySeriesTags'].split()
+                    # else:
+                    #     l_tags  = self.d_reportTags['body']['series']
                     l_tags      = self.d_reportTags['body']['series']
                     for series in l_series:
                         # pudb.set_trace()
@@ -390,6 +385,14 @@ class Report(Base):
             l_padded    : list  = [ f.center(width) for f in l_lv ]
             return l_padded, width
 
+        def padListToLeft(l_lv) -> tuple:
+            """
+            Pad the string elements in a list to a fixed width
+            """
+            width       : int   = maxWidthinList(l_lv)+2
+            l_padded    : list  = [ f.ljust(width) for f in l_lv ]
+            return l_padded, width
+
         def checkAndPrettify() -> bool:
             """
             If self.arg['csvPrettity'] is true, then edit some dictionaries
@@ -406,28 +409,36 @@ class Report(Base):
             if self.arg['csvPrettify']:
                 b_status            = True
                 self.arg['csvSeparator']    = '│'
-                # Pad the SeriesDescription/UID
-                l_padded, width     = padListToMax([k['SeriesDescription']  \
-                                            for k in ld_seriesDesc])
-                for i in range(0, len(ld_seriesDesc)):
-                    ld_seriesDesc[i]['SeriesDescription']   = l_padded[i]
+                if len(self.arg['reportBodySeriesTags']):
+                    l_tag = self.arg['reportBodySeriesTags'].split(',')
+                    for tag in l_tag:
+                        l_padded, width     = padListToLeft([k[tag]  \
+                                                    for k in ld_seriesDesc])
+                        for i in range(0, len(ld_seriesDesc)):
+                            ld_seriesDesc[i][tag]   = l_padded[i]
+                else:
+                    # Pad the SeriesDescription/UID
+                    l_padded, width     = padListToMax([k['SeriesDescription']  \
+                                                for k in ld_seriesDesc])
+                    for i in range(0, len(ld_seriesDesc)):
+                        ld_seriesDesc[i]['SeriesDescription']   = l_padded[i]
 
-                # Pad the NumberOfSeriesRelatedInstances
-                # The following is a cesspoll of ugliness, marginally saved
-                # by the check at least for the existence of this long column
-                str_colToJustify    = 'NumberOfSeriesRelatedInstances'
-                if str_colToJustify in ld_seriesUID[0]:
-                    # Fix all numbers to 3 width and leading zeros
-                    try:
-                        l_w = ['%05d' % int(f[str_colToJustify]) for f in ld_seriesUID]
-                    except:
-                        l_w = [ld_seriesUID[0][str_colToJustify]]
-                    # Now set the width of the first element
-                    l_w[0] = l_w[0].center(len(str_colToJustify)+2)
-                    # and pad the whole list to that width
-                    l_padded, width     = padListToMax(l_w)
-                    for i in range(0, len(ld_seriesUID)):
-                        ld_seriesUID[i][str_colToJustify] = l_padded[i]
+                    # Pad the NumberOfSeriesRelatedInstances
+                    # The following is a cesspoll of ugliness, marginally saved
+                    # by the check at least for the existence of this long column
+                    str_colToJustify    = 'NumberOfSeriesRelatedInstances'
+                    if str_colToJustify in ld_seriesUID[0]:
+                        # Fix all numbers to 3 width and leading zeros
+                        try:
+                            l_w = ['%05d' % int(f[str_colToJustify]) for f in ld_seriesUID]
+                        except:
+                            l_w = [ld_seriesUID[0][str_colToJustify]]
+                        # Now set the width of the first element
+                        l_w[0] = l_w[0].center(len(str_colToJustify)+2)
+                        # and pad the whole list to that width
+                        l_padded, width     = padListToMax(l_w)
+                        for i in range(0, len(ld_seriesUID)):
+                            ld_seriesUID[i][str_colToJustify] = l_padded[i]
 
                 # Pad Study key and values pairs to optional column header
                 # as part of the prettification
@@ -468,12 +479,22 @@ class Report(Base):
             """
             Generate the column headers
             """
-            str_headerLabels = cols_keystring(d_header.keys())
-            str_bodyLabels   = '%s%s%s' % (
-                'SeriesDescription'.center(len(ld_seriesDesc[0]['SeriesDescription'])),
-                self.arg['csvSeparator'],
-                'NumberOfSeriesRelatedInstances'.center(len(ld_seriesUID[0]['NumberOfSeriesRelatedInstances']))
-            )
+            str_bodyLabels      : str   = ""
+            str_headerLabels    : str   = cols_keystring(d_header.keys())
+            if len(self.arg['reportBodySeriesTags']):
+                l_tags  = self.arg['reportBodySeriesTags'].split(',')
+                for tag in l_tags:
+                    str_bodyLabels  += '%s%s' % (
+                        tag.center(len(ld_seriesDesc[0][tag])),
+                        self.arg['csvSeparator']
+                    )
+                str_bodyLabels  = str_bodyLabels[:-1]
+            else:
+                str_bodyLabels   = '%s%s%s' % (
+                    'SeriesDescription'.center(len(ld_seriesDesc[0]['SeriesDescription'])),
+                    self.arg['csvSeparator'],
+                    'NumberOfSeriesRelatedInstances'.center(len(ld_seriesUID[0]['NumberOfSeriesRelatedInstances']))
+                )
             return  str_headerLabels                        +\
                     self.arg['csvSeparator']                +\
                     str_bodyLabels                          +'\n'
@@ -517,11 +538,21 @@ class Report(Base):
                 if b_prettifyDo:    str_csvReport += str_tableTop
             str_headerVals      = cols_keystring(d_header.values())
             for ds,dn in zip(ld_seriesDesc, ld_seriesUID):
-                str_seriesVals  = '%s%s%s' % (
-                        ds['SeriesDescription'],
-                        self.arg['csvSeparator'],
-                        dn['NumberOfSeriesRelatedInstances']
-                )
+                if len(self.arg['reportBodySeriesTags']):
+                    l_tags  = self.arg['reportBodySeriesTags'].split(',')
+                    str_seriesVals  = ''
+                    for tag in l_tags:
+                        str_seriesVals  += '%s%s' % (
+                            ds[tag],
+                            self.arg['csvSeparator']
+                        )
+                    str_seriesVals  = str_seriesVals[:-1]
+                else:
+                    str_seriesVals  = '%s%s%s' % (
+                            ds['SeriesDescription'],
+                            self.arg['csvSeparator'],
+                            dn['NumberOfSeriesRelatedInstances']
+                    )
                 str_csvReport   +=  str_headerVals                          +\
                                     self.arg['csvSeparator']                +\
                                     str_seriesVals                          +'\n'
@@ -556,9 +587,9 @@ class Report(Base):
             ret = d_fieldMeta[str_field]
         return ret
 
-    def seriesRetrieve_print(self, **kwargs):
+    def seriesRetrieve_print(self, **kwargs) -> str:
         """
-        Print a study/series retrieve based on the kwargs
+        Return an inline study/series retrieve string based on the kwargs
         """
         studyIndex              : int   = -1
         seriesIndex             : int   = -1
@@ -575,18 +606,55 @@ class Report(Base):
                 str_seriesDescription   =           \
                     self.report_getBodyField(studyIndex, seriesIndex,
                                             'SeriesDescription')
-                str_request             =                            \
-                    Colors.LIGHT_CYAN   + 'Requesting '             +\
-                    Colors.YELLOW       + str_seriesInstances       +\
-                    Colors.LIGHT_CYAN   + ' images for '
-                self.log('%52s' % str_request, end = '')
-                self.log(
-                    Colors.YELLOW       + ' ' + str_seriesDescription
-                )
+                str_line                =                                \
+                                            'Requesting '               +\
+                                            str_seriesInstances         +\
+                                            ' images for '
+                str_line = '%31s' % str_line + ' ' + str_seriesDescription
             else:
-                self.log('Invalid seriesIndex specified', comms = 'error')
+                str_line    = 'Invalid seriesIndex specified'
         else:
-            self.log('Invalid studyIndex referenced', comms = 'error')
+            str_line    = 'Invalid studyIndex specified'
+        return str_line
+
+    def seriesStatus_print(self, **kwargs) -> str:
+        """
+        Return an inline study/series status string based on the kwargs
+        """
+        studyIndex              : int   = -1
+        seriesIndex             : int   = -1
+        str_seriesInstances     : str   = ''
+        str_seriesDescription   : str   = ''
+        d_status                : dict  = {}
+        for k,v in kwargs.items():
+            if k == 'studyIndex'    : studyIndex    = int(v)
+            if k == 'seriesIndex'   : seriesIndex   = int(v)
+            if k == 'status'        : d_status      = v
+        if studyIndex >= 0:
+            if seriesIndex >= 0:
+                str_receivedCount       = '%03d' % d_status['images']['received']['count']
+                str_requestedCount      = '%03d' % d_status['images']['requested']['count']
+                str_status              = '%20s : %20s : %20s ' % \
+                    (
+                        d_status['state']['study'],
+                        d_status['state']['series'],
+                        d_status['state']['images']
+                     )
+                str_seriesDescription   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesDescription')
+                if d_status['status']:
+                    str_line                = str_status               +\
+                        ' [ %s/%s ] images for ' %                      \
+                            (str_receivedCount, str_requestedCount)
+                else:
+                    str_line                =  str_status
+                str_line = '%38s' % str_line + ' ' + str_seriesDescription
+            else:
+                str_line    = 'Invalid seriesIndex specified'
+        else:
+            str_line    = 'Invalid studyIndex specified'
+        return str_line
 
     def report_print(self):
         """
