@@ -32,7 +32,7 @@ Typical safe calling spec for an xinetd controlled storescp is
 
 """
 
-import  os
+import  os, os.path
 import  json
 import  pudb
 import  datetime
@@ -146,12 +146,15 @@ class SMDB():
             'PatientID'                         : 'Not defined',
             'StudyDescription'                  : 'Not defined',
             'StudyDate'                         : 'Not defined',
+            'StudyInstanceUID'                  : 'Not defined',
             'PerformedStationAETitle'           : 'Not defined'
         }
 
         self.d_seriesMap        : dict  = {}
         self.d_seriesInfo       : dict  = {
+            'PatientID'                         : 'Not defined',
             'StudyInstanceUID'                  : 'Not defined',
+            'SeriesInstanceUID'                 : 'Not defined',
             'SeriesDescription'                 : 'Not defined',
             'SeriesDate'                        : 'Not defined',
             'Modality'                          : 'Not defined'
@@ -257,111 +260,85 @@ class SMDB():
         """
         Return the patientMap table files
         """
+        str_studySeries         : str = ''
         str_studyMapFile        : str = '%s/%s.json' % (
                                     self.str_studyMapDir,
                                     self.d_DICOM['StudyInstanceUID']
                                 )
+        str_seriesDir           : str = '%s/%s-series' % (
+                                    self.str_studyMapDir,
+                                    self.d_DICOM['StudyInstanceUID']
+                                )
+        if 'SeriesInstanceUID' in self.d_DICOM.keys():
+            str_studySeries     = '%s/%s.json' % (
+                                    str_seriesDir,
+                                    self.d_DICOM['SeriesInstanceUID']
+                                )
+            if not os.path.isdir(str_seriesDir): os.makedirs(str_seriesDir)
         return {
             'status'            : True,
+            'studyMapDir'       : self.str_studyMapDir,
+            'studySeriesDir'    : str_seriesDir,
             'studyMapFile'      : {
-                'name'      : str_studyMapFile,
-                'exists'    : os.path.isfile(str_studyMapFile)
-            }
+                'name'              : str_studyMapFile,
+                'exists'            : os.path.isfile(str_studyMapFile)
+                                },
+            'studySeriesFile'   : {
+                'name'              : str_studySeries,
+                'exists'            : os.path.isfile(str_studySeries)
+                                }
         }
+
+    def dictexpand(self, d) -> dict:
+        """
+        Expand a dictionary of key,value pairs:
+
+            d[key] = value
+
+        to
+
+            d[key]  = {
+                'value':    value
+                'label':    key
+            }
+
+        and return result. This is mainly to reconstruct the structure to which
+        some pypx utils expect a DICOM dictionary conformance.
+        """
+        d_ret       : dict  = {}
+        d_ret       = {k:{'value': v, 'label': k} for (k,v) in d.items()}
+        return d_ret
 
     def studyMap_process(self) -> dict:
         """
         Process the study map data.
+
+        This merely checks if study map and series-related map json
+        files exist, and if not simply creates them.
+
+        Since multiple processes might attempt this, this method attempts
+        to be conceptually thread safe. If collisions occur, then no data
+        should be lost since effectively only the same information is ever
+        stamped/saved by each thread that might clobber this.
         """
         self.studyInfo_init()
         d_studyTable    = self.studyMap_DBtablesGet()
-        if d_studyTable['studyMapFile']['exists']:
-            with open(d_studyTable['studyMapFile']['name']) as fj:
-                self.json_read(fj, self.d_studyMap)
-                # self.d_studyMap    = json.load(fj)
-            fj.close()
-        if self.d_DICOM['StudyInstanceUID'] not in self.d_studyMap.keys():
+        if not d_studyTable['studyMapFile']['exists']:
             self.d_studyMap[self.d_DICOM['StudyInstanceUID']] =             \
                 self.d_studyInfo
-        l_seriesList    = [f['SeriesInstanceUID'] \
-                            for f in self.d_studyMap[self.d_DICOM['StudyInstanceUID']]['SeriesList']]
-        if self.d_DICOM['SeriesInstanceUID'] not in l_seriesList:
-            self.d_studyMap[self.d_DICOM['StudyInstanceUID']]['SeriesList'].\
-                append({
-                    'SeriesInstanceUID' :   self.d_DICOM['SeriesInstanceUID'],
-                    'SeriesBaseDir'     :   self.str_outputDir
-                })
-            self.seriesMapMeta('received', {'timestamp' : '%s' % datetime.datetime.now()})
             with open(d_studyTable['studyMapFile']['name'], 'w') as fj:
                 self.json_write(self.d_studyMap, fj)
-                # json.dump(self.d_studyMap, fj, indent = 4)
-        self.d_studyInfo = self.d_studyMap[self.d_DICOM['StudyInstanceUID']]
-
-    # def seriesMapMeta_packingStamp(self, *args) -> dict:
-    #     """
-    #     set or get the series map meta table packaging start information
-    #     """
-    #     b_status                        = False
-    #     str_error                       = 'File does not exist at time of read'
-    #     b_read                          = False
-    #     d_stamp                         = {}
-    #     d_seriesTable                   = self.seriesMap_DBtablesGet(
-    #             SeriesInstanceUID       = self.d_DICOM['SeriesInstanceUID']
-    #     )
-    #     if d_seriesTable['status']:
-    #         if d_seriesTable['seriesMapMetaFile']['exists']:
-    #             with open(d_seriesTable['seriesMapMetaFile']['name']) as fj:
-    #                 self.json_read(fj, d_stamp)
-    #             fj.close()
-    #             b_read                  = True
-    #         if len(args):
-    #             d_stamp['received']     = {
-    #                 'timestamp'         : '%s' % datetime.datetime.now()
-    #             }
-    #             try:
-    #                 with open(d_seriesTable['seriesMapMetaFile']['name'], 'w') as fj:
-    #                     self.json_write(d_stamp, fj)
-    #                 b_status            = True
-    #                 str_error           = ''
-    #             except Exception as e:
-    #                 str_error           = '%s' % e
-    #     return {
-    #         'status'        : b_status,
-    #         'error'         : str_error,
-    #         'stamp'         : d_stamp
-    #     }
-
-    # def seriesMapMeta_relatedInstances(self, *args) -> dict:
-    #     """
-    #     Stamp the series map meta table with NumberOfSeriesRelatedInstances.
-    #     """
-    #     b_status                        = False
-    #     str_error                       = 'File does not exist at time of read'
-    #     b_read                          = False
-    #     d_stamp                         = {}
-    #     d_seriesTable                   = self.seriesMap_DBtablesGet(
-    #             SeriesInstanceUID       = self.d_DICOM['SeriesInstanceUID']
-    #     )
-    #     if d_seriesTable['status']:
-    #         if d_seriesTable['seriesMapMetaFile']['exists']:
-    #             with open(d_seriesTable['seriesMapMetaFile']['name']) as fj:
-    #                 self.json_read(fj, d_stamp)
-    #             fj.close()
-    #             b_read                  = True
-    #         if len(args):
-    #             d_stamp['NumberOfSeriesRelatedInstances']   = args[0]
-    #             try:
-    #                 with open(d_seriesTable['seriesMapMetaFile']['name'], 'w') as fj:
-    #                     self.json_write(d_stamp, fj)
-    #                 b_status            = True
-    #                 str_error           = ''
-    #             except Exception as e:
-    #                 str_error           = '%s' % e
-    #     return {
-    #         'status'        : b_status,
-    #         'error'         : str_error,
-    #         'stamp'         : d_stamp
-    #     }
+            fj.close()
+        if not d_studyTable['studySeriesFile']['exists']:
+            with open(d_studyTable['studySeriesFile']['name'], 'w') as fj:
+                self.json_write({
+                    self.d_DICOM['StudyInstanceUID'] : {
+                        'SeriesInstanceUID' :   self.d_DICOM['SeriesInstanceUID'],
+                        'SeriesBaseDir'     :   self.str_outputDir,
+                        'DICOM'             :   self.dictexpand(self.d_DICOM)
+                    }
+                }, fj)
+        return self.d_studyInfo
 
     def seriesMapMeta(self, str_field, *args)   -> dict:
         """
@@ -369,7 +346,6 @@ class SMDB():
         """
         b_status                        = False
         str_error                       = 'File does not exist at time of read'
-        b_read                          = False
         d_meta                          = {}
         d_seriesTable                   = self.seriesMap_DBtablesGet(
                 SeriesInstanceUID       = self.d_DICOM['SeriesInstanceUID']
@@ -379,28 +355,201 @@ class SMDB():
                 with open(d_seriesTable['seriesMapMetaFile']['name']) as fj:
                     self.json_read(fj, d_meta)
                 fj.close()
-                b_read                  = True
+                if str_field in d_meta.keys():
+                    b_status            = True
+                    str_error           = ''
+                else:
+                    str_error           = "No field '%s' found" % str_field
             if len(args):
-                d_meta[str_field]      = args[0]
+                d_meta[str_field]       = args[0]
                 try:
                     with open(d_seriesTable['seriesMapMetaFile']['name'], 'w') as fj:
                         self.json_write(d_meta, fj)
-                    b_status            = True
                     str_error           = ''
                 except Exception as e:
                     str_error           = '%s' % e
+                    b_status            = False
         return {
             'status'        : b_status,
             'error'         : str_error,
             'meta'          : d_meta
         }
 
-    def seriesStatus_get(self, str_SeriesInstanceUID) -> dict:
+    def study_statusGet(self, str_StudyInstanceUID) -> dict:
+        """
+        Return the status of the passed StudyInstanceUID as well as
+        an embedded list in the returned object of the contents of
+        all the related study-series files.
+        """
+        b_status        : bool  = False
+
+        d_DICOM         = self.d_DICOM.copy()
+        self.d_DICOM['StudyInstanceUID'] = str_StudyInstanceUID
+        d_studyTable    : dict  = self.studyMap_DBtablesGet()
+        self.d_DICOM    = d_DICOM.copy()
+
+        b_status        = d_studyTable['studyMapFile']['exists']
+        return {
+            'status'        : b_status,
+            'studyTable'    : d_studyTable
+        }
+
+    def study_seriesListGet(self, str_StudyInstanceUID) -> dict:
+        """
+        Return a list of the series associated with given
+        str_StudyInstanceUID
+        """
+        b_status            : bool  = False
+        d_studyTable        : dict  = self.study_statusGet(str_StudyInstanceUID)
+        d_series            : dict  = {}
+        l_series            : list  = []
+        str_studySeriesDir  : str = ''
+        str_studySeriesFile : str = ''
+        if d_studyTable['status']:
+            with open(d_studyTable['studyTable']['studyMapFile']['name']) as fp:
+                d_studyInfo     = json.load(fp)
+            fp.close()
+            str_studySeriesDir  = d_studyTable['studyTable']['studySeriesDir']
+            l_studySeries       = os.listdir(str_studySeriesDir)
+            if len(l_studySeries):
+                b_status        = True
+            for f in l_studySeries:
+                str_studySeriesFile = '%s/%s' % (str_studySeriesDir, f)
+                with open(str_studySeriesFile, 'r') as fp:
+                    d_series    = json.load(fp)
+                l_series.append(d_series[str_StudyInstanceUID]['SeriesInstanceUID'])
+        return {
+            'status'            : b_status,
+            'seriesList'        : l_series
+        }
+
+    def study_seriesContainsVerify(self,
+                    str_StudyInstanceUID,
+                    str_SeriesInstanceUID,
+                    b_verifySeriesInStudy) -> dict:
+        """
+        Check if the passed str_StudyInstanceUID contains
+        the passed str_SeriesInstanceUID -- at least as far
+        as the smdb is concerned.
+        """
+        d_status                : dict      = {}
+        d_status['status']                  = False
+        d_status['error']       : str       = 'Study not found'
+        d_status['study']       : dict      = self.study_statusGet(
+                                                str_StudyInstanceUID
+                                            )
+        d_status['study']['state']  : str   = 'StudyNotFound'
+
+        d_status['series']      : dict      = {}
+
+        if d_status['study']['status'] or not b_verifySeriesInStudy:
+            if d_status['study']['status']:
+                d_status['study']['state']  = 'StudyOK'
+            d_status['error']               = 'Series not found'
+            d_status['study']['seriesListInStudy']   = \
+                                            self.study_seriesListGet(
+                                                str_StudyInstanceUID
+                                            )
+            d_status['series']              = self.series_statusGet(
+                                                str_SeriesInstanceUID
+                                            )
+            d_status['series']['state']     = 'SeriesNotFound'
+            if d_status['series']['status']:
+                d_status['error']           = ''
+                d_status['series']['state'] = 'SeriesOK'
+                d_status['status']          = True
+            if str_SeriesInstanceUID in d_status['study']\
+                                        ['seriesListInStudy']\
+                                        ['seriesList']:
+                d_status['study']['state'] = 'StudyContainsSeriesOK'
+            else:
+                d_status['study']['state'] = 'StudyDoesNotContainSeries'
+                d_status['study']['status']= False
+        return d_status
+
+    def series_receivedAndRequested(self, str_SeriesInstanceUID) -> dict:
+        """
+        Return a dictionary with requested vs received file count.
+        """
+        d_count                 : dict  = {}
+        d_count['received']     = self.series_receivedFilesCount(
+                                        str_SeriesInstanceUID
+                                )
+        d_count['requested']    = self.series_requestedFilesCount(
+                                        str_SeriesInstanceUID
+                                )
+        if d_count['received']['count'] >= d_count['requested']['count']:
+            d_count['state']    = 'ImagesAllReceived'
+            d_count['status']   = True
+        elif not d_count['received']['count']:
+            d_count['status']   = 'NoImagesReceived'
+            d_count['status']   = False
+        else:
+            d_count['status']   = 'ImagesInFlight'
+            d_count['status']   = False
+        return d_count
+
+    def series_statusGet(self, str_SeriesInstanceUID) -> dict:
         """
         Return the status of the passed SeriesInstanceUID.
         """
         b_status        : bool  = False
-        d_ret           : dict  = {}
+        d_seriesTable   : dict  = self.seriesMap_DBtablesGet(
+                            SeriesInstanceUID = str_SeriesInstanceUID
+        )
+        b_status        = d_seriesTable['seriesMapMetaFile']['exists']
+        return {
+            'status'        : b_status,
+            'seriesTable'   : d_seriesTable
+        }
+
+    def series_requestedFilesCount(self, str_SeriesInstanceUID) -> dict:
+        """
+        Return the requested files count for a given series.
+
+        This assumes that the series was received as the result of a
+        DICOM movescu which allows the requestor to ask the PACS for
+        the NumberOfSeriesRelatedInstances. If a DICOM series was simply
+        pushed directly to the listener, this information is not
+        available.
+        """
+        b_status        : bool  = False
+        d_DICOM         = self.d_DICOM.copy()
+        self.d_DICOM['SeriesInstanceUID'] = str_SeriesInstanceUID
+        d_get           : dict  = \
+            self.seriesMapMeta('NumberOfSeriesRelatedInstances')
+        self.d_DICOM    = d_DICOM.copy()
+        b_status        = d_get['status']
+        return {
+            'status'    :   b_status,
+            'count'     :   int(d_get['meta']['NumberOfSeriesRelatedInstances'])
+        }
+
+    def series_receivedFilesCount(self, str_SeriesInstanceUID) -> dict:
+        """
+        Return the number of actual received files by "counting" the
+        object json files for a given series.
+
+        Note this returns the count in the seriesMapDir for a given
+        series, which assumes that a file has been processed and
+        recorded -- this does not return the count of files in the
+        packed location.
+        """
+        b_status            : bool  = False
+        l_files             : list  = []
+        str_processedDir    : str   = os.path.join( self.args.str_logDir,
+                                                    self.str_seriesMap,
+                                                    str_SeriesInstanceUID)
+        if os.path.isdir(str_processedDir):
+            b_status        = True
+            l_files         : list  = [
+                f for f in os.listdir(str_processedDir)
+                        if os.path.isfile(os.path.join(str_processedDir, f))
+            ]
+        return {
+            'status'    : b_status,
+            'count'     : len(l_files)
+        }
 
     def seriesMap_DBtablesGet(self, **kwargs) -> dict:
         """
