@@ -10,9 +10,9 @@ from .base import Base
 
 class Move(Base):
     """
-    The 'Move' class is essentially a stripped down module that 
+    The 'Move' class is essentially a stripped down module that
     simply performs a call to the system to run an appropriately
-    constructed 'movescu' command. 
+    constructed 'movescu' command.
 
     In some ways, the Move() class replicates/duplicates similar
     functionality in the Find() class. Future development might
@@ -28,11 +28,12 @@ class Move(Base):
         """
 
         super(Move, self).__init__(arg)
-        self.dp = pfmisc.debug(
-                    verbosity   = self.verbosity,
-                    within      = 'Find',
-                    syslog      = False
+        self.dp     = pfmisc.debug(
+                        verbosity   = self.verbosity,
+                        within      = 'Find',
+                        syslog      = False
         )
+        self.log    = self.dp.qprint
 
     def movescu_command(self, opt={}):
         command = '-S --move ' + opt['aet']
@@ -51,13 +52,13 @@ class Move(Base):
     def run(self, opt={}):
 
         # First, for dockerized run, (re)start the xinetd service
-        self.systemlevel_run(self.arg, 
+        self.systemlevel_run(self.arg,
             {
                 'executable':   'xinetd'
             }
         )
 
-        d_moveRun = self.systemlevel_run(self.arg, 
+        d_moveRun = self.systemlevel_run(self.arg,
                 {
                     'f_commandGen':         self.movescu_command,
                     'series_uid':           opt['SeriesInstanceUID'],
