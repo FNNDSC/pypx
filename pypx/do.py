@@ -47,12 +47,15 @@ class Do(Base):
         arg values with this specific app's arg values.
 
         """
-        d_argCopy           = arg.copy()
-        # "merge" these 'arg's with upstream.
-        arg.update(arg['reportData']['args'])
-        # Since this might overwrite some args specific to this
-        # app, we update again to the copy.
-        arg.update(d_argCopy)
+        # Check if an upstream 'reportData' exists, and if so
+        # merge those args with the current namespace:
+        if 'reportData' in arg.keys():
+            d_argCopy           = arg.copy()
+            # "merge" these 'arg's with upstream.
+            arg.update(arg['reportData']['args'])
+            # Since this might overwrite some args specific to this
+            # app, we update again to the copy.
+            arg.update(d_argCopy)
 
         super(Do, self).__init__(arg)
         self.dp             = pfmisc.debug(
