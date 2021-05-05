@@ -456,7 +456,7 @@ class SMDB():
             d_status['series']['state']     = 'SeriesNotFound'
             if d_status['series']['status']:
                 d_status['error']           = ''
-                d_status['series']['state'] = 'SeriesOK'
+                d_status['series']['state'] = 'SeriesMapMetaOK'
                 d_status['status']          = True
             if str_SeriesInstanceUID in d_status['study']\
                                         ['seriesListInStudy']\
@@ -479,13 +479,13 @@ class SMDB():
                                         str_SeriesInstanceUID
                                 )
         if d_count['received']['count'] >= d_count['requested']['count']:
-            d_count['state']    = 'ImagesAllReceived'
+            d_count['state']    = 'ImagesAllReceivedOK'
             d_count['status']   = True
         elif not d_count['received']['count']:
-            d_count['status']   = 'NoImagesReceived'
+            d_count['state']    = 'NoImagesReceived'
             d_count['status']   = False
         else:
-            d_count['status']   = 'ImagesInFlight'
+            d_count['state']    = 'ImagesInFlight'
             d_count['status']   = False
         return d_count
 
