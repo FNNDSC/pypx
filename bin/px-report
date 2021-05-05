@@ -73,6 +73,7 @@ def synopsis(ab_shortOnly = False):
             _script mode_:
             px-report
                 [--reportData <JSONdump>]                           \\
+                [--reportDataFile <file>]                           \\
                 [--colorize light|dark]                             \\
                 [--printReport tabular|rawText|csv|json]            \\
                 [--reportLayout <JSONstructure>]                    \\
@@ -100,8 +101,12 @@ def synopsis(ab_shortOnly = False):
     ARGS
 
         [--reportData <JSONdump>]
-        The JSON dump from (usually) a ``px-find`` that will be parsed and
-        reported to CLI.
+        This argument is used to store JSON data that is either read from
+        stdin or from the [--reportDataFile]. It is not really meant to
+        be a usable CLI.
+
+        [--reportDataFile <file>]
+        A file containing JSON report data.
 
         [--reportTags <JSONdesc>]
         If specified, print only the JSON specified result tags from either the
@@ -118,11 +123,15 @@ def synopsis(ab_shortOnly = False):
 
         [--reportBodySeriesTags <commaListOfSeriesTags>]
         If specified, set the list of Series Tags in the report body to
-        the specified values. Only applicable to non-CSV reports.
+        the specified values.
 
         [--colorize 'light'|'dark']
         An optional directive to colorize the report output, either for 'light'
         or 'dark' consoles.
+
+        [--ReportLineOverwrite]
+        If specified, use the "special" DICOM tag value for ReportLineOverwrite
+        for the report body.
 
         [--printReport tabular|rawText|json|csv]
         If specified, pretty print a report in a variety of formats.
@@ -175,7 +184,7 @@ def synopsis(ab_shortOnly = False):
 
     EXAMPLES
 
-        px-report --printReport csv --reportData $(px-find --PatientID 4777764)
+        px-find --PatientID 4777764 | px-report --printReport csv
 
     ''' + Colors.NO_COLOUR
 
