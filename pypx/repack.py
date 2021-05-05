@@ -38,7 +38,11 @@ import  rpudb
 import  pfmisc
 
 class Process():
-    """docstring for Listen."""
+    """
+    The core class of the repack module -- this class essentially reads
+    a DICOM file, parses its tags, and then repacks (or re-copies) that
+    file to a more descriptive location on the filesystem.
+    """
 
     def loggers_create(self):
         """
