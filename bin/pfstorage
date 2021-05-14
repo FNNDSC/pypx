@@ -1,0 +1,365 @@
+#!/usr/bin/env python3
+#
+# (c) 2021 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import sys, os, pudb, socket, json
+sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
+
+from    pypx                import PfStorage, swiftStorage, swiftStore
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+from    pfmisc._colors      import Colors
+
+
+str_name    = "pfstorage"
+str_version = "3.0.0"
+str_desc    = Colors.CYAN + """
+
+                 __       _
+                / _|     | |
+         _ __  | |_  ___ | |_   ___   _ __   __ _   __ _   ___
+        | '_ \ |  _|/ __|| __| / _ \ | '__| / _` | / _` | / _ \\
+        | |_) || |  \__ \| |_ | (_) || |   | (_| || (_| ||  __/
+        | .__/ |_|  |___/ \__| \___/ |_|    \__,_| \__, | \___|
+        | |                                         __/ |
+        |_|                                        |___/
+
+
+                            Path-File-storage
+
+           An interface to open storage -- part of the pf* family.
+
+                              -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+    Most simply, ``pfstorage`` is a module that offers a regularized interface
+    to some other backend object storage. While currently supporting ``swift``,
+    the long term idea is to support a multitude of backends. By providing its
+    own interface to several storage backends, this module removes the need for
+    client code to change when a different object storage backend is used.
+
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  '''
+    NAME
+
+	    pfstorage
+
+        - path-and-file object-storage
+
+    SYNOPSIS
+
+            _script mode_:
+            pfstorage                                               \\
+                [--do <JSONdirective>]                              \\
+                [--swiftIP <swiftStorage>]                          \\
+                [--swiftPort <swiftPort>]                           \\
+                [--swiftLogin <user>:<password>]                    \\
+                [--verbosity <level>]                               \\
+                [--test]                                            \\
+                [--json]                                            \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--type <storageBackendType>]                       \\
+                --do '<JSON_formatted_message>'
+
+
+    BRIEF EXAMPLE
+
+            _script mode_:
+            pfstorage                                               \\
+                --swiftIP 192.168.1.216                             \\
+                --swiftPort 8080                                    \\
+                --swiftLogin chris:chris1234                        \\
+                --verbosity 1                                       \\
+                --debugToDir /tmp                                   \\
+                --type swift                                        \\
+                --do '
+                { "action": "ls",
+                  "args": {
+                            "swiftpath":    "",
+                            "retSpec":      ["name", "bytes"]
+                        }
+                }
+                ' --json
+
+    '''
+
+    description =  '''
+    DESCRIPTION
+
+        ``pfstorage`` is a module/script that provides unifed access
+        to some object storage backend (typically swift) and it is part
+        of the ``pf`` suite of applications.
+
+        ``pfstorage`` provides:
+
+            * A library/module for internal API access to some
+              object storage backend;
+
+            * A stand alone command line mode using this module;
+
+    ARGS
+
+        --do '<JSON_formatted>'
+        The action to perform. This can be one of:
+
+            * objPull -- pull data from storage to file system
+            * objPush -- push data from file system to storage
+            * ls      -- listing of data within storage
+
+        with a JSON formatted string similar to:
+
+            * ls:
+            {   "action": "ls",
+                "args": {
+                            "path":         "",
+                            "retSpec":      ["name", "bytes"]
+                      }
+            }
+
+            * objPut:
+            {   "action": "objPut",
+                "args": {
+                            "localpath":            "./data",
+                            "toLocation":           "storage",
+                            "mapLocationOver":      "./data"
+                        }
+            }
+
+            * objPull:
+            {   "action": "objPull",
+                "args": {
+                            "path":                 "chris",
+                            "substr":               "/018",
+                            "fromLocation":         "chris/uploads/DICOM",
+                            "toLocationOver":       "./data"
+                        }
+            }
+
+        [--type <storageBackendType>]
+        The type of object storage. Currently this is 'swift'.
+
+        [--swiftIP <swiftStorage>]
+        [--swiftPort <swiftPort>]
+        The IP address and port for the swift storage container.
+
+        [--swiftLogin <user>:<password>]
+        The username and password for swift access.
+
+        [-x|--desc]
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--json]
+        If specified, print the JSON structure related to the find event. If
+        piping results to a report module, you MUST specify this.
+
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output. Allows for
+        more fine tuned output control as opposed to '--quiet' that effectively
+        silences everything.
+
+    EXAMPLES
+
+    _script mode_:
+    pfstorage                                               \\
+        --swiftIP 192.168.1.216                             \\
+        --swiftPort 8080                                    \\
+        --swiftLogin chris:chris1234                        \\
+        --verbosity 1                                       \\
+        --debugToDir /tmp                                   \\
+        --type swift                                        \\
+        --do '
+        {
+            "action":   "ls",
+            "args": {
+                "swiftpath":        "",
+                "retSpec":          ["name", "bytes"]
+            }
+        }
+        ' --json
+
+
+    '''
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+parser  = ArgumentParser(description = str_desc, formatter_class = RawTextHelpFormatter)
+
+parser.add_argument(
+    '--swiftIP',
+    action  = 'store',
+    dest    = 'swiftIP',
+    type    = str,
+    default = '',
+    help    = 'swift IP')
+parser.add_argument(
+    '--swiftPort',
+    action  = 'store',
+    dest    = 'swiftPort',
+    type    = str,
+    default = '',
+    help    = 'swift port')
+parser.add_argument(
+    '--swiftLogin',
+    action  = 'store',
+    dest    = 'swiftLogin',
+    type    = str,
+    default = '',
+    help    = 'swift login')
+
+parser.add_argument(
+    '--upstreamFile',
+    action  = 'store',
+    dest    = 'upstreamFile',
+    type    = str,
+    default = '',
+    help    = 'JSON report contained in file from upstream process')
+parser.add_argument(
+    '--upstream',
+    action  = 'store',
+    dest    = 'reportData',
+    type    = str,
+    default = '',
+    help    = 'JSON report from upstream process')
+
+parser.add_argument(
+    '--do',
+    action  = 'store',
+    dest    = 'do',
+    default = '',
+    help    = 'Action directive to perform.'
+)
+parser.add_argument(
+    '--action',
+    action  = 'store',
+    dest    = 'str_action',
+    default = '',
+    help    = 'Action to perform.'
+)
+parser.add_argument(
+    '--args',
+    action  = 'store',
+    dest    = 'str_args',
+    default = '',
+    help    = 'Arguments for action.'
+)
+
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--test',
+    help    = 'if specified, perform internal tests',
+    dest    = 'b_test',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--debugToDir',
+    help    = 'a destination directory to contain debugging info',
+    dest    = 'str_debugToDir',
+    action  = 'store',
+    default = ''
+)
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    default = "1")
+parser.add_argument(
+    "-x", "--desc",
+    help    = "long synopsis",
+    dest    = 'desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "short synopsis",
+    dest    = 'synopsis',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--type',
+    help    = 'the type of openstorage',
+    dest    = 'str_type',
+    action  = 'store',
+    default = 'swift'
+)
+parser.add_argument(
+    "--json",
+    help    = "return a JSON payload",
+    dest    = 'json',
+    action  = 'store_true',
+    default = False
+)
+
+args            = parser.parse_args()
+pudb.set_trace()
+if args.desc or args.synopsis:
+    print(str_desc)
+    if args.desc:
+        str_help     = synopsis(False)
+    if args.synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+if len(args.upstreamFile):
+    with open(args.upstreamFile, 'r') as f:
+        args.upstream = json.load(f)
+# else:
+#     # Or, more conveniently, read from input stream
+#     str_inputPipe           = ''
+#     for line in sys.stdin:
+#         str_inputPipe += line
+#     args.upstream   = json.loads(str_inputPipe)
+
+
+# pudb.set_trace()
+d_store     : dict = {}
+if args.str_type == 'swift':
+    d_store = swiftStore(vars(args))
+
+if args.verbosity:
+    if args.json:
+        try:
+            print(json.dumps(d_store, indent = 4))
+        except Exception as e:
+            print(json.dumps({
+                'status'    : False,
+                'error'     : '%s' % e
+            }))

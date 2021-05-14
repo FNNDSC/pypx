@@ -5,6 +5,8 @@ from .move      import Move
 from .report    import Report
 from .status    import Status
 from .do        import Do
+from .push      import Push
+from .pfstorage import PfStorage, swiftStorage
 
 def echo(opt={}):
     return Echo(opt).run()
@@ -26,3 +28,9 @@ def do(opt={}):
 
 def status(opt={}):
     return Status(opt).run(opt)
+
+def push(opt={}):
+    return Push(opt).run(opt)
+
+def swiftStore(opt={}):
+    return swiftStorage(opt).run(opt)

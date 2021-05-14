@@ -1,0 +1,465 @@
+#!/usr/bin/env python
+#                                                            _
+# PACS ToolKit movescu wrapper
+#
+# (c) 2016-2019 Fetal-Neonatal Neuroimaging & Developmental Science Center
+#                   Boston Children's Hospital
+#
+#              http://childrenshospital.org/FNNDSC/
+#                        dev@babyMRI.org
+#
+
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from    argparse            import RawTextHelpFormatter
+from    argparse            import ArgumentParser
+from    terminaltables      import SingleTable
+from    pfmisc._colors      import Colors
+import  json
+import  pypx
+import  socket
+import  pudb
+
+str_defIP   = [l for l in (
+                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                if not ip.startswith("127.")][:1],
+                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
+                for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+
+str_name    = "px-push"
+str_version = "1.0.0"
+str_desc    = Colors.CYAN + """
+
+                                                     _
+                                                    | |
+             _ __  __  __ ______  _ __   _   _  ___ | |__
+            | '_ \ \ \/ /|______|| '_ \ | | | |/ __|| '_ \
+            | |_) | >  <         | |_) || |_| |\__ \| | | |
+            | .__/ /_/\_\        | .__/  \__,_||___/|_| |_|
+            | |                  | |
+            |_|                  |_|
+
+                        PACS ToolKit Wrapper
+                            "move" images
+
+                       -- version """ + \
+             Colors.YELLOW + str_version + Colors.CYAN + """ --
+
+    ``px-push`` is a module / script that provides functionality for
+    "pushing" specific study/series collections to a remote destination.
+
+    Depending on the context of the CLI flags, ``px-push`` can push to
+    either a PACS node or to ChRIS swift storage.
+
+""" + Colors.NO_COLOUR
+
+def synopsis(ab_shortOnly = False):
+    scriptName = os.path.basename(sys.argv[0])
+    shortSynopsis =  Colors.YELLOW + '''
+    NAME
+
+	    %s
+
+        - (image) push
+
+    SYNOPSIS
+
+            _script mode_:
+            px-push                                                 \\
+                [--db <dblogbasepath>]                              \\
+                [--xcrdir|-p <xcrdir>]                              \\
+                [--xcrfile|-f <xcrfile>]                            \\
+                [--xcrdirfile <xcrdirfile>]                         \\
+                [--parseAllFilesWithSubStr <substr>]                \\
+                [--aet <AETitle>]                                   \\
+                [--aec <CalledAETitle>]                             \\
+                [--serverIP <PACSserverIP>]                         \\
+                [--serverPort <PACSserverPort>]                     \\
+                [--StudyInstanceUID <studyInstanceUID>]             \\
+                [--SeriesInstanceUID <seriesInstanceUID>]           \\
+                [--swiftIP <swiftStorage>]                          \\
+                [--swiftPort <swiftPort>]                           \\
+                [--swiftLogin <user>:<password>]                    \\
+                [--swiftBaseLocation <swiftBaseLocation>]           \\
+                [--swiftBaseLocationDelete <swiftBaseLocation>]     \\
+                [--CUBEIP <cubeIP>]                                 \\
+                [--CUBEPort <cubePort>]                             \\
+                [--CUBELogin <user>:<password>]                     \\
+                [-x|--desc]                                         \\
+                [-y|--synopsis]                                     \\
+                [--json]                                            \\
+                [--version]                                         \\
+                [--debugToDir <dir>]                                \\
+                [--verbosity <level>]
+
+    BRIEF EXAMPLE
+
+        px-push                                                     \\
+            --swiftIP 192.168.1.216                                 \\
+            --swiftPort 8080                                        \\
+            --swiftLogin cube:cube1234                              \\
+            --swiftBaseLocation SERVICES/PACS                       \\
+            --CUBEIP 192.168.1.216                                  \\
+            --CUBEPort 8000                                         \\
+            --CUBELogin chris:chris1234                             \\
+            --StudyInstanceUID 1.2.3.435                            \\
+            --SeriesInstanceUID 2.3.5.6.7                           \\
+
+    ''' % scriptName + Colors.NO_COLOUR
+
+    description = Colors.LIGHT_GREEN + '''
+
+    DESCRIPTION
+
+        ``px-push`` is the primary vehicle for transmitting a DICOM file
+        to a remote location. The remote location can be either another
+        PACS node (in which case the PACS related CLI are used), or
+        swift storage (in which the swift related CLI are used). In the
+        case of swift storage, and if CUBE related CLI are used, then
+        this module will also register the files that have been pushed
+        to the CUBE instance.
+
+        While the most typical use case will involve specifying the
+        file (set) to transmit using a (study/series) description to
+        the internal `smdb` database, it is also possible to indate a
+        file (or set of files) directly on the filesystem.
+
+    ARGS
+
+        [--db <dblogbasepath>]
+        A path to the base directory of the DB contents/files that track
+        received files. This is typically the <logDir> of the `px-repack`
+        process that repacks incoming DICOM files. Specifying this path
+        allows `px-find` to access db tables needed to track the number
+        of DICOM files that are received in the case of a 'retrieve'
+        event.
+
+        [--xcrdir|-p <xcrdir>]
+        A directory that contains a DICOM file to process.
+
+        [--xcrfile|-f <xcrfile>]
+        A specific DICOM file in the <xcrdir>.
+
+        [--xcrdirfile <xcrdirfile>]
+        A fully qualified dir and file specifier. If passed, the script
+        will separate into dir and file parts.
+
+        [--parseAllFilesWithSubStr <substr>]
+        If passed, process all the files in the <xcrdir> that contain the
+        <substr> in their filename in one sweep.
+
+        [--aet <AETitle>]
+        The AETitle of *this* entity.
+
+        [--aec <CalledAETitle>]
+        The called AETitle of *this* entity. Needed for some PACS systems.
+
+        [--serverIP <PACSserverIP>]
+        The IP of the PACS server to which a push will be made.
+
+        [--serverPort <PACSserverPort>]
+        The port associated with the PACS server.
+
+        [--swiftIP <swiftStorage>]
+        [--swiftPort <swiftPort>]
+        The IP address and port for the swift storage container.
+
+        [--swiftLogin <user>:<password>]
+        The username and password for swift access.
+
+        [--CUBEIP <cubeIP>]
+        [--CUBEPort <cubePort>]
+        The IP address and port for the CUBE instance associated with the
+        swift storage.
+
+        [--CUBElogin <user>:<password>]
+        A username and password for ChRIS/CUBE access.
+
+        [--StudyInstanceUID <studyInstanceUID>]
+        The <studyInstanceUID> to request.
+
+        [--SeriesDescription <seriesInstanceUID>]
+        The <seriesInstanceUID> to request.
+
+        [-x|--desc]
+        Provide an overview help page.
+
+        [-y|--synopsis]
+        Provide a synopsis help summary.
+
+        [--version]
+        Print internal version number and exit.
+
+        [--json]
+        If specified, print the JSON structure related to the find event. If
+        piping results to a report module, you MUST specify this.
+
+        [--debugToDir <dir>]
+        A directory to contain various debugging output -- these are typically
+        JSON object strings capturing internal state. If empty string (default)
+        then no debugging outputs are captured/generated. If specified, then
+        ``pfcon`` will check for dir existence and attempt to create if
+        needed.
+
+        [-v|--verbosity <level>]
+        Set the verbosity level. "0" typically means no/minimal output. Allows for
+        more fine tuned output control as opposed to '--quiet' that effectively
+        silences everything.
+
+    EXAMPLES
+
+        px-push                                                     \\
+            --swiftIP 192.168.1.216                                 \\
+            --swiftPort 8080                                        \\
+            --swiftLogin chris:chris1234                            \\
+            --swiftBaseLocation SERVICES/PACS                       \\
+            --CUBEIP 192.168.1.216                                  \\
+            --CUBEPort 8000                                         \\
+            --CUBELogin chris:chris1234                             \\
+            --StudyInstanceUID 1.2.3.435                            \\
+            --SeriesInstanceUID 2.3.5.6.7                           \\
+
+        px-push                                                     \\
+            --swiftIP 192.168.1.216                                 \\
+            --swiftPort 8080                                        \\
+            --swiftLogin chris:chris1234                            \\
+            --swiftBaseLocation SERVICES/PACS                       \\
+            --CUBEIP 192.168.1.216                                  \\
+            --CUBEPort 8000                                         \\
+            --CUBELogin chris:chris1234                             \\
+            --xcrdir /tmp/dicom                                     \\
+            --parseAllFilesWithSubStr dcm
+
+    ''' + Colors.LIGHT_PURPLE + '''
+
+    DOCKERIZED EXAMPLES
+
+
+    ''' + Colors.NO_COLOUR
+
+    if ab_shortOnly:
+        return shortSynopsis
+    else:
+        return shortSynopsis + description
+
+
+parser = ArgumentParser(
+            description         = str_desc,
+            formatter_class     = RawTextHelpFormatter
+        )
+
+# db access settings
+parser.add_argument(
+    '--db',
+    action  = 'store',
+    dest    = 'dblogbasepath',
+    type    = str,
+    default = '/tmp/log',
+    help    = 'path to base dir of receipt database')
+
+# File/dir settings
+parser.add_argument(
+    '-p', '--xcrdir',
+    action  = 'store',
+    dest    = 'str_xcrdir',
+    type    = str,
+    default = '/tmp',
+    help    = 'Directory containing a received study'
+    )
+parser.add_argument(
+    '-f', '--xcrfile',
+    action  = 'store',
+    dest    = 'str_xcrfile',
+    type    = str,
+    default = '',
+    help    = 'File in <xcrdir> to process'
+    )
+parser.add_argument(
+    '--xcrdirfile',
+    action  = 'store',
+    dest    = 'str_xcrdirfile',
+    type    = str,
+    default = '',
+    help    = 'Fully qualified file to process'
+    )
+parser.add_argument(
+    '--parseAllFilesWithSubStr',
+    action  = 'store',
+    dest    = 'str_filesubstr',
+    type    = str,
+    default = '',
+    help    = 'Parse all files in <xcrdir> that contain <substr>'
+    )
+
+# PACS settings
+parser.add_argument(
+    '--aet',
+    action  = 'store',
+    dest    = 'aet',
+    type    = str,
+    default = 'CHRIS-ULTRON-AET',
+    help    = 'aet')
+parser.add_argument(
+    '--aec',
+    action  = 'store',
+    dest    = 'aec',
+    type    = str,
+    default = 'CHRIS-ULTRON-AEC',
+    help    = 'aec')
+parser.add_argument(
+    '--serverIP',
+    action  = 'store',
+    dest    = 'serverIP',
+    type    = str,
+    default = '192.168.1.110',
+    help    = 'PACS server IP')
+parser.add_argument(
+    '--serverPort',
+    action  = 'store',
+    dest    = 'serverPort',
+    type    = str,
+    default = '4242',
+    help    = 'PACS server port')
+parser.add_argument(
+    '--movescu',
+    action  = 'store',
+    dest    = 'movescu',
+    type    = str,
+    default = '/usr/bin/movescu',
+    help    = '"movescu"" executable absolute location')
+
+# Swift settings
+parser.add_argument(
+    '--swiftIP',
+    action  = 'store',
+    dest    = 'swiftIP',
+    type    = str,
+    default = '',
+    help    = 'swift IP')
+parser.add_argument(
+    '--swiftPort',
+    action  = 'store',
+    dest    = 'swiftPort',
+    type    = str,
+    default = '',
+    help    = 'swift port')
+parser.add_argument(
+    '--swiftLogin',
+    action  = 'store',
+    dest    = 'swiftLogin',
+    type    = str,
+    default = '',
+    help    = 'swift login')
+parser.add_argument(
+    '--swiftBaseLocation',
+    action  = 'store',
+    dest    = 'swiftBaseLocation',
+    type    = str,
+    default = '',
+    help    = 'swift base location to push files')
+
+# CUBE settings
+parser.add_argument(
+    '--CUBEIP',
+    action  = 'store',
+    dest    = 'cubeIP',
+    type    = str,
+    default = '',
+    help    = 'CUBE IP')
+parser.add_argument(
+    '--CUBEPort',
+    action  = 'store',
+    dest    = 'cubePort',
+    type    = str,
+    default = '',
+    help    = 'CUBE port')
+parser.add_argument(
+    '--CUBELogin',
+    action  = 'store',
+    dest    = 'cubeLogin',
+    type    = str,
+    default = '',
+    help    = 'CUBE login')
+
+
+# Data settings
+parser.add_argument(
+    '--SeriesInstanceUID',
+    action  = 'store',
+    dest    = 'SeriesInstanceUID',
+    type    = str,
+    default = '',
+    help    = 'Series Instance UID')
+parser.add_argument(
+    '--StudyInstanceUID',
+    action  = 'store',
+    dest    = 'StudyInstanceUID',
+    type    = str,
+    default = '',
+    help    = 'Study Instance UID')
+
+parser.add_argument(
+    "-v", "--verbosity",
+    help    = "verbosity level for app",
+    dest    = 'verbosity',
+    type    = int,
+    default = 1)
+parser.add_argument(
+    "--json",
+    help    = "return a JSON payload",
+    dest    = 'json',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-x", "--desc",
+    help    = "long synopsis",
+    dest    = 'desc',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    "-y", "--synopsis",
+    help    = "short synopsis",
+    dest    = 'synopsis',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
+    '--version',
+    help    = 'if specified, print version number',
+    dest    = 'b_version',
+    action  = 'store_true',
+    default = False
+)
+
+
+args        = parser.parse_args()
+
+if args.desc or args.synopsis:
+    print(str_desc)
+    if args.desc:
+        str_help     = synopsis(False)
+    if args.synopsis:
+        str_help     = synopsis(True)
+    print(str_help)
+    sys.exit(1)
+
+if args.b_version:
+    print("Version: %s" % str_version)
+    sys.exit(1)
+
+pudb.set_trace()
+# Return the JSON result as a serialized string:
+output = pypx.push(vars(args))
+
+if args.verbosity:
+    if args.json:
+        try:
+            print(json.dumps(output, indent = 4))
+        except Exception as e:
+            print(json.dumps({
+                'status'    : False,
+                'error'     : '%s' % e
+            }))

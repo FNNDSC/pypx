@@ -164,7 +164,6 @@ class Process():
         tag  space,  and then  save  the  file  in the appropriate target
         directory tree.
         """
-        b_status    = True
         dl_run      : list  = []
         d_run       : dict  = {'status' : False}
         for str_file in self.l_files:
