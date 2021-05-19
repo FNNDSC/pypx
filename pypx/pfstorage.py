@@ -630,7 +630,6 @@ class swiftStorage(PfStorage):
         """
         Perform the storage operation
         """
-        pudb.set_trace()
         d_actionResult  : dict  = {
             'status'    : False,
             'msg'       : ''
