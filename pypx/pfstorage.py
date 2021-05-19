@@ -148,14 +148,6 @@ class PfStorage(metaclass = abc.ABCMeta):
         d_ret['numDirs']    = len(d_ret['l_dirFS'])
         return d_ret
 
-    @staticmethod
-    def storagePath_get(key_num, storeBase):
-        """
-        Returns path of storage location in the filesystem space in which a
-        specific service has been launched.
-        """
-        return os.path.join('%s/key-%s' %(storeBase, key_num), '')
-
     @abc.abstractmethod
     def connect(self, *args, **kwargs):
         """
@@ -428,9 +420,9 @@ class swiftStorage(PfStorage):
         """
         Process the 'objPut' directive.
         """
-        d_ret           : dict  = {
+        d_ret           :   dict  = {
             'status'    :   False,
-            'msg'       :      "No 'arg' JSON directive found in request"
+            'msg'       :   "No 'arg' JSON directive found in request"
         }
         d_msg           : dict  = {}
         d_args          : dict  = {}
@@ -533,9 +525,9 @@ class swiftStorage(PfStorage):
         """
         Process the 'objPull' directive.
         """
-        d_ret       = {
+        d_ret       :   dict  = {
             'status':   False,
-            'msg':      "No 'meta' JSON directive found in request"
+            'msg'   :   "No 'meta' JSON directive found in request"
         }
         d_msg       = {}
         d_args      = {}
@@ -571,7 +563,7 @@ class swiftStorage(PfStorage):
                     toLocation      = /some/dir/data
 
         if 'toLocation' is not specified, then the local file system
-        location will be the 'inLocation' prefixed with a '/'.
+        location will be the 'fromLocation' prefixed with a '/'.
 
         """
         b_status                : bool  = True
@@ -595,11 +587,12 @@ class swiftStorage(PfStorage):
             if k == 'fromLocation'  : str_swiftLocation   = v
             if k == 'toLocation'    : str_mapLocationOver = v
 
+        kwargs['path']  = str_swiftLocation
         # Get dictionary of objects in storage
         d_ls            = self.ls(*args, **kwargs)
 
         # List of objects in storage
-        l_objectfile    = [x['name'] for x in d_ls['objectDict']]
+        l_objectfile    = [x['name'] for x in d_ls['listDict_obj']]
 
         if len(str_mapLocationOver):
             # replace the local file path with object store path
