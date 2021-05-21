@@ -34,7 +34,7 @@ str_desc    = Colors.CYAN + """
                                                      _
                                                     | |
              _ __  __  __ ______  _ __   _   _  ___ | |__
-            | '_ \ \ \/ /|______|| '_ \ | | | |/ __|| '_ \
+            | '_ \ \ \/ /|______|| '_ \ | | | |/ __|| '_ \.
             | |_) | >  <         | |_) || |_| |\__ \| | | |
             | .__/ /_/\_\        | .__/  \__,_||___/|_| |_|
             | |                  | |
@@ -81,11 +81,11 @@ def synopsis(ab_shortOnly = False):
                 [--swiftIP <swiftStorage>]                          \\
                 [--swiftPort <swiftPort>]                           \\
                 [--swiftLogin <user>:<password>]                    \\
-                [--swiftBaseLocation <swiftBaseLocation>]           \\
-                [--swiftBaseLocationDelete <swiftBaseLocation>]     \\
-                [--CUBEIP <cubeIP>]                                 \\
-                [--CUBEPort <cubePort>]                             \\
-                [--CUBELogin <user>:<password>]                     \\
+                [--swiftServicesPACS <PACSname>]                    \\
+                [--swiftPackEachDICOM]                              \\
+                [--CUBEURL <cubeURL>]                               \\
+                [--CUBEusername <cubeusername>]                     \\
+                [--CUBEuserpasswd <cubeuserpassword>]               \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--json]                                            \\
@@ -99,10 +99,7 @@ def synopsis(ab_shortOnly = False):
             --swiftIP 192.168.1.216                                 \\
             --swiftPort 8080                                        \\
             --swiftLogin cube:cube1234                              \\
-            --swiftBaseLocation SERVICES/PACS                       \\
-            --CUBEIP 192.168.1.216                                  \\
-            --CUBEPort 8000                                         \\
-            --CUBELogin chris:chris1234                             \\
+            --swiftServicesPACS BCH                                 \\
             --StudyInstanceUID 1.2.3.435                            \\
             --SeriesInstanceUID 2.3.5.6.7                           \\
 
@@ -168,13 +165,21 @@ def synopsis(ab_shortOnly = False):
         [--swiftLogin <user>:<password>]
         The username and password for swift access.
 
-        [--CUBEIP <cubeIP>]
-        [--CUBEPort <cubePort>]
-        The IP address and port for the CUBE instance associated with the
-        swift storage.
+        [--swiftPackEachDICOM]
+        If specified, assume DICOMS are unordered and not all of the same
+        series. Process a store directive for each DICOM file individually.
 
-        [--CUBElogin <user>:<password>]
-        A username and password for ChRIS/CUBE access.
+        [--swiftServicesPACS <PACSname>]
+        The name of the PACS within the swift ``SERVICES/PACS`` location.
+
+        [--CUBEURL <cubeURL>]
+        The URL of the CUBE instance.
+
+        [--CUBEusername <cubeusername>]
+        The name of a CUBE user.
+
+        [--CUBEuserpasswd <cubeuserpassword>]
+        The password for a CUBE user. Note the flag spelling is 'passwd'!
 
         [--StudyInstanceUID <studyInstanceUID>]
         The <studyInstanceUID> to request.
@@ -192,8 +197,8 @@ def synopsis(ab_shortOnly = False):
         Print internal version number and exit.
 
         [--json]
-        If specified, print the JSON structure related to the find event. If
-        piping results to a report module, you MUST specify this.
+        If specified, print the JSON structure related to the process event. This is
+        useful when used in a pipeline fashion with other px-* modules.
 
         [--debugToDir <dir>]
         A directory to contain various debugging output -- these are typically
@@ -214,9 +219,9 @@ def synopsis(ab_shortOnly = False):
             --swiftPort 8080                                        \\
             --swiftLogin chris:chris1234                            \\
             --swiftBaseLocation SERVICES/PACS                       \\
-            --CUBEIP 192.168.1.216                                  \\
-            --CUBEPort 8000                                         \\
-            --CUBELogin chris:chris1234                             \\
+            --CUBEURL https://localhost:8000/api/v1/                \\
+            --CUBEusername chris                                    \\
+            --CUBEuserpasswd chris1234                              \\
             --StudyInstanceUID 1.2.3.435                            \\
             --SeriesInstanceUID 2.3.5.6.7                           \\
 
@@ -224,10 +229,11 @@ def synopsis(ab_shortOnly = False):
             --swiftIP 192.168.1.216                                 \\
             --swiftPort 8080                                        \\
             --swiftLogin chris:chris1234                            \\
-            --swiftBaseLocation SERVICES/PACS                       \\
-            --CUBEIP 192.168.1.216                                  \\
-            --CUBEPort 8000                                         \\
-            --CUBELogin chris:chris1234                             \\
+            --swiftServicesPACS BCH                                 \\
+            --swiftPackEachDICOM                                    \\
+            --CUBEURL https://localhost:8000/api/v1/                \\
+            --CUBEusername chris                                    \\
+            --CUBEuserpasswd chris1234                              \\
             --xcrdir /tmp/dicom                                     \\
             --parseAllFilesWithSubStr dcm
 
@@ -308,16 +314,16 @@ parser.add_argument(
     default = 'CHRIS-ULTRON-AEC',
     help    = 'aec')
 parser.add_argument(
-    '--serverIP',
+    '--PACSserverIP',
     action  = 'store',
-    dest    = 'serverIP',
+    dest    = 'str_PACSserverIP',
     type    = str,
     default = '192.168.1.110',
     help    = 'PACS server IP')
 parser.add_argument(
-    '--serverPort',
+    '--PACSserverPort',
     action  = 'store',
-    dest    = 'serverPort',
+    dest    = 'str_PACSserverPort',
     type    = str,
     default = '4242',
     help    = 'PACS server port')
@@ -333,54 +339,71 @@ parser.add_argument(
 parser.add_argument(
     '--swiftIP',
     action  = 'store',
-    dest    = 'swiftIP',
+    dest    = 'str_swiftIP',
     type    = str,
     default = '',
     help    = 'swift IP')
 parser.add_argument(
     '--swiftPort',
     action  = 'store',
-    dest    = 'swiftPort',
+    dest    = 'str_swiftPort',
     type    = str,
     default = '',
     help    = 'swift port')
 parser.add_argument(
     '--swiftLogin',
     action  = 'store',
-    dest    = 'swiftLogin',
+    dest    = 'str_swiftLogin',
     type    = str,
     default = '',
     help    = 'swift login')
 parser.add_argument(
+    '--swiftServicesPACS',
+    action  = 'store',
+    dest    = 'str_swiftServicesPACS',
+    type    = str,
+    default = '',
+    help    = 'swift PACS location within SERVICE/PACS to push files')
+parser.add_argument(
+    "--swiftPackEachDICOM",
+    help    = "If specified, determine the pack location of _each_ DICOM file",
+    dest    = 'b_swiftPackEachDICOM',
+    action  = 'store_true',
+    default = False
+)
+parser.add_argument(
     '--swiftBaseLocation',
     action  = 'store',
-    dest    = 'swiftBaseLocation',
+    dest    = 'str_swiftBaseLocation',
     type    = str,
     default = '',
     help    = 'swift base location to push files')
 
 # CUBE settings
 parser.add_argument(
-    '--CUBEIP',
+    '--CUBEURL',
     action  = 'store',
-    dest    = 'cubeIP',
+    dest    = 'str_CUBEURL',
     type    = str,
-    default = '',
-    help    = 'CUBE IP')
+    default = 'http://localhost:8000/api/v1/',
+    help    = 'CUBE URL'
+    )
 parser.add_argument(
-    '--CUBEPort',
+    '--CUBEusername',
     action  = 'store',
-    dest    = 'cubePort',
+    dest    = 'str_CUBEusername',
     type    = str,
-    default = '',
-    help    = 'CUBE port')
+    default = 'chris',
+    help    = 'Username with which to log into CUBE'
+    )
 parser.add_argument(
-    '--CUBELogin',
+    '--CUBEuserpasswd',
     action  = 'store',
-    dest    = 'cubeLogin',
+    dest    = 'str_CUBEuserpasswd',
     type    = str,
-    default = '',
-    help    = 'CUBE login')
+    default = 'chris1234',
+    help    = 'CUBE user password'
+    )
 
 
 # Data settings
@@ -434,7 +457,6 @@ parser.add_argument(
     default = False
 )
 
-
 args        = parser.parse_args()
 
 if args.desc or args.synopsis:
@@ -450,11 +472,10 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
-pudb.set_trace()
 # Return the JSON result as a serialized string:
 output = pypx.push(vars(args))
 
-if args.verbosity:
+if int(args.verbosity):
     if args.json:
         try:
             print(json.dumps(output, indent = 4))
