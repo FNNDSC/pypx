@@ -37,6 +37,40 @@ from    pudb.remote         import  set_trace
 import  rpudb
 import  pfmisc
 
+def args_impedanceMatch(ns_arg):
+    """
+    This method is an "impedance matcher" that examines the 
+    incoming namespace, ns_arg, and returns a new namespace that
+    contains any missing elements necessary for full instantiation
+    of the class object.
+
+    Typically this method is used when the class is called as a module
+    without the assumption of the native driving script creating the 
+    the fully qualified namespace.
+    """
+    l_key   : list  = []
+
+    l_key = [k for (k,v) in vars(ns_arg).items()]
+    if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '/tmp')
+    if 'str_xcrfile'    not in l_key:   setattr(ns_arg, 'str_xcrfile', '') 
+    if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '') 
+    if 'str_xcrdirfile' not in l_key:   setattr(ns_arg, 'str_xcrdirfile', '') 
+    if 'str_filesubstr' not in l_key:   setattr(ns_arg, 'str_filesubstr', '')
+
+    if 'str_rootDirTemplate' not in l_key:
+        setattr(ns_arg, 'str_rootDirTemplate', 
+                        '%PatientID-%PatientName-%PatientAge')
+    if 'str_studyDirTemplate' not in l_key:
+        setattr(ns_arg, 'str_studyDirTemplate', 
+                        '%StudyDescription-%StudyDate-%StudyInstanceUID')
+    if 'str_studyDirTemplate' not in l_key:
+        setattr(ns_arg, 'str_seriesDirTemplate', 
+                        '%SeriesDescription-%SeriesInstanceUID')
+    if 'str_studyDirTemplate' not in l_key:
+        setattr(ns_arg, 'str_imageTemplate', 
+                        '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm')
+    return ns_arg
+
 class Process():
     """
     The core class of the repack module -- this class essentially reads
@@ -201,6 +235,56 @@ class Process():
             'run'       : dl_run
         }
 
+    def packPath_resolve(self, d_DICOMfile_read) -> dict:
+        """
+        Return the pack path and image name template. Note this
+        needs a d_DICOMread dictionary as returned from a call
+        to DICOMfile_read.
+        """
+
+        def DICOMlookup_santitizeFromTemplate(str_template):
+            """
+            Process DICOM lookup tags in a template string and
+            return a sanitized result.
+            """
+            return re.sub('[^A-Za-z0-9\.\-]+', '_',
+                                self.tagsInString_process(
+                                    d_DICOMfile_read['d_DICOM'],
+                                    str_template
+                                )['str_result']
+                            )
+
+        str_rootDir     :   str     = ''
+        str_studyDir    :   str     = ''
+        str_seriesDir   :   str     = ''
+        str_packtDir    :   str     = ''
+        str_imageFile   :   str     = ''
+
+        str_rootDir     = DICOMlookup_santitizeFromTemplate(
+                            self.args.str_rootDirTemplate
+                        )
+        str_studyDir    = DICOMlookup_santitizeFromTemplate(
+                            self.args.str_studyDirTemplate
+                        )
+        str_seriesDir   = DICOMlookup_santitizeFromTemplate(
+                            self.args.str_seriesDirTemplate
+                        )
+        str_imageFile   = DICOMlookup_santitizeFromTemplate(
+                            self.args.str_imageTemplate
+                        )
+        str_packDir     = '%s/%s/%s' % (
+                            str_rootDir,
+                            str_studyDir,
+                            str_seriesDir
+                        )
+
+        return {
+            'status'    : True,
+            'packDir'   : str_packDir,
+            'imageFile' : str_imageFile
+        }
+
+
     def DICOMfile_save(self, d_DICOMfile_read) -> dict:
         """
         Save/pack the initial DICOM file in a new location based on the
@@ -219,47 +303,45 @@ class Process():
         Also update the various map files that are used to track the
         status of receipts.
         """
-        def DICOMlookup_santitizeFromTemplate(str_template):
-            """
-            Process DICOM lookup tags in a template string and
-            return a sanitized result.
-            """
-            return re.sub('[^A-Za-z0-9\.\-]+', '_',
-                                self.tagsInString_process(
-                                    d_DICOMfile_read['d_DICOM'],
-                                    str_template
-                                )['str_result']
-                            )
 
         b_status        :   bool    = False
-        str_rootDir     :   str     = ''
-        str_studyDir    :   str     = ''
-        str_seriesDir   :   str     = ''
+        # str_rootDir     :   str     = ''
+        # str_studyDir    :   str     = ''
+        # str_seriesDir   :   str     = ''
         str_imageFile   :   str     = ''
         str_outputDir   :   str     = ''
         str_errorDir    :   str     = ''
         str_errorCopy   :   str     = ''
+        d_path          :   dict    = {}
 
         # pudb.set_trace()
         if d_DICOMfile_read['status']:
-            str_rootDir     = DICOMlookup_santitizeFromTemplate(
-                                self.args.str_rootDirTemplate
+            d_path          = self.packPath_resolve()
+
+            # str_rootDir     = DICOMlookup_santitizeFromTemplate(
+            #                     self.args.str_rootDirTemplate
+            #                 )
+            # str_studyDir    = DICOMlookup_santitizeFromTemplate(
+            #                     self.args.str_studyDirTemplate
+            #                 )
+            # str_seriesDir   = DICOMlookup_santitizeFromTemplate(
+            #                     self.args.str_seriesDirTemplate
+            #                 )
+            # str_imageFile   = DICOMlookup_santitizeFromTemplate(
+            #                     self.args.str_imageTemplate
+            #                 )
+            # str_outputDir   = '%s/%s/%s/%s' % (
+            #                     self.args.str_dataDir,
+            #                     str_rootDir,
+            #                     str_studyDir,
+            #                     str_seriesDir
+            #                 )
+            str_outputDir   = '%s/%s' % (
+                                    self.args.str_dataDir,
+                                    d_path['packDir']
                             )
-            str_studyDir    = DICOMlookup_santitizeFromTemplate(
-                                self.args.str_studyDirTemplate
-                            )
-            str_seriesDir   = DICOMlookup_santitizeFromTemplate(
-                                self.args.str_seriesDirTemplate
-                            )
-            str_imageFile   = DICOMlookup_santitizeFromTemplate(
-                                self.args.str_imageTemplate
-                            )
-            str_outputDir   = '%s/%s/%s/%s' % (
-                                self.args.str_dataDir,
-                                str_rootDir,
-                                str_studyDir,
-                                str_seriesDir
-                            )
+            str_imageFile   = d_path['imageFile']
+
             try:
                 os.makedirs(str_outputDir)
             except Exception as e:
