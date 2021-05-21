@@ -17,42 +17,37 @@ from        argparse            import ArgumentParser
 from        pfmisc._colors      import Colors
 import      pypx
 from        pypx                import repack
+from        pypx                import register
 
 import      json
 
 import      pudb
 from        pudb.remote         import set_trace
 
-str_name    = "px-repack"
+str_name    = "px-register"
 str_version = "1.2.0"
 str_desc    = Colors.CYAN + """
-                                                              _
-                                                             | |
-         _ __  __  __ ______  _ __   ___  _ __    __ _   ___ | | __
-        | '_ \ \ \/ /|______|| '__| / _ \| '_ \  / _` | / __|| |/ /
-        | |_) | >  <         | |   |  __/| |_) || (_| || (__ |   <
-        | .__/ /_/\_\        |_|    \___|| .__/  \__,_| \___||_|\_\.
-        | |                              | |
-        |_|                              |_|
 
 
+                                                  _     _             
+                                                 (_)   | |            
+                  _ ____  ________ _ __ ___  __ _ _ ___| |_  ___ _ __ 
+                 | '_ \ \/ /______| '__/ _ \/ _` | / __| __|/ _ \ '__|
+                 | |_) >  <       | | |  __/ (_| | \__ \ |_|  __/ |   
+                 | .__/_/\_\      |_|  \___|\__, |_|___/\__|\___|_|   
+                 | |                         __/ |                    
+                 |_|                        |___/                     
+
+             
                                 PACS ToolKit Wrapper
-                                    px-repack
+                                    px-register
 
                                -- version """ + \
              Colors.YELLOW + str_version + Colors.CYAN + """ --
 
-    ``px-repack``   is  an  end-of-(DICOM)reception  processing  script and
-    module. It is designed to be called by some initiator program and works
-    on a directory and file to process.
-
-    The typical initiator is a ``storescp`` "listener" (often under control
-    of an  xinetd servce). Usually xinetd will fire up ``storescp`` on  the
-    receipt  of traffic on a  listening port.  Assuming these are DICOM data
-    stream files, ``storescp`` will save the DICOM file on success, and then
-    call ``px-repack`` which will repack the file in a filesystem expressive
-    location. This organization pattern can be specified by a set of string
-    templates.
+    ``px-register`` is used to register files that have been pushed to a
+    CUBE service, i.e. files that are in the ``SERVICES/`` swift storage
+    location.
 
 """ + Colors.NO_COLOUR
 
@@ -63,22 +58,22 @@ def synopsis(ab_shortOnly = False):
 
 	    %s
 
-        - DICOM file "repack" to FS location based on various
-          DICOM tag values.
+        - Register files in ``SERVICES/`` to a CUBE instance.
 
     SYNOPSIS
 
-            px-repack                                               \\
+            px-register                                             \\
                 [--xcrdir|-p <xcrdir>]                              \\
                 [--xcrfile|-f <xcrfile>]                            \\
                 [--xcrdirfile <xcrdirfile>]                         \\
                 [--parseAllFilesWithSubStr <substr>]                \\
+                [--localFileList <listOfFiles>]                     \\
+                [--objectFileList <listOfNamesInStorage>]           \\
                 [--logdir|-l <logdir>]                              \\
-                [--datadir|-d <datadir>]                            \\
-                [--rootDirTemplate <rootTemplate>]                  \\
-                [--studyDirTemplate <studyTemplate>]                \\
-                [--seriesDirTemplate <seriesTemplate>]              \\
-                [--imageFileTemplate <imageTemplate>]               \\
+                [--CUBEURL <CUBEURL>]                               \\
+                [--CUBEusername <CUBEusername>]                     \\
+                [--CUBEuserpasswd <CUBEuserpasswd>]                 \\
+                [--swiftServicesPACS <PACSname>]                    \\
                 [--cleanup]                                         \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
@@ -91,6 +86,22 @@ def synopsis(ab_shortOnly = False):
     description = Colors.LIGHT_GREEN + '''
 
     ARGS
+
+        [--upstreamFile]
+        A JSON formatted file containing information to pack into the
+        [--upstream] argument.
+
+        [--upstream <JSONData>]
+        A convenience argument to populate with JSON data for further
+        processing.
+
+        [--localFileList <listOfFiles>]
+        Not passed usually on the CLI but used to store results from 
+        upstream JSON compute.
+
+        [--objectFileList <listOfNamesInStorage>]
+        Not passed usually on the CLI but used to store results from 
+        upstream JSON compute.
 
         [--xcrdir|-p <xcrdir>]
         A directory that contains a DICOM file to process.
@@ -107,11 +118,24 @@ def synopsis(ab_shortOnly = False):
         <substr> in their filename in one sweep.
 
         [--logdir|-l <logdir>]
-        The directory containing log files relevant to px-repack operation.
+        The directory containing log files relevant to px-register operation.
 
-        [--datadir|-d <datadir>]
-        The directory that will contain the root of the file tree of packed
-        image files.
+        [--CUBEURL <cubeURL>]
+        The URL of the CUBE instance.
+
+        [--CUBEusername <cubeusername>]
+        The name of a CUBE user.
+
+        [--CUBEuserpasswd <cubeuserpassword>]
+        The password for a CUBE user. Note the flag spelling is 'passwd'!
+
+        [--swiftServicesPACS <PACSname>]
+        The name of the specific PACS within SERVICE/PACS to which files will be
+        registered.
+
+        [--json]
+        If specified, print the JSON structure related to the process event. This is
+        useful when used in a pipeline fashion with other px-* modules.
 
         [--cleanup]
         If specified, clean up nicely like a good little script should. This
@@ -137,93 +161,46 @@ def synopsis(ab_shortOnly = False):
             * "1"   :   JSON dump output from the run call
             * "2"   :   Dump internal intermediary output
 
-        [--rootDirTemplate <rootTemplate>]
-        A string template for the root directory name in which to pack a
-        given DICOM.
-
-        Default: "%PatientID-%PatientName-%PatientAge"
-
-        [--studyDirTemplate <studyTemplate>]
-        A string template for the study directory name in which to pack a
-        given DICOM.
-
-        Default: "%StudyDescription-%StudyDate"
-
-        [--seriesDirTemplate <seriesTemplate>]
-        A string template for the series directory name in which to pack a
-        given DICOM.
-
-        Default: "%SeriesDescription"
-
-        [--imageFileTemplate <imageTemplate>]
-        A string template for the image file name in which to copy a
-        given DICOM.
-
-        Default: "%_pad|4,0_InstanceNumber-%SOPInstanceUID"
 
     DESCRIPTION
 
-        This script and module are used to process (typically) single
-        DICOM files from one location on a filesystem and pack them to
-        a different location.
+        This script and module are used to register files that have been
+        pushed to swift with a CUBE instance.
 
-        Essentially, ``px-repack`` is meant to operate on a single DICOM
-        file, and based on the meta/header information, save that same file
-        elsewhere in the filesystem under the following structure:
+        The most common mode of operation is as part of pipeline wherein
+        ``px-register`` receives a JSON stream on stdin. This stream is
+        parsed for [--localFileList <list>] and [--objectFileList <list>]
+        and elements in each list correspond with each other.
 
-        <dataDir>
-            |
-            └─<rootTemplate>
-                    |
-                    └─<studyTemplate>
-                             |
-                             └─<seriesTemplate>
-                                      |
-                                      └─<imageTemplate>.dcm
+        The [--localFileList <list>] is needed so that this module can
+        load the corresponding DICOM file to determine its tags and send
+        a subset of the same to CUBE to allow for registration.
 
-        The purpose of course is to provide some meaningful structure to
-        what would otherwise be an opaque and flat set of meaningless DICOM
-        file names.
+        In the absence of the explicit list structure, this module can
+        work off file system directories and files, in which base it will
+        infer the swift push path (by asking the repack module) and then
+        construct its own internal lists.
 
-        ``px-repack`` is designed to be called by an different process,
-        usually a ``storescp`` listener, on a per-file-received basis.
+    NOTE
 
-        However, as a convenience, ``px-repack`` can also be called directly
-        on a single directory containing DICOMS and be instructed to repack
-        all the files in the above template structure.
-
-    TEMPLATES
-
-        A template is a pattern for a string, based on DICOM tags. For example,
-        a template that is specified as the following string:
-
-            %PatientAge-%PatientID-output.txt
-
-        will be parsed to
-
-            006Y-4412364-ouptut.txt
-
-        It is also possible to apply certain permutations/functions
-        to a tag. For example, a function is identified by an underscore
-        prefixed and suffixed string as part of the DICOM tag. If
-        found, this function is applied to the tag value. For example,
-
-            %PatientAge-%_md5|4_PatientID-output.txt
-
-        will apply an md5 hash to the PatientID and use the first 4
-        characters:
-
-            006Y-7f38-output.txt
+        It is assumed that files to register have already been pushed to
+        CUBE swift storage, using a pypx-conformant packing structure. If
+        used in a typical pypx pipeline structure then the packing structure
+        that this module uses will be read from pipe-upstream processes.
 
 ''' + Colors.PURPLE + '''
 
     EXAMPLES
 
-        px-repack                                                   \\
-                --xcrdir /dicom/tmp                                 \\
-                --xcrfile file0001.dcm                              \\
+        px-register                                                 \\
+                --upstreamFile push.json                            \\
+                --CUBEURL http://localhost:8000/api/v1/             \\
+                --CUBEusername chris                                \\
+                --CUBEuserpasswd chris1234                          \\
+                --swiftServicesPACS BCH                             \\
+                --verbosity 1                                       \\
+                --json                                              \\
                 --logdir /dicom/log                                 \\
-                --datadir /dicom/data                               \\
                 --debug
 
 ''' + Colors.NO_COLOUR
@@ -239,12 +216,28 @@ parser = ArgumentParser(
         )
 
 # Settings
+
+parser.add_argument(
+    '--upstreamFile',
+    action  = 'store',
+    dest    = 'upstreamFile',
+    type    = str,
+    default = '',
+    help    = 'JSON report contained in file from upstream process')
+parser.add_argument(
+    '--upstream',
+    action  = 'store',
+    dest    = 'reportData',
+    type    = str,
+    default = '',
+    help    = 'JSON report from upstream process')
+
 parser.add_argument(
     '-p', '--xcrdir',
     action  = 'store',
     dest    = 'str_xcrdir',
     type    = str,
-    default = '/tmp',
+    default = '',
     help    = 'Directory containing a received study'
     )
 parser.add_argument(
@@ -272,6 +265,20 @@ parser.add_argument(
     help    = 'Parse all files in <xcrdir> that contain <substr>'
     )
 parser.add_argument(
+    '--localFileList',
+    action  = 'store',
+    dest    = 'localFileList',
+    default = [],
+    help    = 'a list of local files -- not used by CLI!'
+    )
+parser.add_argument(
+    '--objectFileList',
+    action  = 'store',
+    dest    = 'objectFileList',
+    default = [],
+    help    = 'a list of object files -- not used by CLI!'
+    )
+parser.add_argument(
     '-l', '--logdir',
     action  = 'store',
     dest    = 'str_logDir',
@@ -287,39 +294,47 @@ parser.add_argument(
     default = '/tmp/data',
     help    = 'Directory in which to pack final DICOM files'
     )
+parser.add_argument(
+    '--PACS',
+    action  = 'store',
+    dest    = 'str_PACS',
+    type    = str,
+    default = '',
+    help    = 'PACS name ID within swift storage'
+    )
 
+# CUBE settings
 parser.add_argument(
-    '--rootDirTemplate',
+    '--CUBEURL',
     action  = 'store',
-    dest    = 'str_rootDirTemplate',
+    dest    = 'str_CUBEURL',
     type    = str,
-    default = '%PatientID-%PatientName-%PatientAge',
-    help    = 'Template pattern for root unpack directory'
+    default = 'http://localhost:8000/api/v1/',
+    help    = 'CUBE URL'
     )
 parser.add_argument(
-    '--studyDirTemplate',
+    '--CUBEusername',
     action  = 'store',
-    dest    = 'str_studyDirTemplate',
+    dest    = 'str_CUBEusername',
     type    = str,
-    default = '%StudyDescription-%StudyDate-%StudyInstanceUID',
-    help    = 'Template pattern for study unpack directory'
+    default = 'chris',
+    help    = 'Username with which to log into CUBE'
     )
 parser.add_argument(
-    '--seriesDirTemplate',
+    '--CUBEuserpasswd',
     action  = 'store',
-    dest    = 'str_seriesDirTemplate',
+    dest    = 'str_CUBEuserpasswd',
     type    = str,
-    default = '%SeriesDescription-%SeriesInstanceUID',
-    help    = 'Template pattern for series unpack directory'
+    default = 'chris1234',
+    help    = 'CUBE user password'
     )
 parser.add_argument(
-    '--imageTemplate',
+    '--swiftServicesPACS',
     action  = 'store',
-    dest    = 'str_imageTemplate',
+    dest    = 'str_swiftServicesPACS',
     type    = str,
-    default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
-    help    = 'Template pattern for image file'
-    )
+    default = '',
+    help    = 'swift PACS location within SERVICE/PACS to push files')
 
 parser.add_argument(
     '--cleanup',
@@ -341,6 +356,13 @@ parser.add_argument(
     dest    = 'verbosity',
     type    = int,
     default = 1)
+parser.add_argument(
+    "--json",
+    help    = "return a JSON payload",
+    dest    = 'json',
+    action  = 'store_true',
+    default = False
+)
 parser.add_argument(
     "-x", "--desc",
     help    = "show long synopsis",
@@ -365,9 +387,6 @@ parser.add_argument(
 
 args        = parser.parse_args()
 
-# set_trace(host = "0.0.0.0", port = 5555, term_size = (252, 63))
-# rpudb.set_trace(addr='0.0.0.0', port=5555)
-
 if args.b_desc or args.b_synopsis:
     print(str_desc)
     if args.b_desc:
@@ -381,8 +400,18 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
-handler     = repack.Process(args)
-d_handler   = handler.run()
+# pudb.set_trace()
+if len(args.upstreamFile):
+    with open(args.upstreamFile, 'r') as f:
+        args.upstream = json.load(f)
+# else:
+#     # Or, more conveniently, read from input stream
+#     str_inputPipe           = ''
+#     for line in sys.stdin:
+#         str_inputPipe += line
+#     args.upstream   = json.loads(str_inputPipe)
+
+d_handler   = register(args)
 
 if args.verbosity:
     print(json.dumps(d_handler, indent = 4))
