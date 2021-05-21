@@ -212,21 +212,21 @@ parser  = ArgumentParser(description = str_desc, formatter_class = RawTextHelpFo
 parser.add_argument(
     '--swiftIP',
     action  = 'store',
-    dest    = 'swiftIP',
+    dest    = 'str_swiftIP',
     type    = str,
     default = '',
     help    = 'swift IP')
 parser.add_argument(
     '--swiftPort',
     action  = 'store',
-    dest    = 'swiftPort',
+    dest    = 'str_swiftPort',
     type    = str,
     default = '',
     help    = 'swift port')
 parser.add_argument(
     '--swiftLogin',
     action  = 'store',
-    dest    = 'swiftLogin',
+    dest    = 'str_swiftLogin',
     type    = str,
     default = '',
     help    = 'swift login')
@@ -352,7 +352,7 @@ d_store     : dict = {}
 if args.str_type == 'swift':
     d_store = swiftStore(vars(args))
 
-if args.verbosity:
+if int(args.verbosity):
     if args.json:
         try:
             print(json.dumps(d_store, indent = 4))
