@@ -24,11 +24,14 @@ import  multiprocessing
 import  configparser
 import  swiftclient
 import  traceback
+from    argparse            import  Namespace
 
 import  pfmisc
 
 # debugging utilities
 import  pudb
+
+from    pypx                import  repack
 
 # pfstorage local dependencies
 from    pfmisc._colors      import  Colors
@@ -58,8 +61,8 @@ class D(S):
         {
             "swift": {
                 "auth_url":                 "http://%s:%s/auth/v1.0" % \
-                                            (arg['swiftIP'], arg['swiftPort']),
-                "username":                 arg['swiftLogin'],
+                                            (arg['str_swiftIP'], arg['str_swiftPort']),
+                "username":                 arg['str_swiftLogin'],
                 "key":                      "testing",
                 "container_name":           "users",
                 "auto_create_container":    True,
@@ -101,10 +104,8 @@ class PfStorage(metaclass = abc.ABCMeta):
 
     def __init__(self, arg, *args, **kwargs):
         """
-        The logic of this constructor reflects a bit from legacy design
-        patterns of `pfcon` -- specifically the passing of flags in a
-        single structure, and the <self.state> dictionary to try and
-        organize the space of <self> variables a bit logically.
+        The core constructor -- essentially this adds the main
+        operational module objects to this class.
         """
 
         # pudb.set_trace()
@@ -115,26 +116,34 @@ class PfStorage(metaclass = abc.ABCMeta):
                                 within      = self.state('/this/name')
                             )
         self.log            = self.dp.qprint
+        self.packer         = repack.Process(
+                                repack.args_impedanceMatch(Namespace(**arg))
+                            )
 
-    def filesFind(self, *args, **kwargs):
+    def filesFind(self, *args, **kwargs) -> dict:
         """
         This method simply returns a list of files
         and directories down a filesystem tree starting
         from the kwarg:
 
-            root = <someStartPath>
+            root        = <someStartPath>
+            fileSubStr  = <someSubStr>
 
+        where the 'fileSubStr' optionally filters all the files
+        with <someSubStr>.
         """
-        d_ret      = {
+        d_ret           : dict  = {
             'status':   False,
             'l_fileFS': [],
             'l_dirFS':  [],
             'numFiles': 0,
             'numDirs':  0
         }
-        str_rootPath    = ''
+        str_rootPath    : str   = ''
+        str_fileSubStr  : str   = ''
         for k,v in kwargs.items():
-            if k == 'root': str_rootPath    = v
+            if k == 'root'          : str_rootPath      = v
+            if k == 'fileSubStr'    : str_fileSubStr    = v
         if len(str_rootPath):
             # Create a list of all files down the <str_rootPath>
             for root, dirs, files in os.walk(str_rootPath):
@@ -143,6 +152,11 @@ class PfStorage(metaclass = abc.ABCMeta):
                     d_ret['status'] = True
                 for dirname in dirs:
                     d_ret['l_dirFS'].append(os.path.join(root, dirname))
+            if len(str_fileSubStr):
+                d_ret['l_fileFS']   = [
+                                        f for f in d_ret['l_fileFS'] 
+                                            if str_fileSubStr in f 
+                                        ]
 
         d_ret['numFiles']   = len(d_ret['l_fileFS'])
         d_ret['numDirs']    = len(d_ret['l_dirFS'])
@@ -419,27 +433,110 @@ class swiftStorage(PfStorage):
     def objPut_process(self, *args, **kwargs) -> dict:
         """
         Process the 'objPut' directive.
+
+        DICOM handling
+        --------------
+        
+        A special behaviour is available for DICOM files, triggered by passing
+        a kwarg of 'DICOMsubstr = <X>'. In this case, DICOM files (as identi-
+        fied by containing the substring pattern within the filename) will be
+        read for tag information used to generate the fully qualified storage
+        path. 
+        
+        This fully qualified storage path will be substituted into the 
+        'toLocation = <someswiftpath>' by replacing the special tag
+        '%pack' in the <someswiftpath>.
+
+        NOTE:
+        * Typically a list of files all constitute the same DICOM SERIES
+          and as such, only one of file in the list needs to be processed for
+          packing tags.
+        * If the 'do' 'objPut' directive contains a true value for the field
+          'packEachDICOM', then each DICOM will be explicitly examined and
+          packed individually.
+
         """
+
+        def toLocation_updateWithDICOMtags(str_DICOMfilename) -> dict:
+            """
+            Read the str_DICOMfilename, determine the pack path,
+            and update the 'toLocation' if necessary.
+
+            Return the orginal and modified 'toLocation' and status flag.
+            """
+            b_pack      = False
+            d_DICOMread = self.packer.DICOMfile_read(file = str_DICOMfilename)
+            d_path      = self.packer.packPath_resolve(d_DICOMread)
+            str_origTo  = d_args['toLocation']
+            if '%pack' in d_args['toLocation']:
+                b_pack  = True
+                d_args['toLocation'] = \
+                    d_args['toLocation'].replace('%pack', d_path['packDir'])
+            return {
+                'pack'              : b_pack,
+                'originalLocation'  : str_origTo,
+                'toLocation'        : d_args['toLocation']
+            }
+
+        def files_putSingly() -> dict:
+            """
+            Handle a single file put, return and update d_ret
+            """
+            nonlocal d_ret
+            nonlocal b_singleShot
+            d_pack  : dict          = {}
+            b_singleShot            = True
+            d_ret                   = {
+                'status'            : False,
+                'localFileList'     : [],
+                'objectFileList'    : []
+            }
+            for f in d_fileList['l_fileFS']:
+                d_pack = toLocation_updateWithDICOMtags(f)
+                d_args['file']      = f
+                d_put               = self.objPut(**d_args)
+                d_args['toLocation'] = d_pack['originalLocation']
+                d_ret['status']     = d_put['status']
+                if d_ret['status']:
+                    d_ret['localFileList'].append(d_put['localFileList'][0])
+                    d_ret['objectFileList'].append(d_put['objectFileList'][0])
+            return d_ret
+
         d_ret           :   dict  = {
             'status'    :   False,
             'msg'       :   "No 'arg' JSON directive found in request"
         }
+
         d_msg           : dict  = {}
         d_args          : dict  = {}
         str_localPath   : str   = ""
+        str_DICOMsubstr : str   = ""
+        b_singleShot    : bool  = False
 
         for k, v in kwargs.items():
             if k == 'request':      d_msg       = v
-
+        # pudb.set_trace()
         if 'args' in d_msg:
             d_args  = d_msg['args']
             if 'localpath' in d_args:
                 str_localPath       = d_args['localpath']
-                d_fileList          = self.filesFind(root = str_localPath)
-                if d_fileList['status']:
+                if 'DICOMsubstr' in d_args:
+                    d_fileList      = self.filesFind(
+                                        root        = str_localPath,
+                                        fileSubStr  = d_args['DICOMsubstr']
+                                    )
+                    if 'packEachDICOM' in d_args:
+                        if d_args['packEachDICOM']: files_putSingly()
+                    if len(d_fileList['l_fileFS']) and not b_singleShot:
+                        toLocation_updateWithDICOMtags(d_fileList['l_fileFS'][0])
+                else:
+                    d_fileList      = self.filesFind(
+                                        root        = str_localPath
+                    )
+                if d_fileList['status'] and not b_singleShot:
                     d_args['fileList']  = d_fileList['l_fileFS']
                     d_ret               = self.objPut(**d_args)
-                else:
+                elif not d_fileList['status']:
                     d_ret['msg']    = 'No valid file list generated'
         return d_ret
 
@@ -480,19 +577,19 @@ class swiftStorage(PfStorage):
         str_storagefilename     : str   = ''
         str_swiftLocation       : str   = ""
         d_ret                   : dict  = {
-            'status':           b_status,
-            'localFileList':    [],
-            'objectFileList':   [],
-            'localpath':        ''
-        }
+                                            'status':           b_status,
+                                            'localFileList':    [],
+                                            'objectFileList':   [],
+                                            'localpath':        ''
+                                        }
 
         d_conn  = self.connect(*args, **kwargs)
 
         for k,v in kwargs.items():
-            if k == 'file':             l_localfile.append(v)
-            if k == 'fileList':         l_localfile         = v
-            if k == 'toLocation':       str_swiftLocation   = v
-            if k == 'mapLocationOver':  str_mapLocationOver = v
+            if k == 'file'              : l_localfile.append(v)
+            if k == 'fileList'          : l_localfile           = v
+            if k == 'toLocation'        : str_swiftLocation     = v
+            if k == 'mapLocationOver'   : str_mapLocationOver   = v
 
         if len(str_mapLocationOver):
             # replace the local file path with object store path
@@ -634,7 +731,13 @@ class swiftStorage(PfStorage):
             'status'    : False,
             'msg'       : ''
         }
-        d_do            : dict  = json.loads(self.arg['do'])
+        try:
+            # First see if the "do" directive is a CLI
+            # flag captured in the self.arg structure
+            d_do            : dict  = json.loads(self.arg['do'])
+        except:
+            # Else, assume that the d_do is the passed opt
+            d_do            = opt
         if 'action' in d_do:
             self.log("verb: %s detected." % d_do['action'],
                       comms = 'status')
