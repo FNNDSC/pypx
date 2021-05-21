@@ -4,12 +4,12 @@ import  pudb
 import  json
 import  pfmisc
 from    pfmisc._colors      import  Colors
-from    pypx                import pfstorage
 
 import  os
 from    os                  import  listdir
 from    os.path             import  isfile, join
 
+from    .pfstorage          import  swiftStorage
 
 # PYPX modules
 from .base import Base
@@ -25,48 +25,6 @@ class Push(Base):
         to the CUBE instance.
     """
 
-    def filesOnFS_determine(self):
-        """
-        Determine the location on the file system of the directory
-        containing files to all push.
-        """
-        self.filesToPush_determine()
-
-    def filesToPush_determine(self):
-        """
-        Based on the pattern of CLI calling flags, determine which
-        file system files to actually push.
-
-        The location of the files to push is specified either directly
-        with explicit CLI for xcrdir/xcrfile or indirectly via study/series
-        lookup.
-        """
-
-        if len(self.arg['str_xcrdirfile']):
-            self.arg['str_xcrdir']      = os.path.dirname(
-                                                self.arg['str_xcrdirfile']
-                                        )
-            self.arg['str_xcrfile']     = os.path.basename(
-                                                self.arg['str_xcrdirfile']
-                                        )
-
-        if self.arg['str_filesubstr']:
-            # First create a list of all the files...
-            self.l_files    = [
-                f                                                       \
-                    for f in listdir(self.arg['str_xcrdir'])              \
-                        if isfile(join(self.arg['str_xcrdir'], f))
-            ]
-            # Now filter them according to the passed filesubstr
-            self.l_files    = [
-                x                                                       \
-                    for y in self.arg['str_filesubstr'].split(',')        \
-                        for x in self.l_files if y in x
-            ]
-        else:
-            self.l_files.append(self.arg['str_xcrfile'])
-
-
     def __init__(self, arg):
         """
         Constructor.
@@ -74,8 +32,6 @@ class Push(Base):
         Largely simple/barebones constructor that calls the Base()
         and sets up the executable name.
         """
-        pudb.set_trace()
-
         self.l_files        : list  = []
 
         # Check if an upstream 'reportData' exists, and if so
@@ -96,7 +52,6 @@ class Push(Base):
         )
         self.log            = self.dp.qprint
         self.arg['name']    = "Push/PfStorage"
-        self.swift          = pfstorage.swiftStorage(args = self.arg)
 
     def movescu_command(self, opt={}) -> str:
         command = '-S --move ' + opt['aet']
@@ -128,34 +83,30 @@ class Push(Base):
         b_pushToSwift       : bool  = True
         return b_pushToSwift
 
-    def pushToSwift_files(self):
+    def path_pushToSwift(self):
         """
-        Push the self.l_files list to swift storage
+        Push files in the path <xcrdir> to swift
         """
-        d_ls = self.swift.ls(swiftpath = 'chris/uploads')
-        b_exists = self.swift.objExists(swiftpath = 'chrris/uploads/pl-fshack-infant/SAG-anon.nii')
+        d_do                : dict  = {
+            'action'    :       'objPut',
+            'args'      : {
+                'localpath'         :   self.arg['str_xcrdir'],
+                'DICOMsubstr'       :   self.arg['str_filesubstr'],
+                'packEachDICOM'     :   self.arg['b_swiftPackEachDICOM'],
+                'toLocation'        :   'SERVICES/PACS/%s/%%pack' % \
+                                            self.arg['str_swiftServicesPACS'],
+                'mapLocationOver'   :   self.arg['str_xcrdir']
+            }
+        }
+        d_store     = swiftStorage(self.arg).run(d_do)
 
-    def swift_filesDelete(self):
-        """
-        bulk delete files from swift
-        """
-
-    def registerToCUBE_true(self):
-        """
-        Return a bool condition that indicates if the image data is
-        to be registered to CUBE
-        """
-        b_registerToCUBE    : bool  = False
-        return b_registerToCUBE
-
+        return d_store
 
     def run(self, opt={}) -> dict:
 
         d_push              : dict  = {}
 
-        pudb.set_trace()
-        self.filesOnFS_determine()
         if self.pushToSwift_true():
-            self.pushToSwift_files()
+            d_push  = self.path_pushToSwift()
 
         return d_push
