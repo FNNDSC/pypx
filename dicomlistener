@@ -4,10 +4,10 @@
             socket_type         = stream
             wait                = no
             user                = root
-            server              = /usr/local/bin/px-listen
-            server_args         = -e /usr/bin/storescp -t /dicom/tmp -l /dicom/log -d /dicom/data
+            server              = /bin/storescp
+            server_args         = -od /tmp/data -pm -sp -xcr "/usr/local/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data --cleanup" -xcs "/usr/local/bin/px-smdb --xcrdir #p --action endOfStudy" 11113
             type                = UNLISTED
-            port                = 10402
-            bind                = 0.0.0.0  
-        } 
+            port                = 11113
+            bind                = 0.0.0.0
+        }
 
