@@ -16,11 +16,17 @@ services:
     volumes:
       # - /var/run/docker.sock:/var/run/docker.sock
       # - .:/usr/local/pypx
-      - ./pypx:/usr/local/lib/python3.6/dist-packages/pypx
+      - ./pypx:/usr/local/lib/python3.8/dist-packages/pypx
+      - bin/px-do:/usr/local/bin/px-do
       - bin/px-echo:/usr/local/bin/px-echo
       - bin/px-find:/usr/local/bin/px-find
       - bin/px-move:/usr/local/bin/px-move
       - bin/px-listen:/usr/local/bin/px-listen
+      - bin/px-push:/usr/local/bin/px-push
+      - bin/px-register:/usr/local/bin/px-register
+      - bin/px-report:/usr/local/bin/px-report
+      - bin/px-smdb:/usr/local/bin/px-smdb
+      - bin/px-status:/usr/local/bin/px-status
     ports:
       - "10402:10402"
     labels:
