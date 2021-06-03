@@ -304,37 +304,16 @@ class Process():
         """
 
         b_status        :   bool    = False
-        # str_rootDir     :   str     = ''
-        # str_studyDir    :   str     = ''
-        # str_seriesDir   :   str     = ''
         str_imageFile   :   str     = ''
         str_outputDir   :   str     = ''
         str_errorDir    :   str     = ''
         str_errorCopy   :   str     = ''
+        str_path        :   str     = ''
         d_path          :   dict    = {}
 
         # pudb.set_trace()
         if d_DICOMfile_read['status']:
-            d_path          = self.packPath_resolve()
-
-            # str_rootDir     = DICOMlookup_santitizeFromTemplate(
-            #                     self.args.str_rootDirTemplate
-            #                 )
-            # str_studyDir    = DICOMlookup_santitizeFromTemplate(
-            #                     self.args.str_studyDirTemplate
-            #                 )
-            # str_seriesDir   = DICOMlookup_santitizeFromTemplate(
-            #                     self.args.str_seriesDirTemplate
-            #                 )
-            # str_imageFile   = DICOMlookup_santitizeFromTemplate(
-            #                     self.args.str_imageTemplate
-            #                 )
-            # str_outputDir   = '%s/%s/%s/%s' % (
-            #                     self.args.str_dataDir,
-            #                     str_rootDir,
-            #                     str_studyDir,
-            #                     str_seriesDir
-            #                 )
+            d_path          = self.packPath_resolve(d_DICOMfile_read)
             str_outputDir   = '%s/%s' % (
                                     self.args.str_dataDir,
                                     d_path['packDir']
@@ -363,6 +342,7 @@ class Process():
             'method'            : inspect.stack()[0][3],
             'outputDir'         : str_outputDir,
             'outputFile'        : str_imageFile,
+            'shutilpath'        : str_path,
             'status'            : b_status,
             'errorDir'          : str_errorDir,
             'errorCopy'         : str_errorCopy,
