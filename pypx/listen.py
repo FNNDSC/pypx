@@ -22,7 +22,6 @@ import  pypx.utils
 import  pudb
 from    pudb.remote         import set_trace
 
-import  rpudb
 import  pfmisc
 
 class Listen():
