@@ -1,5 +1,6 @@
 # Global modules
 import  subprocess, re, collections
+from pfmisc.other import list_removeDuplicates
 import  pudb
 import  json
 
@@ -92,6 +93,43 @@ class Do(Base):
         to try and handle the flood.
         """
 
+        def countDownTimer_do(f_time):
+            t : int     = int(f_time)
+            while t:
+                mins, secs = divmod(t, 60)
+                timer = '{:02d}:{:02d}'.format(mins, secs)
+                if self.arg['withFeedBack']:
+                    print(timer, end="\r")
+                    print("     ", end = '')
+                    print(  Colors.BLUE_BCKGRND + Colors.WHITE +          \
+                            "[ Cooling down for %02i ]" % t + Colors.NO_COLOUR,
+                            end = '\r'
+                    )
+                time.sleep(1)
+                t -= 1
+
+        def seriesRetrieveDelay_do(str_line):
+            """
+            Simply delay processing a retrieve to prevent client
+            overwhelm.
+
+            Delay can be a simple fixed interval in (float) seconds,
+            or if the delay is the string "dynamic" then delay by
+            a function of the number of images retrieved.
+            """
+            factor  = 1
+            f_sleep = 0.0
+            if 'dynamic' not in self.arg['intraSeriesRetrieveDelay']:
+                f_sleep = float(self.arg['intraSeriesRetrieveDelay'])
+            else:
+                l_dynamic   = self.arg['intraSeriesRetrieveDelay'].split(':')
+                if len(l_dynamic) ==2:
+                    factor  = int(l_dynamic[1])
+                l_words     = str_line.split()
+                images  = int(l_words[1])
+                f_sleep = float(images) / factor
+            countDownTimer_do(f_sleep)
+
         def retrieve_do() -> dict:
             """
             Nested retrieve handler
@@ -124,6 +162,8 @@ class Do(Base):
                             'study_uid'         : str_studyUID
                         }
                 )
+            if self.arg['intraSeriesRetrieveDelay']:
+                seriesRetrieveDelay_do(str_line)
             series['PACS_retrieve'] = {
                 'requested' :   '%s' % datetime.now()
             }
