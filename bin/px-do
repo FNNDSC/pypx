@@ -88,6 +88,7 @@ def synopsis(ab_shortOnly = False):
                 [--reportData <JSONdump>]                           \\
                 [--reportDataFile <file>]                           \\
                 [--then retrieve|status] [--withFeedBack]           \\
+                [--intraSeriesRetrieveDelay <seconds>]              \\
                 [--json]                                            \\
                 [--waitForUserTerminate]                            \\
                 [-x|--desc]                                         \\
@@ -134,6 +135,21 @@ def synopsis(ab_shortOnly = False):
         If specified, define an operation to do "next". This can be a comma
         separated string of actions, in which case each action will be
         executed in turn over the input space.
+
+        [--intraSeriesRetrieveDelay <amount>]
+        When operating in a tight loop (with the innermost loop being a per-
+        series loop) and additionally requesting files from an external
+        source (like a PACS), the multiple requests can overwhelm a listening
+        service. Consider that a PACS will transmit a stream of files, and
+        typically on the receiver, for each file, a new python process handler
+        is spawned. This could easily result in many hundreds of handlers
+        being spawned and quickly overwhelm a system.
+
+        This flag introduces a measure of throttling the requests by delaying
+        <amount> after requesting a set of files. If the <amount> is the string
+        'dynamic:<N>' then the throttling is set to the number of images
+        requested divided by <N>. A good value for N here is N = 6, i.e.
+        'dynamic:6'
 
         [--withFeedBack]
         If specified, provide console level feedback on the next operation as
@@ -235,6 +251,13 @@ parser.add_argument(
     dest    = 'then',
     default = "",
     help    = 'If specified, then perform the set of operations')
+parser.add_argument(
+    '--intraSeriesRetrieveDelay',
+    action  = 'store',
+    dest    = 'intraSeriesRetrieveDelay',
+    default = "0",
+    help    = 'If specified, then wait specified seconds between retrieve series loops')
+
 parser.add_argument(
     '--move',
     action  = 'store_true',
