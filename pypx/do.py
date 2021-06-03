@@ -119,16 +119,17 @@ class Do(Base):
             """
             factor  = 1
             f_sleep = 0.0
-            if 'dynamic' not in self.arg['intraSeriesRetrieveDelay']:
-                f_sleep = float(self.arg['intraSeriesRetrieveDelay'])
-            else:
-                l_dynamic   = self.arg['intraSeriesRetrieveDelay'].split(':')
-                if len(l_dynamic) ==2:
-                    factor  = int(l_dynamic[1])
-                l_words     = str_line.split()
-                images  = int(l_words[1])
-                f_sleep = float(images) / factor
-            countDownTimer_do(f_sleep)
+            if 'intraSeriesRetrieveDelay' in self.arg.keys():
+                if 'dynamic' not in self.arg['intraSeriesRetrieveDelay']:
+                    f_sleep = float(self.arg['intraSeriesRetrieveDelay'])
+                else:
+                    l_dynamic   = self.arg['intraSeriesRetrieveDelay'].split(':')
+                    if len(l_dynamic) ==2:
+                        factor  = int(l_dynamic[1])
+                    l_words     = str_line.split()
+                    images  = int(l_words[1])
+                    f_sleep = float(images) / factor
+                countDownTimer_do(f_sleep)
 
         def retrieve_do() -> dict:
             """
@@ -162,8 +163,9 @@ class Do(Base):
                             'study_uid'         : str_studyUID
                         }
                 )
-            if self.arg['intraSeriesRetrieveDelay']:
-                seriesRetrieveDelay_do(str_line)
+            if 'intraSeriesRetrieveDelay' in self.arg.keys():
+                if self.arg['intraSeriesRetrieveDelay']:
+                    seriesRetrieveDelay_do(str_line)
             series['PACS_retrieve'] = {
                 'requested' :   '%s' % datetime.now()
             }
