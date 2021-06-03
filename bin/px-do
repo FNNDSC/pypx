@@ -78,7 +78,7 @@ def synopsis(ab_shortOnly = False):
 
 	    %s
 
-        - PACS find (query)
+        - 'do' various operations related to PACS management
 
     SYNOPSIS
 
@@ -110,6 +110,7 @@ def synopsis(ab_shortOnly = False):
                 * local smdb find/search
                 * local smdb status
                 * push-to-swift storage
+                * register SERVICES in swift to ChRIS/CUBE
 
     ARGS
 
