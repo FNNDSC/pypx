@@ -34,40 +34,39 @@ import  pypx.smdb
 # Debugging
 import  pudb
 from    pudb.remote         import  set_trace
-import  rpudb
 import  pfmisc
 
 def args_impedanceMatch(ns_arg):
     """
-    This method is an "impedance matcher" that examines the 
+    This method is an "impedance matcher" that examines the
     incoming namespace, ns_arg, and returns a new namespace that
     contains any missing elements necessary for full instantiation
     of the class object.
 
     Typically this method is used when the class is called as a module
-    without the assumption of the native driving script creating the 
+    without the assumption of the native driving script creating the
     the fully qualified namespace.
     """
     l_key   : list  = []
 
     l_key = [k for (k,v) in vars(ns_arg).items()]
     if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '/tmp')
-    if 'str_xcrfile'    not in l_key:   setattr(ns_arg, 'str_xcrfile', '') 
-    if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '') 
-    if 'str_xcrdirfile' not in l_key:   setattr(ns_arg, 'str_xcrdirfile', '') 
+    if 'str_xcrfile'    not in l_key:   setattr(ns_arg, 'str_xcrfile', '')
+    if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '')
+    if 'str_xcrdirfile' not in l_key:   setattr(ns_arg, 'str_xcrdirfile', '')
     if 'str_filesubstr' not in l_key:   setattr(ns_arg, 'str_filesubstr', '')
 
     if 'str_rootDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_rootDirTemplate', 
+        setattr(ns_arg, 'str_rootDirTemplate',
                         '%PatientID-%PatientName-%PatientAge')
     if 'str_studyDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_studyDirTemplate', 
+        setattr(ns_arg, 'str_studyDirTemplate',
                         '%StudyDescription-%StudyDate-%StudyInstanceUID')
     if 'str_studyDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_seriesDirTemplate', 
+        setattr(ns_arg, 'str_seriesDirTemplate',
                         '%SeriesDescription-%SeriesInstanceUID')
     if 'str_studyDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_imageTemplate', 
+        setattr(ns_arg, 'str_imageTemplate',
                         '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm')
     return ns_arg
 
@@ -257,7 +256,7 @@ class Process():
         str_rootDir     :   str     = ''
         str_studyDir    :   str     = ''
         str_seriesDir   :   str     = ''
-        str_packtDir    :   str     = ''
+        str_packDir     :   str     = ''
         str_imageFile   :   str     = ''
 
         str_rootDir     = DICOMlookup_santitizeFromTemplate(

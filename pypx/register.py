@@ -36,7 +36,6 @@ import  pypx.repack
 # Debugging
 import  pudb
 from    pudb.remote         import  set_trace
-import  rpudb
 import  pfmisc
 
 class Register():
