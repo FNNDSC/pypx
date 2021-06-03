@@ -30,37 +30,6 @@ def pxdispatch_do(str_appName, args, unknown):
     str_CMD = "/usr/local/bin/%s %s" % (str_appName, str_otherArgs)
     return str_CMD
 
-def pxdo_do(args, unknown):
-
-    str_otherArgs   = ' '.join(unknown)
-
-    str_CMD = "/usr/local/bin/px-do  %s" % (str_otherArgs)
-    return str_CMD
-
-
-def pxfind_do(args, unknown):
-
-    str_otherArgs   = ' '.join(unknown)
-
-    str_CMD = "/usr/local/bin/px-find  %s" % (str_otherArgs)
-    return str_CMD
-
-def pxmove_do(args, unknown):
-
-    str_otherArgs   = ' '.join(unknown)
-
-    str_CMD = "/usr/local/bin/px-move  %s" % (str_otherArgs)
-    return str_CMD
-
-def pxecho_do(args, unknown):
-
-    str_otherArgs   = ' '.join(unknown)
-
-    str_CMD = "/usr/local/bin/px-echo  %s" % (str_otherArgs)
-    return str_CMD
-
-
-
 parser  = argparse.ArgumentParser(description = str_desc)
 
 parser.add_argument(
@@ -123,16 +92,16 @@ parser.add_argument(
 args, unknown   = parser.parse_known_args()
 
 if __name__ == '__main__':
-    fname   = 'pxfind_do(args, unknown)'
+    fname   = 'pxdispatch_do("px-find",args, unknown)'
 
-    if args.b_pxdo:         fname   = 'pxdispatch_do(px-do, args, unknown)'
-    if args.b_pxecho:       fname   = 'pxecho_do(args, unknown)'
-    if args.b_pxfind:       fname   = 'pxfind_do(args, unknown)'
-    if args.b_pxmove:       fname   = 'pxmove_do(args, unknown)'
-    if args.b_pxregister:   fname   = 'pxregister_do(args, unknown)'
-    if args.b_pxrepack:     fname   = 'pxrepack_do(args, unknown)'
-    if args.b_pxreport:     fname   = 'pxreport_do(args, unknown)'
-    if args.b_pxstatus:     fname   = 'pxstatus_do(args, unknown)'
+    if args.b_pxdo:         fname   = 'pxdispatch_do("px-do", args, unknown)'
+    if args.b_pxecho:       fname   = 'pxdispatch_do("px-echo",args, unknown)'
+    if args.b_pxfind:       fname   = 'pxdispatch_do("px-find",args, unknown)'
+    if args.b_pxmove:       fname   = 'pxdispatch_do("px-move",args, unknown)'
+    if args.b_pxregister:   fname   = 'pxdispatch_do("px-register",args, unknown)'
+    if args.b_pxrepack:     fname   = 'pxdispatch_do("px-repack",args, unknown)'
+    if args.b_pxreport:     fname   = 'pxdispatch_do("px-report",args, unknown)'
+    if args.b_pxstatus:     fname   = 'pxdispatch_do("px-status",args, unknown)'
 
     try:
         str_cmd = eval(fname)
