@@ -11,8 +11,8 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '1.1.2.0',
-        description         =   'Wrapper around DCMTK for PACS related actions (echo, find, move and listen)',
+        version             =   '2.0.0',
+        description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
         author              =   'FNNDSC Developers',
@@ -23,10 +23,29 @@ setup(
             'terminaltables',
             'py-dateutil',
             'pydicom',
-            'pfmisc'
+            'pfmisc',
+            'dask',
+            'retry',
+            'psutil',
+            'python-swiftclient',
+            'pfstate',
+            'webob',
+            'python-chrisclient'
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],
-        scripts             =   ['bin/px-echo', 'bin/px-find', 'bin/px-listen', 'bin/px-move'],
+        scripts             =   [
+            'bin/px-do',
+            'bin/px-echo',
+            'bin/px-find',
+            'bin/px-listen',
+            'bin/px-move',
+            'bin/px-push',
+            'bin/px-register',
+            'bin/px-repack',
+            'bin/px-report',
+            'bin/px-smdb',
+            'bin/px-status'
+        ],
         zip_safe            =   False
         )
