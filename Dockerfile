@@ -101,10 +101,11 @@ RUN apt-get update \
   && rm -fr /tmp/pypx
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
-COPY ./dicomlistener /etc/xinetd.d 
+COPY ./dicomlistener /etc/xinetd.d
 RUN chmod 777 /dock                                                   \
   && chmod 777 /dock/docker-entrypoint.py                             \
   && echo "localuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers          \
+  && mkdir /tmp/data                                                  \
   && service xinetd restart
 
 ENTRYPOINT ["/dock/docker-entrypoint.py"]
