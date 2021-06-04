@@ -246,19 +246,19 @@ function institution_set
           G_CALLTITLE=ORTHANC
         ;;
         BCH-chris)
-          G_AETITLE=FNNDSC-CHRIS
+          G_AETITLE=CHRISV3
           G_QUERYHOST=134.174.12.21
           G_QUERYPORT=104
-          G_CALLTITLE=CHRIS
+          G_CALLTITLE=CHRISV3
         ;;
         BCH-chrisdev)
-          G_AETITLE=FNNDSC-CHRISDEV
+          G_AETITLE=CHRISV3
           G_QUERYHOST=134.174.12.21
           G_QUERYPORT=104
           G_CALLTITLE=CHRIS
         ;;
         BCH-christest)
-          G_AETITLE=FNNDSC-CHRISTEST
+          G_AETITLE=CHRISV3
           G_QUERYHOST=134.174.12.21
           G_QUERYPORT=104
           G_CALLTITLE=CHRIS
@@ -334,20 +334,29 @@ fi
 
 # The --tty --interactive is necessary to allow for realtime
 # logging of activity
-CLI="docker run                                 \
-            --tty --interactive                 \
-            --rm                                \
-            --publish 10402:10402               \
-            --volume $G_DICOMDIR:/dicom $DEBUG  \
-            ${G_DOCKERORG}/pypx                 \
-            --px-find                           \
-            --aec $G_CALLTITLE                  \
-            --aet $G_AETITLE                    \
-            --serverIP $G_QUERYHOST             \
-            --serverPort $G_QUERYPORT           \
-            --colorize dark                     \
-            --printReport tabular               \
-            $ARGS"
+CLI="docker run                                                                 \
+            --tty --interactive                                                 \
+            --rm                                                                \
+            --publish 10402:10402                                               \
+            --volume $G_DICOMDIR:/dicom $DEBUG                                  \
+            ${G_DOCKERORG}/pypx                                                 \
+            --px-find                                                           \
+            --aec $G_CALLTITLE                                                  \
+            --aet $G_AETITLE                                                    \
+            --serverIP $G_QUERYHOST                                             \
+            --serverPort $G_QUERYPORT                                           \
+            --colorize dark                                                     \
+            --db /home/dicom/log                                                \
+            --verbosity 1                                                       \
+            --json                                                              \
+            --printReport tabular                                               \
+            $ARGS                                                              |\
+docker run --rm -i -v $PWD/dicom:/home/dicom                                    \
+                   local/pypx                                                   \
+                   --px-report                                                  \
+                   --colorize dark                                              \
+                   --printReport tabular
+            "
 
 if (( G_VERBOSE )) ; then
     CLIp=$(echo "$CLI" | sed 's/--/\n\t--/g' | sed 's/\(.*\)/\1 \\/' | sed 's/        \+/ /')
