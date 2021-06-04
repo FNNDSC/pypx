@@ -94,6 +94,7 @@ args, unknown   = parser.parse_known_args()
 if __name__ == '__main__':
     fname   = 'pxdispatch_do("px-find",args, unknown)'
 
+    os.system("/dock/storescp.sh -p 11113 &")
     if args.b_pxdo:         fname   = 'pxdispatch_do("px-do", args, unknown)'
     if args.b_pxecho:       fname   = 'pxdispatch_do("px-echo",args, unknown)'
     if args.b_pxfind:       fname   = 'pxdispatch_do("px-find",args, unknown)'
