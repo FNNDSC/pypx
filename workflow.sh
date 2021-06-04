@@ -70,11 +70,11 @@ px-find                                                                        \
                    --serverIP  134.174.12.21                                   \
                    --serverPort 104                                            \
                    --PatientID 4780041                                         \
-                   --db /home/dicom/log                                        \
+                   --db /neuro/users/chris/PACS/log                            \
                    --verbosity 1                                               \
                    --json                                                     |\
 px-do                                                                          \
-                   --db /home/dicom/log                                        \
+                   --db /neuro/users/chris/PACS/log                            \
                    --then retrieve,status,status                               \
                    --intraSeriesRetrieveDelay dynamic:6                        \
                    --withFeedBack                                              \
