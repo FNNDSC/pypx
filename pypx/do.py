@@ -94,18 +94,17 @@ class Do(Base):
         """
 
         def countDownTimer_do(f_time):
-            t : int     = int(f_time)
+            t               : int   = int(f_time)
             while t:
                 mins, secs = divmod(t, 60)
                 timer = '{:02d}:{:02d}'.format(mins, secs)
                 if self.arg['withFeedBack']:
-                    print(timer, end="\r")
                     print("     ", end = '')
                     print(  Colors.BLUE_BCKGRND + Colors.WHITE +          \
-                            "[ Cooling down for %02i ]" % t + Colors.NO_COLOUR,
-                            end = '\r'
+                            "[ Parsing incoming images %s ]" % timer + Colors.NO_COLOUR
                     )
                 time.sleep(1)
+                if self.arg['withFeedBack']: print("\033[2A")
                 t -= 1
 
         def seriesRetrieveDelay_do(str_line):
@@ -145,7 +144,7 @@ class Do(Base):
             str_line        = presenter.seriesRetrieve_print(
                 studyIndex  = studyIndex, seriesIndex = seriesIndex
             )
-            if self.arg['withFeedBack']: self.log(str_line)
+            if self.arg['withFeedBack']: self.log(str_line + "               ")
             series['SeriesMetaDescription']  = {
                                     'tag'   : "0,0",
                                     'value' : str_line,
