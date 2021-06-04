@@ -66,9 +66,7 @@ docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
 
 # Perform a find then retrieve on a given PatientID
 px-find                                                                        \
-                   --then retrieve                                             \
-                   --withFeedBack                                              \
-                   --aec CHRISV3                                               \
+                   --aet CHRISV3                                               \
                    --serverIP  134.174.12.21                                   \
                    --serverPort 104                                            \
                    --PatientID 4780041                                         \
