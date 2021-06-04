@@ -46,6 +46,7 @@ docker run  --rm -ti                                                        \
             -v $PWD/bin/px-status:/usr/local/bin/px-status                  \
             -v $PWD/dicom:/home/dicom                                       \
             local/pypx                                                      \
+            -p 11113:11113                                                  \
             --px-find                                                       \
             --aet CHRISLOCAL                                                \
             --aec ORTHANC                                                   \
@@ -71,6 +72,7 @@ docker run  --rm -ti                                                        \
             -v $PWD/bin/px-status:/usr/local/bin/px-status                  \
             -v $PWD/dicom:/home/dicom                                       \
             local/pypx                                                      \
+            -p 11113:11113                                                  \
             --px-find                                                       \
             --aec CHRIS                                                     \
             --aet FNNDSC-CHRISDEV                                           \
@@ -101,14 +103,14 @@ RUN apt-get update \
   && rm -fr /tmp/pypx
 
 COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
-COPY ./dicomlistener /etc/xinetd.d
+COPY ./storescp.sh /dock/storescp.sh
 RUN chmod 777 /dock                                                   \
   && chmod 777 /dock/docker-entrypoint.py                             \
   && echo "localuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers          \
-  && mkdir /tmp/data                                                  \
-  && service xinetd restart
+  && mkdir /tmp/data
 
 ENTRYPOINT ["/dock/docker-entrypoint.py"]
+CMD ["/dock/storescp.sh", "-p", "11113"]
 EXPOSE 11113
 
 # Start as user $UID
