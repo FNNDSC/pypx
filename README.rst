@@ -56,7 +56,7 @@ simply add another block reflecting the variables appropriate to your remote PAC
 
 Internally, the code wraps around DCMTK utilies as well as the PyDicom module. The following modules/scripts are provided:
 
-- px-repack_: Read and repack DICOM files, organizing the destination is a human-friendly tree based layout.
+- px-repack_: Read and repack DICOM files, organizing the destination in a human-friendly tree based layout.
 
 - px-echo_: Ping the PACS to make sure it is online (``echoscu``).
 
