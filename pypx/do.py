@@ -199,11 +199,11 @@ class Do(Base):
             return d_then
 
 
-        self.systemlevel_run(self.arg,
-            {
-                'f_commandGen': self.xinetd_command
-            }
-        )
+        # self.systemlevel_run(self.arg,
+        #     {
+        #         'f_commandGen': self.xinetd_command
+        #     }
+        # )
 
         db              = smdb.SMDB(
                             Namespace(str_logDir = self.arg['dblogbasepath'])
