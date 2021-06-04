@@ -33,5 +33,5 @@ while getopts "p:E:D:" opt; do
         D) DATAROOTPATH=$OPTARG                 ;;
     esac
 done
-
+mkdir /tmp/data
 eval storescp -od /tmp/data -pm -sp -xcr \"$EXECROOTPATH/px-repack --xcrdir \#p --xcrfile \#f --verbosity 0 --logdir $DATAROOTPATH/log --datadir $DATAROOTPATH/data --cleanup\" $PORT
