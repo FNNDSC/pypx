@@ -233,13 +233,14 @@ class Do(Base):
                 l_run       = []
                 seriesIndex = 0
                 if self.arg['withFeedBack']:
-                    if not b_headerPrinted:
-                        presenter.studyHeader_print(
-                            studyIndex  = studyIndex, reportType = 'rawText'
-                        )
-                        b_headerPrinted = True
-                    print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ %s ]" % then +\
-                            Colors.NO_COLOUR)
+                    print("")
+                    print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ STUDY %s ]"\
+                            % then + Colors.NO_COLOUR)
+                    presenter.studyHeader_print(
+                        studyIndex  = studyIndex, reportType = 'rawText'
+                    )
+                    print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ SERIES %s ]"\
+                            % then + Colors.NO_COLOUR)
                 for series in study['series']:
                     str_seriesDescription   = series['SeriesDescription']['value']
                     str_seriesUID           = series['SeriesInstanceUID']['value']
