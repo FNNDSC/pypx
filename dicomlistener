@@ -4,7 +4,7 @@
             socket_type         = stream
             wait                = no
             user                = root
-            server              = /dock/storescp.sh
+            server              = /opt/dcm/storescp.sh
             server_args         = -p 11113 -E /usr/local/bin -D /home/dicom
             type                = UNLISTED
             port                = 11113
