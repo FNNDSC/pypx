@@ -1,5 +1,6 @@
 
 # Perform a find on a given PatientID
+# using docker and assuming container image is ``local/pypx``
 docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
                    local/pypx                                                  \
                    --px-find                                                   \
@@ -11,6 +12,22 @@ docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
                    --db /home/dicom/log                                        \
                    --verbosity 1                                               \
                    --json
+
+# Perform a find on a given PatientID
+# on the metal and generate a report...
+px-find                                                                        \
+                   --aet CHRISV3                                               \
+                   --serverIP  134.174.12.21                                   \
+                   --serverPort 104                                            \
+                   --PatientID 4780041                                         \
+                   --db /home/dicom/log                                        \
+                   --verbosity 1                                               \
+                   --json                                                     |\
+px-report                                                                      \
+                   --colorize dark                                             \
+                   --printReport csv --csvPrettify --csvPrintHeaders           \
+                   --reportHeaderStudyTags PatientName,PatientID
+
                    
 # Perform a find and generate a report
 docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
@@ -36,6 +53,8 @@ docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
                    local/pypx                                                  \
                    --px-find                                                   \
                    --then retrieve                                             \
+                   --withFeedBack                                              \
+                   --intraSeriesRetrieveDelay dynamic:6                        \
                    --aet CHRISLOCAL                                            \
                    --aec ORTHANC                                               \
                    --serverIP  192.168.1.189                                   \
@@ -44,6 +63,24 @@ docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
                    --db /home/dicom/log                                        \
                    --verbosity 1                                               \
                    --json
+
+# Perform a find then retrieve on a given PatientID
+px-find                                                                        \
+                   --then retrieve                                             \
+                   --withFeedBack                                              \
+                   --aec CHRISV3                                               \
+                   --serverIP  134.174.12.21                                   \
+                   --serverPort 104                                            \
+                   --PatientID 4780041                                         \
+                   --db /home/dicom/log                                        \
+                   --verbosity 1                                               \
+                   --json                                                     |\
+px-do                                                                          \
+                   --db /home/dicom/log                                        \
+                   --then retrieve,status,status                               \
+                   --intraSeriesRetrieveDelay dynamic:6                        \
+                   --withFeedBack                                              \
+                   --verbosity 1 
 
 # Read an upstream find.json                   
 docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
