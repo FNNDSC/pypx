@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-do"
-str_version = "3.0.0"
+str_version = "3.0.2"
 str_desc    = Colors.CYAN + """
 
 

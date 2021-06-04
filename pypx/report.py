@@ -350,7 +350,7 @@ class Report(Base):
     def toCSV(self, **kwargs):
         """
         Generate a csv version of the report, suitable for consumption
-        by spreadsheets in raw form. Output can be prettified and 
+        by spreadsheets in raw form. Output can be prettified and
         summarized if chosen.
         """
 
@@ -558,7 +558,7 @@ class Report(Base):
                                     str_seriesVals                          +'\n'
             str_csvReport       =  str_csvReport[:-1]
             if b_prettifyDo: str_csvReport += '\n' + str_tableBottom
-            return str_csvReport
+        return str_csvReport
 
     def studyHeader_print(self, **kwargs):
         """
@@ -713,8 +713,6 @@ class Report(Base):
                 b_status    = False
 
         if b_status:
-            # self.arg['reportData']['report']    = \
-            #     self.report_generate(self.arg['reportData'])
             self.d_report   = self.report_generate()
             if len(self.printReport):
                 if self.printReport in self.d_report.keys() or              \
