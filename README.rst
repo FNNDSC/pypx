@@ -1,5 +1,5 @@
 ####################################
-pypx - 1.1.2.0
+pypx - 3.0.0
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -40,7 +40,7 @@ In order to be fully complete, a destination PACS with which ``pypx`` modules wi
 1.1.3 Configuring ``pypx``
 ---------------------------
 
-Locally, however, some configuration is required and conveniently located in the script ``PACS_QR.sh``. In the 
+Locally, however, some configuration is required and conveniently located in the script ``PACS_QR.sh``. In the
 
 .. code-block:: bash
 
@@ -49,20 +49,28 @@ Locally, however, some configuration is required and conveniently located in the
         ...
     }
 
-simply add another block reflecting the variables appropriate to your remote PACS service. 
+simply add another block reflecting the variables appropriate to your remote PACS service.
 
 1.2 Components
 ==============
 
 Internally, the code wraps around DCMTK utilies as well as the PyDicom module. The following modules/scripts are provided:
 
+- px-repack_: Read and repack DICOM files, organizing the destination is a human-friendly tree based layout.
+
 - px-echo_: Ping the PACS to make sure it is online (``echoscu``).
 
 - px-find_: Find data on the PACS (``findscu``).
 
+- px-report_: Consume the JSON outputs of many of the tools (esp the ``px-find`` and generate various console-based reports).
+
 - px-move_: Move data from the PACS (``movescu``).
 
-- px-listen_: Listen for incoming data from the PACS (``storescp``).
+- px-push_: Push DICOM data to a remote node (either a PACS or a ChRIS swift object storage container).
+
+- px-register_: A companion to ``px-push`` that registers files in ChRIS swift storage to the ChRIS CUBE backend.
+
+- px-smdb_: A simple file-system based database that provides tracking and query for processed DICOM files.
 
 2. Installation
 *****************
@@ -82,10 +90,12 @@ Alternatively, you can build a local image with
 
     # If behing a proxy
     PROXY=http://some.proxy.com
-    docker build --build-arg http_proxy=${PROXY} --build-arg UID=$UID -t local/pypx .
+    export UID=$(id -u)
+    DOCKER_BUILDKIT=1 docker build --build-arg http_proxy=${PROXY} --build-arg UID=$UID -t local/pypx .
 
     # otherwise...
-    docker build --build-arg UID=$UID -t local/pypx .
+    export UID=$(id -u)
+    DOCKER_BUILDKIT=1 docker build --build-arg UID=$UID -t local/pypx .
 
 2.2 pypi
 ========
@@ -116,16 +126,22 @@ If necessary, this port can be changed in the ``Dockerfile`` for a local build o
 4. Usage
 *****************
 
+For more complete examples, please consult the workflow.sh_ script in the source repository
+
 Please see the relevant wiki pages for usage instructions:
 
+- px-repack_
 - px-echo_
 - px-find_
+- px-report_
 - px-move_
-- px-listen_
+- px-push_
+- px-register_
+- px-smdb_
 
 5. Credits
 *****************
-   
+
 PyDicom_
 
 -  Author(s): darcymason_
@@ -134,10 +150,15 @@ DCMTK_
 
 -  Author(s): Dicom @ OFFIS Team
 
+.. _px-repack: https://github.com/FNNDSC/pypx/wiki/1.-px-repack
 .. _px-echo: https://github.com/FNNDSC/pypx/wiki/1.-px-echo
 .. _px-find: https://github.com/FNNDSC/pypx/wiki/2.-px-find
+.. _px-report: https://github.com/FNNDSC/pypx/wiki/4.-px-report
 .. _px-move: https://github.com/FNNDSC/pypx/wiki/3.-px-move
-.. _px-listen: https://github.com/FNNDSC/pypx/wiki/4.-px-listen
+.. _px-push: https://github.com/FNNDSC/pypx/wiki/3.-px-push
+.. _px-register: https://github.com/FNNDSC/pypx/wiki/3.-px-register
+.. _px-smdb: https://github.com/FNNDSC/pypx/wiki/3.-px-smdb
+.. _workflow.sh: https://github.com/FNNDSC/pypx/blob/master/workflow.sh
 .. _PyDicom: http://www.python.org/
 .. _darcymason: https://github.com/darcymason
 .. _DCMTK: http://dicom.offis.de/dcmtk.php.en

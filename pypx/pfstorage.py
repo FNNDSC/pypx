@@ -154,8 +154,8 @@ class PfStorage(metaclass = abc.ABCMeta):
                     d_ret['l_dirFS'].append(os.path.join(root, dirname))
             if len(str_fileSubStr):
                 d_ret['l_fileFS']   = [
-                                        f for f in d_ret['l_fileFS'] 
-                                            if str_fileSubStr in f 
+                                        f for f in d_ret['l_fileFS']
+                                            if str_fileSubStr in f
                                         ]
 
         d_ret['numFiles']   = len(d_ret['l_fileFS'])
@@ -436,14 +436,14 @@ class swiftStorage(PfStorage):
 
         DICOM handling
         --------------
-        
+
         A special behaviour is available for DICOM files, triggered by passing
         a kwarg of 'DICOMsubstr = <X>'. In this case, DICOM files (as identi-
         fied by containing the substring pattern within the filename) will be
         read for tag information used to generate the fully qualified storage
-        path. 
-        
-        This fully qualified storage path will be substituted into the 
+        path.
+
+        This fully qualified storage path will be substituted into the
         'toLocation = <someswiftpath>' by replacing the special tag
         '%pack' in the <someswiftpath>.
 

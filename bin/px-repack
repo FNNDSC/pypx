@@ -24,7 +24,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-repack"
-str_version = "1.2.0"
+str_version = "3.0.0"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
