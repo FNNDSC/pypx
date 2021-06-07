@@ -41,7 +41,7 @@ import  pfmisc
 class Register():
     """
     The core class of the register module -- this class essentially reads
-    a DICOM file, parses its tags, and then registers tags of that file 
+    a DICOM file, parses its tags, and then registers tags of that file
     with a ChRIS/CUBE instance. This of course assumes that the file has been
     pushed to CUBE using some mechanism (most typically ``pfstorage``).
     """
@@ -135,9 +135,9 @@ class Register():
 
     def run(self, opt) -> dict:
         """
-        Main entry point for registration. This will, for each DICOM file 
+        Main entry point for registration. This will, for each DICOM file
         to process, read the DICOM, perform some preprocessing on the meta
-        tag  space,  and then register the already existing object in 
+        tag  space,  and then register the already existing object in
         object storage.
 
         A CRITICAL assumption here is that the file to be registered already
@@ -157,7 +157,7 @@ class Register():
                                 str_file)
                             )
             # Before returning, we need to "sanitize" some of the
-            # DICOMfile_read fields, specifically the DICOM read 
+            # DICOMfile_read fields, specifically the DICOM read
             # payload that can be very full/noisy. Here we just
             # remove it.
             d_run['d_DICOMfile_register']['d_DICOMfile_read']\
@@ -173,7 +173,7 @@ class Register():
         """
         Register the DICOM file described by the passed dictionary
         structure. If the self.arg['objectFileList'] is empty, this
-        method will ask the repack module where to file would have 
+        method will ask the repack module where to file would have
         been packed into storage.
         """
         b_status        :   bool    = False
@@ -181,13 +181,13 @@ class Register():
         d_register      :   dict    = {}
         ld_register     :   list    = []
         l_DICOMtags     :   list    = [
-            'PatientID',    'PatientName',      'PatientBirthDate',     
+            'PatientID',    'PatientName',      'PatientBirthDate',
             'PatientAge',   'PatientSex',       'ProtocolName',
             'StudyDate',    'StudyDescription', 'StudyInstanceUID',
             'Modality',     'SeriesDescription','SeriesInstanceUID'
         ]
         if d_DICOMfile_read['status']:
-            for k in l_DICOMtags: 
+            for k in l_DICOMtags:
                 d_pacsData[k] = d_DICOMfile_read['d_DICOM']['d_dicomSimple'][k]
             d_pacsData['pacs_name']     = self.args.str_swiftServicesPACS
             if len(self.args.objectFileList):
@@ -197,22 +197,22 @@ class Register():
                 d_path                  =  self.packer.packPath_resolve(d_DICOMfile_read)
 
                 d_pacsData['path']      = 'SERVICES/PACS/%s/%s/%s' % \
-                    (   
+                    (
                         self.arg['str_swiftPACS'],
                         d_path['packDir'],
                         d_path['imageFIle']
                     )
             try:
                 d_register = self.CUBE.register_pacs_file(d_pacsData)
-            except:
+            except Exception as e:
                 d_register = {
                     'path'          : d_pacsData['path'],
-                    'msg'           : "Already registered"
+                    'msg'           : '%s' % str(e)
                 }
         return {
-            'status'                :   True,
-            'd_DICOMfile_read'      :   d_DICOMfile_read,
-            'd_DICOMfile_register'  :   d_register
+            'status'                    :   True,
+            'd_DICOMfile_read'          :   d_DICOMfile_read,
+            'd_CUBE_register_pacs_file' :   d_register
         }
 
     def DICOMfile_mapsUpdate(self, d_DICOMfile_register)    -> dict:
