@@ -24,7 +24,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-repack"
-str_version = "3.0.0"
+str_version = "3.0.2"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
@@ -293,7 +293,7 @@ parser.add_argument(
     action  = 'store',
     dest    = 'str_rootDirTemplate',
     type    = str,
-    default = '%PatientID-%PatientName-%PatientAge',
+    default = '%PatientID-%PatientName-%PatientBirthDate',
     help    = 'Template pattern for root unpack directory'
     )
 parser.add_argument(
@@ -301,7 +301,7 @@ parser.add_argument(
     action  = 'store',
     dest    = 'str_studyDirTemplate',
     type    = str,
-    default = '%StudyDescription-%StudyDate-%StudyInstanceUID',
+    default = '%StudyDescription-%StudyDate-%AccessionNumber',
     help    = 'Template pattern for study unpack directory'
     )
 parser.add_argument(
@@ -309,7 +309,7 @@ parser.add_argument(
     action  = 'store',
     dest    = 'str_seriesDirTemplate',
     type    = str,
-    default = '%SeriesDescription-%SeriesInstanceUID',
+    default = '%SeriesNumber-%SeriesDescription',
     help    = 'Template pattern for series unpack directory'
     )
 parser.add_argument(
@@ -367,7 +367,6 @@ args        = parser.parse_args()
 
 # set_trace(host = "0.0.0.0", port = 5555, term_size = (252, 63))
 # rpudb.set_trace(addr='0.0.0.0', port=5555)
-
 if args.b_desc or args.b_synopsis:
     print(str_desc)
     if args.b_desc:
