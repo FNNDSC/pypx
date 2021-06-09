@@ -21,6 +21,7 @@ import  pypx
 from    pypx                import smdb
 from    pypx                import report
 from    pypx                import do
+import  copy
 
 class Find(Base):
 
@@ -170,7 +171,7 @@ class Find(Base):
             filteredStudiesResponse['status']   = formattedStudiesResponse['status']
             filteredStudiesResponse['command']  = formattedStudiesResponse['command']
             filteredStudiesResponse['data']     = []
-            filteredStudiesResponse['args']     = self.arg
+            # filteredStudiesResponse['args']     = self.arg
             studyIndex                          = 0
             for study in formattedStudiesResponse['data']:
                 l_seriesResults = []
@@ -211,9 +212,9 @@ class Find(Base):
                     = l_seriesResults
                 studyIndex+=1
             if len(self.arg['then']):
-                self.then.arg['reportData']     = filteredStudiesResponse
+                self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
                 d_then                          = self.then.run()
-                filteredStudiesResponse['then'] = d_then
+                filteredStudiesResponse['then'] = copy.deepcopy(d_then)
             return filteredStudiesResponse
         else:
             return formattedStudiesResponse
