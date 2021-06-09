@@ -171,7 +171,7 @@ class Find(Base):
             filteredStudiesResponse['status']   = formattedStudiesResponse['status']
             filteredStudiesResponse['command']  = formattedStudiesResponse['command']
             filteredStudiesResponse['data']     = []
-            # filteredStudiesResponse['args']     = self.arg
+            filteredStudiesResponse['args']     = self.arg
             studyIndex                          = 0
             for study in formattedStudiesResponse['data']:
                 l_seriesResults = []
