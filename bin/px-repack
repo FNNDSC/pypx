@@ -24,7 +24,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-repack"
-str_version = "3.0.2"
+str_version = "3.0.4"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
@@ -309,7 +309,7 @@ parser.add_argument(
     action  = 'store',
     dest    = 'str_seriesDirTemplate',
     type    = str,
-    default = '%SeriesNumber-%SeriesDescription',
+    default = '%_pad|4,0_SeriesNumber-%SeriesDescription',
     help    = 'Template pattern for series unpack directory'
     )
 parser.add_argument(
