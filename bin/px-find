@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "3.0.0"
+str_version = "3.0.2"
 str_desc    = Colors.CYAN + """
 
                                    __  _             _ 
@@ -68,7 +68,8 @@ def synopsis(ab_shortOnly = False):
     SYNOPSIS
 
             _script mode_:
-            px-find
+            px-find                                                 \\
+                [--JSONargs <JSONargStringStructure>]               \\
                 [--db <dblogbasepath>]                              \\
                 [--aet <AETitle>]                                   \\
                 [--aec <CalledAETitle>]                             \\
@@ -116,6 +117,12 @@ def synopsis(ab_shortOnly = False):
         a ``px-report`` script for report generation.
 
     ARGS
+
+        [--JSONargs <JSONargStringStructure>]
+        An alternate mechanism of specifying all the args to this script.
+        Essentially every key/value in the <JSONargStringStructure> can
+        mirror a CLI key/value. The JSONargs is parsed first, so key/values
+        in that structure can be overriden by explicit CLI.
 
         [--db <dblogbasepath>]
         A path to the base directory of the DB contents/files that track
@@ -393,6 +400,16 @@ parser = ArgumentParser(
             formatter_class     = RawTextHelpFormatter
         )
 
+# JSONarg
+parser.add_argument(
+    '--JSONargs',
+    action  = 'store',
+    dest    = 'JSONargString',
+    type    = str,
+    default = '',
+    help    = 'JSON equivalent of CLI key/values')
+
+
 # db access settings
 parser.add_argument(
     '--db',
@@ -637,13 +654,35 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
+d_args  : dict  = vars(args)
+
+if len(args.JSONargString):
+    # First merge the JSONargs into the orig arg dictionary space
+    d_JSONargs  : dict  = json.loads(args.JSONargString)
+    d_args.update(d_JSONargs)
+
+# pudb.set_trace()
 # Return the JSON result as a serialized string:
-output = pypx.find(vars(args))
+d_output = pypx.find(d_args)
+
+# d_output['args'].pop('then', None)
+# d_output['args'].pop('JSONargString', None)
+
+# d_args  = d_output['args'].copy()
+# f = open("dict.txt", "w")
+# f.write(str(d_args))
+# f.close()
+
+# print(json.dumps(d_output['status'],  indent = 4))
+# print(json.dumps(d_output['command'], indent = 4))
+# print(json.dumps(d_output['data'],    indent = 4))
+# print(json.dumps(d_args,    indent = 4))
+# print(json.dumps(d_output['then'],    indent = 4))
 
 if args.verbosity:
     if args.json:
         try:
-            print(json.dumps(output, indent = 4))
+            print(json.dumps(d_output, indent = 4))
         except Exception as e:
             print(json.dumps({
                 'status'    : False,
