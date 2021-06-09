@@ -1,3 +1,33 @@
+set SWIFTHOST 192.168.1.200
+set SWIFTPORT 8080
+set SWIFTLOGIN chris:chris1234
+
+# Push some data to swift storage:
+px-push                                                                        \
+                   --swiftIP $SWIFTHOST                                        \
+                   --swiftPort $SWIFTPORT                                      \
+                   --swiftLogin $SWIFTLOGIN                                    \
+                   --swiftServicesPACS covidnet                                \
+                   --swiftPackEachDICOM                                        \
+                   --xcrdir /home/rudolphpienaar/data/WithProtocolName/all     \
+                   --parseAllFilesWithSubStr dcm                               \
+                   --verbosity 1                                               \
+                   --json > push.json
+
+set CUBEURL http://localhost:84444/api/v1/
+set CUBEusername chris
+set CUBEuserpasswd chris1234
+px-register                                                                    \
+                       --upstreamFile push.json                                \
+                       --CUBEURL $CUBEURL                                      \
+                       --CUBEusername $CUBEusername                            \
+                       --CUBEuserpasswd $CUBEuserpasswd                        \
+                       --swiftServicesPACS covidnet                            \
+                       --verbosity 1                                           \
+                       --json                                                  \
+                       --logdir /home/dicom/log                                \
+                       --debug
+
 
 # Perform a find on a given PatientID
 # using docker and assuming container image is ``local/pypx``
@@ -20,13 +50,13 @@ px-find                                                                        \
                    --serverIP  134.174.12.21                                   \
                    --serverPort 104                                            \
                    --PatientID 4780041                                         \
-                   --db /home/dicom/log                                        \
+                   --db /neuro/users/chris/PACS/log                            \
                    --verbosity 1                                               \
                    --json                                                     |\
 px-report                                                                      \
                    --colorize dark                                             \
                    --printReport csv --csvPrettify --csvPrintHeaders           \
-                   --reportHeaderStudyTags PatientName,PatientID
+                   --reportHeaderStudyTags PatientName,PatientID,AccessionNumber,StudyDate
 
                    
 # Perform a find and generate a report
