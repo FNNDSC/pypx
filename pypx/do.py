@@ -226,7 +226,9 @@ class Do(Base):
         }
         l_then          = self.arg['then'].split(',')
         b_headerPrinted = False
+        thenIndex       = -1
         for then in l_then:
+            thenIndex  += 1
             studyIndex  = 0
             d_ret['status'] = False
             for study in d_filteredHits['data']:
@@ -252,8 +254,8 @@ class Do(Base):
                     if then == "status"  :  d_then  = status_do()
                     l_run.append(d_then)
                     seriesIndex += 1
-                d_ret[then]             = { 'study' : []}
-                d_ret[then]['study'].append({ study['StudyInstanceUID']['value'] : l_run})
+                d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
+                d_ret['%02d-%s' % (thenIndex, then)]['study'].append({ study['StudyInstanceUID']['value'] : l_run})
                 studyIndex += 1
                 d_ret['do'] = True
         return d_ret
