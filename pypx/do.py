@@ -1,19 +1,22 @@
 # Global modules
+import  argparse
 import  subprocess, re, collections
-from pfmisc.other import list_removeDuplicates
+from    pfmisc.other import list_removeDuplicates
 import  pudb
 import  json
 
 from    datetime            import  datetime
 from    dateutil            import  relativedelta
 from    terminaltables      import  SingleTable
-from    argparse            import  Namespace
+from    argparse            import  Namespace, ArgumentParser
+from    argparse            import  RawTextHelpFormatter
 import  time
 
 import  pfmisc
 from    pfmisc._colors      import  Colors
 
 from    dask                import  delayed, compute
+import  sys
 
 # PYPX modules
 from    .base               import Base
@@ -21,6 +24,135 @@ from    .move               import Move
 import  pypx
 from    pypx                import smdb
 from    pypx                import report
+
+def parser_setup(str_desc):
+    parser = ArgumentParser(
+                description         = str_desc,
+                formatter_class     = RawTextHelpFormatter
+            )
+
+    # the main report data to interpret
+    parser.add_argument(
+        '--reportData',
+        action  = 'store',
+        dest    = 'reportData',
+        type    = str,
+        default = '',
+        help    = 'JSON report from upstream process')
+
+    parser.add_argument(
+        '--reportDataFile',
+        action  = 'store',
+        dest    = 'reportDataFile',
+        type    = str,
+        default = '',
+        help    = 'JSON report contained in file from upstream process')
+
+    # db access settings
+    parser.add_argument(
+        '--db',
+        action  = 'store',
+        dest    = 'dblogbasepath',
+        type    = str,
+        default = '/tmp/log',
+        help    = 'path to base dir of receipt database')
+
+    # Behaviour settings
+    parser.add_argument(
+        '--withFeedBack',
+        action  = 'store_true',
+        dest    = 'withFeedBack',
+        default = False,
+        help    = 'If specified, print the "then" events as they happen')
+    parser.add_argument(
+        '--then',
+        action  = 'store',
+        dest    = 'then',
+        default = "",
+        help    = 'If specified, then perform the set of operations')
+    parser.add_argument(
+        '--intraSeriesRetrieveDelay',
+        action  = 'store',
+        dest    = 'intraSeriesRetrieveDelay',
+        default = "0",
+        help    = 'If specified, then wait specified seconds between retrieve series loops')
+
+    parser.add_argument(
+        '--move',
+        action  = 'store_true',
+        dest    = 'move',
+        default = False,
+        help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
+
+    parser.add_argument(
+        '--json',
+        action  = 'store_true',
+        dest    = 'json',
+        default = False,
+        help    = 'If specified, dump the JSON structure relating to the query')
+
+    parser.add_argument(
+        "-v", "--verbosity",
+        help    = "verbosity level for app",
+        dest    = 'verbosity',
+        type    = int,
+        default = 1)
+    parser.add_argument(
+        "-x", "--desc",
+        help    = "long synopsis",
+        dest    = 'desc',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-y", "--synopsis",
+        help    = "short synopsis",
+        dest    = 'synopsis',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--version',
+        help    = 'if specified, print version number',
+        dest    = 'b_version',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--waitForUserTerminate',
+        help    = 'if specified, wait for user termination',
+        dest    = 'b_waitForUserTerminate',
+        action  = 'store_true',
+        default = False
+    )
+
+    return parser
+
+def parser_interpret(parser, *args):
+    """
+    Interpret the list space of *args, or sys.argv[1:] if 
+    *args is empty
+    """
+    if len(args):
+        args    = parser.parse_args(*args)
+    else:
+        args    = parser.parse_args(sys.argv[1:])
+    return args
+
+def parser_JSONinterpret(parser, d_JSONargs):
+    """
+    Interpret a JSON dictionary in lieu of CLI.
+
+    For each <key>:<value> in the d_JSONargs, append to
+    list two strings ["--<key>", "<value>"] and then
+    argparse.
+    """
+    l_args  = []
+    for k, v in d_JSONargs.items():
+        l_args.append('--%s' % k)
+        if type(v) == type(True): continue
+        l_args.append('%s' % v)
+    return parser_interpret(parser, l_args)
 
 class Do(Base):
 
@@ -49,14 +181,28 @@ class Do(Base):
 
         """
         # Check if an upstream 'reportData' exists, and if so
-        # merge those args with the current namespace:
+        # merge those the upstream process's CLI args into the
+        # current namespace.
+        #
+        # NOTE:
+        # * the merge is on the 'dest' of the namespace
+        # * this merge WILL OVERWRITE/CLOBBER any CLI specified
+        #   for this app in favor of upstream ones *except* for
+        #   the 'withFeedBack' and 'json'!
+        # this merge is on the 'dest' of the namespace, not the
+        # CLI keys! Also, only update values in the original
+        # arg space that are shadowed by the upstream args.
+        # pudb.set_trace()
         if 'reportData' in arg.keys():
-            d_argCopy           = arg.copy()
-            # "merge" these 'arg's with upstream.
-            arg.update(arg['reportData']['args'])
-            # Since this might overwrite some args specific to this
-            # app, we update again to the copy.
-            arg.update(d_argCopy)
+            if 'args' in arg['reportData']:
+                for k,v in arg['reportData']['args'].items():
+                    if k in arg and len('%s' % v):
+                        if k not in ['json', 'withFeedBack']:
+                            arg[k] = v
+
+        # Minor "sanity" check... if 'withFeedBack' is True
+        # then 'json' should be False
+        if arg['withFeedBack']: arg['json'] = False
 
         super(Do, self).__init__(arg)
         self.dp             = pfmisc.debug(
