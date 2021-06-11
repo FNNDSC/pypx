@@ -2,11 +2,12 @@
 import  subprocess, re, collections
 import  pudb
 import  json
-
+import  sys
 from    datetime            import  datetime
 from    dateutil            import  relativedelta
 from    terminaltables      import  SingleTable
-from    argparse            import  Namespace
+from    argparse            import  Namespace, ArgumentParser
+from    argparse            import  RawTextHelpFormatter
 import  time
 
 import  pfmisc
@@ -22,6 +23,283 @@ from    pypx                import smdb
 from    pypx                import report
 from    pypx                import do
 import  copy
+
+
+def parser_setup(str_desc):
+    parser = ArgumentParser(
+                description         = str_desc,
+                formatter_class     = RawTextHelpFormatter
+            )
+
+    # JSONarg
+    parser.add_argument(
+        '--JSONargs',
+        action  = 'store',
+        dest    = 'JSONargString',
+        type    = str,
+        default = '',
+        help    = 'JSON equivalent of CLI key/values')
+
+
+    # db access settings
+    parser.add_argument(
+        '--db',
+        action  = 'store',
+        dest    = 'dblogbasepath',
+        type    = str,
+        default = '/tmp/log',
+        help    = 'path to base dir of receipt database')
+
+    # PACS access settings
+    parser.add_argument(
+        '--aet',
+        action  = 'store',
+        dest    = 'aet',
+        type    = str,
+        default = 'CHRIS-ULTRON-AET',
+        help    = 'aet')
+    parser.add_argument(
+        '--aec',
+        action  = 'store',
+        dest    = 'aec',
+        type    = str,
+        default = 'CHRIS-ULTRON-AEC',
+        help    = 'aec')
+    parser.add_argument(
+        '--serverIP',
+        action  = 'store',
+        dest    = 'serverIP',
+        type    = str,
+        default = '192.168.1.110',
+        help    = 'PACS server IP')
+    parser.add_argument(
+        '--serverPort',
+        action  = 'store',
+        dest    = 'serverPort',
+        type    = str,
+        default = '4242',
+        help    = 'PACS server port')
+    parser.add_argument(
+        '--findscu',
+        action  = 'store',
+        dest    = 'findscu',
+        type    = str,
+        default = '/usr/bin/findscu',
+        help    = '"findscu" executable absolute location')
+    parser.add_argument(
+        '--movescu',
+        action  = 'store',
+        dest    = 'movescu',
+        type    = str,
+        default = '/usr/bin/movescu',
+        help    = '"movescu" executable absolute location')
+
+    # Query settings
+    parser.add_argument(
+        '--AccessionNumber',
+        action  = 'store',
+        dest    = 'AccessionNumber',
+        type    = str,
+        default = '',
+        help    = 'Accession Number')
+    parser.add_argument(
+        '--PatientID',
+        action  = 'store',
+        dest    = 'PatientID',
+        type    = str,
+        default = '',
+        help    = 'Patient ID')
+    parser.add_argument(
+        '--PatientName',
+        action  = 'store',
+        dest    = 'PatientName',
+        type    = str,
+        default = '',
+        help    = 'Patient name')
+    parser.add_argument(
+        '--PatientSex',
+        action  = 'store',
+        dest    = 'PatientSex',
+        type    = str,
+        default = '',
+        help    ='Patient sex')
+    parser.add_argument(
+        '--StudyDate',
+        action  = 'store',
+        dest    = 'StudyDate',
+        type    = str,
+        default = '',
+        help    = 'Study date (YYYY/MM/DD)')
+    parser.add_argument(
+        '--ModalitiesInStudy',
+        action  = 'store',
+        dest    = 'ModalitiesInStudy',
+        type    = str,
+        default = '',
+        help    = 'Modalities in study')
+    parser.add_argument(
+        '--Modality',
+        action  = 'store',
+        dest    = 'Modality',
+        type    = str,
+        default = '',
+        help    = 'Study Modality')
+    parser.add_argument(
+        '--PerformedStationAETitle',
+        action  = 'store',
+        dest    = 'PerformedStationAETitle',
+        type    = str,
+        default = '',
+        help    = 'Performed station aet')
+    parser.add_argument(
+        '--StudyDescription',
+        action  = 'store',
+        dest    = 'StudyDescription',
+        type    = str,
+        default = '',
+        help    = 'Study description')
+    parser.add_argument(
+        '--SeriesDescription',
+        action  = 'store',
+        dest    = 'SeriesDescription',
+        type    = str,
+        default = '',
+        help    = 'Series Description')
+    parser.add_argument(
+        '--SeriesInstanceUID',
+        action  = 'store',
+        dest    = 'SeriesInstanceUID',
+        type    = str,
+        default = '',
+        help    = 'Series Instance UID')
+    parser.add_argument(
+        '--StudyInstanceUID',
+        action  = 'store',
+        dest    = 'StudyInstanceUID',
+        type    = str,
+        default = '',
+        help    = 'Study Instance UID')
+    parser.add_argument(
+        '--ProtocolName',
+        action  = 'store',
+        dest    = 'ProtocolName',
+        type    = str,
+        default = '',
+        help    = 'Protocol Name')
+    parser.add_argument(
+        '--AcquisitionProtocolName',
+        action  = 'store',
+        dest    = 'AcquisitionProtocolName',
+        type    = str,
+        default = '',
+        help    = 'Acquisition Protocol Description Name')
+
+    parser.add_argument(
+        '--AcquisitionProtocolDescription',
+        action  = 'store',
+        dest    = 'AcquisitionProtocolDescription',
+        type    = str,
+        default = '',
+        help    = 'Acquisition Protocol Description')
+
+    # Retrieve settings
+    parser.add_argument(
+        '--withFeedBack',
+        action  = 'store_true',
+        dest    = 'withFeedBack',
+        default = False,
+        help    = 'If specified, print the "then" events as they happen')
+    parser.add_argument(
+        '--then',
+        action  = 'store',
+        dest    = 'then',
+        default = "",
+        help    = 'If specified, perform another set operations "next" after the find')
+    parser.add_argument(
+        '--intraSeriesRetrieveDelay',
+        action  = 'store',
+        dest    = 'intraSeriesRetrieveDelay',
+        default = "0",
+        help    = 'If specified, then wait specified seconds between retrieve series loops')
+    parser.add_argument(
+        '--move',
+        action  = 'store_true',
+        dest    = 'move',
+        default = False,
+        help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
+
+    parser.add_argument(
+        '--json',
+        action  = 'store_true',
+        dest    = 'json',
+        default = False,
+        help    = 'If specified, dump the JSON structure relating to the query')
+
+    parser.add_argument(
+        "-v", "--verbosity",
+        help    = "verbosity level for app",
+        dest    = 'verbosity',
+        type    = int,
+        default = 1)
+    parser.add_argument(
+        "-x", "--desc",
+        help    = "long synopsis",
+        dest    = 'desc',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-y", "--synopsis",
+        help    = "short synopsis",
+        dest    = 'synopsis',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--version',
+        help    = 'if specified, print version number',
+        dest    = 'b_version',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--waitForUserTerminate',
+        help    = 'if specified, wait for user termination',
+        dest    = 'b_waitForUserTerminate',
+        action  = 'store_true',
+        default = False
+    )
+
+
+    return parser
+
+def parser_interpret(parser, *args):
+    """
+    Interpret the list space of *args, or sys.argv[1:] if
+    *args is empty
+    """
+    if len(args):
+        args    = parser.parse_args(*args)
+    else:
+        args    = parser.parse_args(sys.argv[1:])
+    return args
+
+def parser_JSONinterpret(parser, d_JSONargs):
+    """
+    Interpret a JSON dictionary in lieu of CLI.
+
+    For each <key>:<value> in the d_JSONargs, append to
+    list two strings ["--<key>", "<value>"] and then
+    argparse.
+    """
+    l_args  = []
+    for k, v in d_JSONargs.items():
+        if type(v) == type(True):
+            if v: l_args.append('--%s' % k)
+            continue
+        l_args.append('--%s' % k)
+        l_args.append('%s' % v)
+    return parser_interpret(parser, l_args)
 
 class Find(Base):
 
