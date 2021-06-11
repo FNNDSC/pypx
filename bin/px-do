@@ -18,9 +18,11 @@ from    argparse            import ArgumentParser
 from    terminaltables      import SingleTable
 from    pfmisc._colors      import Colors
 import  json
-import  pypx
 import  socket
 import  pudb
+
+import  pypx
+from    pypx.do             import parser_setup, parser_interpret
 
 str_defIP   = [l for l in (
                 [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
@@ -29,7 +31,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-do"
-str_version = "3.0.2"
+str_version = "3.0.4"
 str_desc    = Colors.CYAN + """
 
 
@@ -207,107 +209,7 @@ def synopsis(ab_shortOnly = False):
         return shortSynopsis + description
 
 
-parser = ArgumentParser(
-            description         = str_desc,
-            formatter_class     = RawTextHelpFormatter
-        )
-
-# the main report data to interpret
-parser.add_argument(
-    '--reportData',
-    action  = 'store',
-    dest    = 'reportData',
-    type    = str,
-    default = '',
-    help    = 'JSON report from upstream process')
-
-parser.add_argument(
-    '--reportDataFile',
-    action  = 'store',
-    dest    = 'reportDataFile',
-    type    = str,
-    default = '',
-    help    = 'JSON report contained in file from upstream process')
-
-# db access settings
-parser.add_argument(
-    '--db',
-    action  = 'store',
-    dest    = 'dblogbasepath',
-    type    = str,
-    default = '/tmp/log',
-    help    = 'path to base dir of receipt database')
-
-# Behaviour settings
-parser.add_argument(
-    '--withFeedBack',
-    action  = 'store_true',
-    dest    = 'withFeedBack',
-    default = False,
-    help    = 'If specified, print the "then" events as they happen')
-parser.add_argument(
-    '--then',
-    action  = 'store',
-    dest    = 'then',
-    default = "",
-    help    = 'If specified, then perform the set of operations')
-parser.add_argument(
-    '--intraSeriesRetrieveDelay',
-    action  = 'store',
-    dest    = 'intraSeriesRetrieveDelay',
-    default = "0",
-    help    = 'If specified, then wait specified seconds between retrieve series loops')
-
-parser.add_argument(
-    '--move',
-    action  = 'store_true',
-    dest    = 'move',
-    default = False,
-    help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
-
-parser.add_argument(
-    '--json',
-    action  = 'store_true',
-    dest    = 'json',
-    default = False,
-    help    = 'If specified, dump the JSON structure relating to the query')
-
-parser.add_argument(
-    "-v", "--verbosity",
-    help    = "verbosity level for app",
-    dest    = 'verbosity',
-    type    = int,
-    default = 1)
-parser.add_argument(
-    "-x", "--desc",
-    help    = "long synopsis",
-    dest    = 'desc',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-y", "--synopsis",
-    help    = "short synopsis",
-    dest    = 'synopsis',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--version',
-    help    = 'if specified, print version number',
-    dest    = 'b_version',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--waitForUserTerminate',
-    help    = 'if specified, wait for user termination',
-    dest    = 'b_waitForUserTerminate',
-    action  = 'store_true',
-    default = False
-)
-
-args        = parser.parse_args()
+args = parser_interpret(parser_setup(str_desc))
 
 if args.desc or args.synopsis:
     print(str_desc)
@@ -322,7 +224,11 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
-# pudb.set_trace()
+#
+# NOTE:
+# If an upstream process passes its CLI args, remember that
+# this upstream dictionary of CLI are arg parser dest based!
+#
 
 if len(args.reportDataFile):
     with open(args.reportDataFile, 'r') as f:
