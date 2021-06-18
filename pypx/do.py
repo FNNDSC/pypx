@@ -196,7 +196,8 @@ class Do(Base):
         if 'reportData' in arg.keys():
             if 'args' in arg['reportData']:
                 for k,v in arg['reportData']['args'].items():
-                    if k in arg and len('%s' % v):
+                    # if k in arg and len('%s' % v):
+                    if len('%s' % v):
                         if k not in ['json', 'withFeedBack']:
                             arg[k] = v
 
