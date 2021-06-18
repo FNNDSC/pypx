@@ -405,6 +405,7 @@ class SMDB():
         l_series            : list  = []
         str_studySeriesDir  : str = ''
         str_studySeriesFile : str = ''
+        lstr_error          : list  = []
         if d_studyTable['status']:
             with open(d_studyTable['studyTable']['studyMapFile']['name']) as fp:
                 d_studyInfo     = json.load(fp)
@@ -416,11 +417,18 @@ class SMDB():
             for f in l_studySeries:
                 str_studySeriesFile = '%s/%s' % (str_studySeriesDir, f)
                 with open(str_studySeriesFile, 'r') as fp:
-                    d_series    = json.load(fp)
+                    try:
+                        d_series    = json.load(fp)
+                    except:
+                        b_status    = False
+                        lstr_error.append(str_studySeriesFile)
+                        # pudb.set_trace()
+                        # pass
                 l_series.append(d_series[str_StudyInstanceUID]['SeriesInstanceUID'])
         return {
             'status'            : b_status,
-            'seriesList'        : l_series
+            'seriesList'        : l_series,
+            'JSONparseError'    : lstr_error
         }
 
     def study_seriesContainsVerify(self,
