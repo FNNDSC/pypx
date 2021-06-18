@@ -407,9 +407,9 @@ class SMDB():
         str_studySeriesFile : str = ''
         lstr_error          : list  = []
         if d_studyTable['status']:
-            with open(d_studyTable['studyTable']['studyMapFile']['name']) as fp:
-                d_studyInfo     = json.load(fp)
-            fp.close()
+            # with open(d_studyTable['studyTable']['studyMapFile']['name']) as fp:
+            #     d_studyInfo     = json.load(fp)
+            # fp.close()
             str_studySeriesDir  = d_studyTable['studyTable']['studySeriesDir']
             l_studySeries       = os.listdir(str_studySeriesDir)
             if len(l_studySeries):
@@ -418,12 +418,14 @@ class SMDB():
                 str_studySeriesFile = '%s/%s' % (str_studySeriesDir, f)
                 with open(str_studySeriesFile, 'r') as fp:
                     try:
-                        d_series    = json.load(fp)
+                        # d_series    = json.load(fp)
+                        self.json_read(fp, d_series)
                     except:
                         b_status    = False
                         lstr_error.append(str_studySeriesFile)
                         # pudb.set_trace()
                         # pass
+                fp.close()
                 l_series.append(d_series[str_StudyInstanceUID]['SeriesInstanceUID'])
         return {
             'status'            : b_status,
@@ -653,7 +655,8 @@ class SMDB():
         else:
             self.d_seriesInfo     = self.d_seriesMap[self.d_DICOM['SeriesInstanceUID']]
         with open(d_seriesTable['seriesMapSingleImageFile']['name'], 'w') as fj:
-            json.dump(self.d_seriesMap, fj, indent = 4)
+            self.json_write(self.d_seriesMap, fj)
+            # json.dump(self.d_seriesMap, fj, indent = 4)
 
     def mapsUpdateForFile(self, str_file):
         b_status        :   bool    = True
