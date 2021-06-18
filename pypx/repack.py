@@ -58,16 +58,16 @@ def args_impedanceMatch(ns_arg):
 
     if 'str_rootDirTemplate' not in l_key:
         setattr(ns_arg, 'str_rootDirTemplate',
-                        '%PatientID-%PatientName-%PatientAge')
+                        '%PatientID-%PatientName-%PatientBirthDate')
     if 'str_studyDirTemplate' not in l_key:
         setattr(ns_arg, 'str_studyDirTemplate',
-                        '%StudyDescription-%StudyDate-%StudyInstanceUID')
+                        '%StudyDescription-%AccessionNumber-%StudyDate')
     if 'str_studyDirTemplate' not in l_key:
         setattr(ns_arg, 'str_seriesDirTemplate',
-                        '%SeriesDescription-%SeriesInstanceUID')
+                        '%_pad|4,0_SeriesNumber-%SeriesDescription')
     if 'str_studyDirTemplate' not in l_key:
         setattr(ns_arg, 'str_imageTemplate',
-                        '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm')
+                        '%_pad|5,0_InstanceNumber-%SOPInstanceUID.dcm')
     return ns_arg
 
 class Process():
