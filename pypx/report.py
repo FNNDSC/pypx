@@ -276,6 +276,7 @@ class Report(Base):
                 dl_seriesUID    = []
                 l_seriesUIDtag  = [
                                     'SeriesInstanceUID',
+                                    'SeriesNumber',
                                     'NumberOfSeriesRelatedInstances'
                                 ]
                 if k == 'series':
@@ -606,11 +607,16 @@ class Report(Base):
                 str_seriesDescription   =           \
                     self.report_getBodyField(studyIndex, seriesIndex,
                                             'SeriesDescription')
+                str_seriesNumber        =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesNumber')
+                if len(str_seriesNumber):
+                    str_seriesNumber    = ' [ %04d ] ' % int(str_seriesNumber)
                 str_line                =                                \
                                             'Requesting '               +\
                                             str_seriesInstances         +\
                                             ' images for '
-                str_line = '%31s' % str_line + ' ' + str_seriesDescription
+                str_line = '%31s' % str_line + str_seriesNumber  + str_seriesDescription
             else:
                 str_line    = 'Invalid seriesIndex specified'
         else:
