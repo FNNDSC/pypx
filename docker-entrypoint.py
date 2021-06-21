@@ -88,6 +88,13 @@ parser.add_argument(
     default = False,
     help    = 'if specified, indicates running px-status.',
 )
+parser.add_argument(
+    '--pfstorage',
+    action  = 'store_true',
+    dest    = 'b_pfstorage',
+    default = False,
+    help    = 'if specified, indicates running pfstorage.',
+)
 
 args, unknown   = parser.parse_known_args()
 
@@ -103,6 +110,7 @@ if __name__ == '__main__':
     if args.b_pxrepack:     fname   = 'pxdispatch_do("px-repack",args, unknown)'
     if args.b_pxreport:     fname   = 'pxdispatch_do("px-report",args, unknown)'
     if args.b_pxstatus:     fname   = 'pxdispatch_do("px-status",args, unknown)'
+    if args.b_pxstatus:     fname   = 'pxdispatch_do("pfstorage",args, unknown)'
 
     try:
         str_cmd = eval(fname)

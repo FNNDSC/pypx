@@ -11,7 +11,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.0.26',
+        version             =   '3.0.28',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
@@ -35,6 +35,7 @@ setup(
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],
         scripts             =   [
+            'bin/pfstorage',
             'bin/px-do',
             'bin/px-echo',
             'bin/px-find',
