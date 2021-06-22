@@ -1,6 +1,39 @@
+# NOTE:
+# this script assumes fish conventions
+#
+
+
+
 set SWIFTHOST 192.168.1.200
 set SWIFTPORT 8080
 set SWIFTLOGIN chris:chris1234
+
+# on the metal
+pfstorage                                                                      \
+                --swiftIP $SWIFTHOST                                           \
+                --swiftPort $SWIFTPORT                                         \
+                --swiftLogin $SWIFTLOGIN                                       \
+                --verbosity 1                                                  \
+                --debugToDir /tmp                                              \
+                --type swift                                                   \
+                --do '
+           {
+               "action":   "ls",
+               "args": {
+                   "path":        "SERVICES/PACS/covidnet"
+                   }
+           }
+           ' --json
+
+# docker equivalent
+docker run --rm -ti local/pypx  --pfstorage                                    \
+                --swiftIP $SWIFTHOST                                           \
+                --swiftPort $SWIFTPORT                                         \
+                --swiftLogin $SWIFTLOGIN                                       \
+                --verbosity 1                                                  \
+                --debugToDir /tmp                                              \
+                --do '{\"action\":\"ls\",\"args\":{\"path\":\"SERVICES/PACS/covidnet\"}}' --json
+
 
 # Push some data to swift storage:
 px-push                                                                        \
