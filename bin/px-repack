@@ -24,7 +24,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-repack"
-str_version = "3.0.8"
+str_version = "3.0.10"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
@@ -153,7 +153,7 @@ def synopsis(ab_shortOnly = False):
         A string template for the series directory name in which to pack a
         given DICOM.
 
-        Default: "%SeriesDescription"
+        Default: "%_pad|5,0_SeriesNumber-%SeriesDescription"
 
         [--imageFileTemplate <imageTemplate>]
         A string template for the image file name in which to copy a
