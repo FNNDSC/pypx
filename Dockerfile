@@ -100,8 +100,7 @@ COPY ./docker-entrypoint.py /dock/docker-entrypoint.py
 COPY ./storescp.sh /dock/storescp.sh
 RUN chmod 777 /dock                                                   \
   && chmod 777 /dock/docker-entrypoint.py                             \
-  && echo "localuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers          \
-  && mkdir /tmp/data
+  && echo "localuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 ENTRYPOINT ["/dock/docker-entrypoint.py"]
 CMD ["/dock/storescp.sh", "-p", "11113"]
