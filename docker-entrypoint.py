@@ -110,7 +110,7 @@ if __name__ == '__main__':
     if args.b_pxrepack:     fname   = 'pxdispatch_do("px-repack",args, unknown)'
     if args.b_pxreport:     fname   = 'pxdispatch_do("px-report",args, unknown)'
     if args.b_pxstatus:     fname   = 'pxdispatch_do("px-status",args, unknown)'
-    if args.b_pxstatus:     fname   = 'pxdispatch_do("pfstorage",args, unknown)'
+    if args.b_pfstorage:    fname   = 'pxdispatch_do("pfstorage",args, unknown)'
 
     try:
         str_cmd = eval(fname)
