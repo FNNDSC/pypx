@@ -25,13 +25,15 @@ DESC
 PORT=10402
 EXECROOTPATH="/usr/local/bin"
 DATAROOTPATH="/home/dicom"
+TMPINCOMINGDATA=/tmp/data
 
-while getopts "p:E:D:" opt; do
+while getopts "p:E:D:t:" opt; do
     case $opt in
+        t) TMPINCOMINGDATA=$OPTARG              ;;
         p) PORT=$OPTARG                         ;;
         E) EXECROOTPATH=$OPTARG                 ;;
         D) DATAROOTPATH=$OPTARG                 ;;
     esac
 done
-mkdir /tmp/data
-eval storescp -od /tmp/data -pm -sp -xcr \"$EXECROOTPATH/px-repack --xcrdir \#p --xcrfile \#f --verbosity 0 --logdir $DATAROOTPATH/log --datadir $DATAROOTPATH/data --cleanup\" $PORT
+mkdir $TMPINCOMINGDATA
+eval storescp -od $TMPINCOMINGDATA -pm -sp -xcr \"$EXECROOTPATH/px-repack --xcrdir \#p --xcrfile \#f --verbosity 0 --logdir $DATAROOTPATH/log --datadir $DATAROOTPATH/data --cleanup\" $PORT

@@ -4,8 +4,8 @@
             socket_type         = stream
             wait                = no
             user                = root
-            server              = /opt/dcm/storescp.sh
-            server_args         = -p 11113 -E /usr/local/bin -D /home/dicom
+            server              = /usr/local/bin/storescp.sh
+            server_args         = -t /tmp/data -p 11113 -E /usr/local/bin -D /home/dicom
             type                = UNLISTED
             port                = 11113
             bind                = 0.0.0.0
