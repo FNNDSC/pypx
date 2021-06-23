@@ -7,7 +7,7 @@
             server              = /usr/local/bin/storescp.sh
             server_args         = -t /tmp/data -p 11113 -E /usr/local/bin -D /home/dicom
             type                = UNLISTED
-            port                = 11113
+            port                = 10502
             bind                = 0.0.0.0
         }
 
