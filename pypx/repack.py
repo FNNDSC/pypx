@@ -355,6 +355,7 @@ class Process():
         relative to this save operation.
         """
         b_status        :   bool    = False
+        d_mapsUpdate    :   dict    = {}
 
         if d_DICOMfile_save['status']:
             b_status    = True
@@ -369,9 +370,7 @@ class Process():
 
         return {
             'status'            : b_status,
-            'd_patientInfo'     : self.smdb.d_patientInfo,
-            'd_studyInfo'       : self.smdb.d_studyInfo,
-            'd_seriesInfo'      : self.smdb.d_seriesInfo,
+            'd_mapsUpdate'      : d_mapsUpdate,
             'd_DICOMfile_save'  : d_DICOMfile_save
         }
 
