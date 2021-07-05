@@ -31,7 +31,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-do"
-str_version = "3.0.6"
+str_version = "3.0.10"
 str_desc    = Colors.CYAN + """
 
 
@@ -60,6 +60,7 @@ str_desc    = Colors.CYAN + """
         * local smdb find/search
         * local smdb status
         * push-to-swift storage
+        * register swfit storage files to a CUBE instance
 
     This script/module is mostly used as an iterator that loops over
     a study/series structure and at each study/series tuple executes
@@ -89,7 +90,8 @@ def synopsis(ab_shortOnly = False):
                 [--db <dblogbasepath>]                              \\
                 [--reportData <JSONdump>]                           \\
                 [--reportDataFile <file>]                           \\
-                [--then retrieve|status] [--withFeedBack]           \\
+                [--then retrieve|status|push|register]              \\
+                [--withFeedBack]                                    \\
                 [--intraSeriesRetrieveDelay <seconds>]              \\
                 [--json]                                            \\
                 [--waitForUserTerminate]                            \\
@@ -133,7 +135,7 @@ def synopsis(ab_shortOnly = False):
         [--reportDataFile <file>]
         A file containing (typically upstream) JSON report data.
 
-        [--then retrieve|status|search|push]
+        [--then retrieve|status|search|push|register]
         If specified, define an operation to do "next". This can be a comma
         separated string of actions, in which case each action will be
         executed in turn over the input space.
