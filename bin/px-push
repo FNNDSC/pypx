@@ -18,6 +18,7 @@ from    terminaltables      import SingleTable
 from    pfmisc._colors      import Colors
 import  json
 import  pypx
+from    pypx.push           import parser_setup, parser_interpret
 import  socket
 import  pudb
 
@@ -126,11 +127,7 @@ def synopsis(ab_shortOnly = False):
 
         [--db <dblogbasepath>]
         A path to the base directory of the DB contents/files that track
-        received files. This is typically the <logDir> of the `px-repack`
-        process that repacks incoming DICOM files. Specifying this path
-        allows `px-find` to access db tables needed to track the number
-        of DICOM files that are received in the case of a 'retrieve'
-        event.
+        received files. This is typically the <logDir> of the `smdb` DB.
 
         [--xcrdir|-p <xcrdir>]
         A directory that contains a DICOM file to process.
@@ -215,6 +212,7 @@ def synopsis(ab_shortOnly = False):
     EXAMPLES
 
         px-push                                                     \\
+            --db /home/dicom/log                                    \\
             --swiftIP 192.168.1.216                                 \\
             --swiftPort 8080                                        \\
             --swiftLogin chris:chris1234                            \\
@@ -226,6 +224,7 @@ def synopsis(ab_shortOnly = False):
             --SeriesInstanceUID 2.3.5.6.7                           \\
 
         px-push                                                     \\
+            --db /home/dicom/log                                    \\
             --swiftIP 192.168.1.216                                 \\
             --swiftPort 8080                                        \\
             --swiftLogin chris:chris1234                            \\
@@ -249,215 +248,216 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
+args = parser_interpret(parser_setup(str_desc))
 
-parser = ArgumentParser(
-            description         = str_desc,
-            formatter_class     = RawTextHelpFormatter
-        )
+# parser = ArgumentParser(
+#             description         = str_desc,
+#             formatter_class     = RawTextHelpFormatter
+#         )
 
-# db access settings
-parser.add_argument(
-    '--db',
-    action  = 'store',
-    dest    = 'dblogbasepath',
-    type    = str,
-    default = '/tmp/log',
-    help    = 'path to base dir of receipt database')
+# # db access settings
+# parser.add_argument(
+#     '--db',
+#     action  = 'store',
+#     dest    = 'dblogbasepath',
+#     type    = str,
+#     default = '/tmp/log',
+#     help    = 'path to base dir of receipt database')
 
-# File/dir settings
-parser.add_argument(
-    '-p', '--xcrdir',
-    action  = 'store',
-    dest    = 'str_xcrdir',
-    type    = str,
-    default = '/tmp',
-    help    = 'Directory containing a received study'
-    )
-parser.add_argument(
-    '-f', '--xcrfile',
-    action  = 'store',
-    dest    = 'str_xcrfile',
-    type    = str,
-    default = '',
-    help    = 'File in <xcrdir> to process'
-    )
-parser.add_argument(
-    '--xcrdirfile',
-    action  = 'store',
-    dest    = 'str_xcrdirfile',
-    type    = str,
-    default = '',
-    help    = 'Fully qualified file to process'
-    )
-parser.add_argument(
-    '--parseAllFilesWithSubStr',
-    action  = 'store',
-    dest    = 'str_filesubstr',
-    type    = str,
-    default = '',
-    help    = 'Parse all files in <xcrdir> that contain <substr>'
-    )
+# # File/dir settings
+# parser.add_argument(
+#     '-p', '--xcrdir',
+#     action  = 'store',
+#     dest    = 'str_xcrdir',
+#     type    = str,
+#     default = '/tmp',
+#     help    = 'Directory containing a received study'
+#     )
+# parser.add_argument(
+#     '-f', '--xcrfile',
+#     action  = 'store',
+#     dest    = 'str_xcrfile',
+#     type    = str,
+#     default = '',
+#     help    = 'File in <xcrdir> to process'
+#     )
+# parser.add_argument(
+#     '--xcrdirfile',
+#     action  = 'store',
+#     dest    = 'str_xcrdirfile',
+#     type    = str,
+#     default = '',
+#     help    = 'Fully qualified file to process'
+#     )
+# parser.add_argument(
+#     '--parseAllFilesWithSubStr',
+#     action  = 'store',
+#     dest    = 'str_filesubstr',
+#     type    = str,
+#     default = '',
+#     help    = 'Parse all files in <xcrdir> that contain <substr>'
+#     )
 
-# PACS settings
-parser.add_argument(
-    '--aet',
-    action  = 'store',
-    dest    = 'aet',
-    type    = str,
-    default = 'CHRIS-ULTRON-AET',
-    help    = 'aet')
-parser.add_argument(
-    '--aec',
-    action  = 'store',
-    dest    = 'aec',
-    type    = str,
-    default = 'CHRIS-ULTRON-AEC',
-    help    = 'aec')
-parser.add_argument(
-    '--PACSserverIP',
-    action  = 'store',
-    dest    = 'str_PACSserverIP',
-    type    = str,
-    default = '192.168.1.110',
-    help    = 'PACS server IP')
-parser.add_argument(
-    '--PACSserverPort',
-    action  = 'store',
-    dest    = 'str_PACSserverPort',
-    type    = str,
-    default = '4242',
-    help    = 'PACS server port')
-parser.add_argument(
-    '--movescu',
-    action  = 'store',
-    dest    = 'movescu',
-    type    = str,
-    default = '/usr/bin/movescu',
-    help    = '"movescu"" executable absolute location')
+# # PACS settings
+# parser.add_argument(
+#     '--aet',
+#     action  = 'store',
+#     dest    = 'aet',
+#     type    = str,
+#     default = 'CHRIS-ULTRON-AET',
+#     help    = 'aet')
+# parser.add_argument(
+#     '--aec',
+#     action  = 'store',
+#     dest    = 'aec',
+#     type    = str,
+#     default = 'CHRIS-ULTRON-AEC',
+#     help    = 'aec')
+# parser.add_argument(
+#     '--PACSserverIP',
+#     action  = 'store',
+#     dest    = 'str_PACSserverIP',
+#     type    = str,
+#     default = '192.168.1.110',
+#     help    = 'PACS server IP')
+# parser.add_argument(
+#     '--PACSserverPort',
+#     action  = 'store',
+#     dest    = 'str_PACSserverPort',
+#     type    = str,
+#     default = '4242',
+#     help    = 'PACS server port')
+# parser.add_argument(
+#     '--movescu',
+#     action  = 'store',
+#     dest    = 'movescu',
+#     type    = str,
+#     default = '/usr/bin/movescu',
+#     help    = '"movescu"" executable absolute location')
 
-# Swift settings
-parser.add_argument(
-    '--swiftIP',
-    action  = 'store',
-    dest    = 'str_swiftIP',
-    type    = str,
-    default = '',
-    help    = 'swift IP')
-parser.add_argument(
-    '--swiftPort',
-    action  = 'store',
-    dest    = 'str_swiftPort',
-    type    = str,
-    default = '',
-    help    = 'swift port')
-parser.add_argument(
-    '--swiftLogin',
-    action  = 'store',
-    dest    = 'str_swiftLogin',
-    type    = str,
-    default = '',
-    help    = 'swift login')
-parser.add_argument(
-    '--swiftServicesPACS',
-    action  = 'store',
-    dest    = 'str_swiftServicesPACS',
-    type    = str,
-    default = '',
-    help    = 'swift PACS location within SERVICE/PACS to push files')
-parser.add_argument(
-    "--swiftPackEachDICOM",
-    help    = "If specified, determine the pack location of _each_ DICOM file",
-    dest    = 'b_swiftPackEachDICOM',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--swiftBaseLocation',
-    action  = 'store',
-    dest    = 'str_swiftBaseLocation',
-    type    = str,
-    default = '',
-    help    = 'swift base location to push files')
+# # Swift settings
+# parser.add_argument(
+#     '--swiftIP',
+#     action  = 'store',
+#     dest    = 'str_swiftIP',
+#     type    = str,
+#     default = '',
+#     help    = 'swift IP')
+# parser.add_argument(
+#     '--swiftPort',
+#     action  = 'store',
+#     dest    = 'str_swiftPort',
+#     type    = str,
+#     default = '',
+#     help    = 'swift port')
+# parser.add_argument(
+#     '--swiftLogin',
+#     action  = 'store',
+#     dest    = 'str_swiftLogin',
+#     type    = str,
+#     default = '',
+#     help    = 'swift login')
+# parser.add_argument(
+#     '--swiftServicesPACS',
+#     action  = 'store',
+#     dest    = 'str_swiftServicesPACS',
+#     type    = str,
+#     default = '',
+#     help    = 'swift PACS location within SERVICE/PACS to push files')
+# parser.add_argument(
+#     "--swiftPackEachDICOM",
+#     help    = "If specified, determine the pack location of _each_ DICOM file",
+#     dest    = 'b_swiftPackEachDICOM',
+#     action  = 'store_true',
+#     default = False
+# )
+# parser.add_argument(
+#     '--swiftBaseLocation',
+#     action  = 'store',
+#     dest    = 'str_swiftBaseLocation',
+#     type    = str,
+#     default = '',
+#     help    = 'swift base location to push files')
 
-# CUBE settings
-parser.add_argument(
-    '--CUBEURL',
-    action  = 'store',
-    dest    = 'str_CUBEURL',
-    type    = str,
-    default = 'http://localhost:8000/api/v1/',
-    help    = 'CUBE URL'
-    )
-parser.add_argument(
-    '--CUBEusername',
-    action  = 'store',
-    dest    = 'str_CUBEusername',
-    type    = str,
-    default = 'chris',
-    help    = 'Username with which to log into CUBE'
-    )
-parser.add_argument(
-    '--CUBEuserpasswd',
-    action  = 'store',
-    dest    = 'str_CUBEuserpasswd',
-    type    = str,
-    default = 'chris1234',
-    help    = 'CUBE user password'
-    )
+# # CUBE settings
+# parser.add_argument(
+#     '--CUBEURL',
+#     action  = 'store',
+#     dest    = 'str_CUBEURL',
+#     type    = str,
+#     default = 'http://localhost:8000/api/v1/',
+#     help    = 'CUBE URL'
+#     )
+# parser.add_argument(
+#     '--CUBEusername',
+#     action  = 'store',
+#     dest    = 'str_CUBEusername',
+#     type    = str,
+#     default = 'chris',
+#     help    = 'Username with which to log into CUBE'
+#     )
+# parser.add_argument(
+#     '--CUBEuserpasswd',
+#     action  = 'store',
+#     dest    = 'str_CUBEuserpasswd',
+#     type    = str,
+#     default = 'chris1234',
+#     help    = 'CUBE user password'
+#     )
 
 
-# Data settings
-parser.add_argument(
-    '--SeriesInstanceUID',
-    action  = 'store',
-    dest    = 'SeriesInstanceUID',
-    type    = str,
-    default = '',
-    help    = 'Series Instance UID')
-parser.add_argument(
-    '--StudyInstanceUID',
-    action  = 'store',
-    dest    = 'StudyInstanceUID',
-    type    = str,
-    default = '',
-    help    = 'Study Instance UID')
+# # Data settings
+# parser.add_argument(
+#     '--SeriesInstanceUID',
+#     action  = 'store',
+#     dest    = 'SeriesInstanceUID',
+#     type    = str,
+#     default = '',
+#     help    = 'Series Instance UID')
+# parser.add_argument(
+#     '--StudyInstanceUID',
+#     action  = 'store',
+#     dest    = 'StudyInstanceUID',
+#     type    = str,
+#     default = '',
+#     help    = 'Study Instance UID')
 
-parser.add_argument(
-    "-v", "--verbosity",
-    help    = "verbosity level for app",
-    dest    = 'verbosity',
-    type    = int,
-    default = 1)
-parser.add_argument(
-    "--json",
-    help    = "return a JSON payload",
-    dest    = 'json',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-x", "--desc",
-    help    = "long synopsis",
-    dest    = 'desc',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-y", "--synopsis",
-    help    = "short synopsis",
-    dest    = 'synopsis',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--version',
-    help    = 'if specified, print version number',
-    dest    = 'b_version',
-    action  = 'store_true',
-    default = False
-)
+# parser.add_argument(
+#     "-v", "--verbosity",
+#     help    = "verbosity level for app",
+#     dest    = 'verbosity',
+#     type    = int,
+#     default = 1)
+# parser.add_argument(
+#     "--json",
+#     help    = "return a JSON payload",
+#     dest    = 'json',
+#     action  = 'store_true',
+#     default = False
+# )
+# parser.add_argument(
+#     "-x", "--desc",
+#     help    = "long synopsis",
+#     dest    = 'desc',
+#     action  = 'store_true',
+#     default = False
+# )
+# parser.add_argument(
+#     "-y", "--synopsis",
+#     help    = "short synopsis",
+#     dest    = 'synopsis',
+#     action  = 'store_true',
+#     default = False
+# )
+# parser.add_argument(
+#     '--version',
+#     help    = 'if specified, print version number',
+#     dest    = 'b_version',
+#     action  = 'store_true',
+#     default = False
+# )
 
-args        = parser.parse_args()
+# args        = parser.parse_args()
 
 if args.desc or args.synopsis:
     print(str_desc)
