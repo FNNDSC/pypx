@@ -10,13 +10,14 @@
 #
 
 import      sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from        argparse            import RawTextHelpFormatter
 from        argparse            import ArgumentParser
 from        pfmisc._colors      import Colors
 import      pypx
 from        pypx                import smdb
+from        pypx.smdb           import parser_setup, parser_interpret, parser_JSONinterpret
 
 import      json
 
@@ -91,12 +92,16 @@ def synopsis(ab_shortOnly = False):
         A fully qualified dir and file specifier. If passed, the script
         will separate into dir and file parts.
 
+        [--SeriesInstanceUID <seriesInstanceUID>]
+        SMDB behaviour that operates on a series instance UID.
+
         [--action <action>]
         Some action to perform. Valid actions include:
 
             * mapsUpdateForFile
             * endOfStudy
             * seriesMap_DBtablesGet
+            * seriesDirLocation_get
 
         [--logdir|-l <logdir>]
         The directory containing log files relevant to smdb operation.
@@ -147,96 +152,94 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
-parser = ArgumentParser(
-            description         = str_desc,
-            formatter_class     = RawTextHelpFormatter
-        )
+parser      = parser_setup(str_desc)
+args        = parser_interpret(parser)
 
 # Settings
-parser.add_argument(
-    '-p', '--xcrdir',
-    action  = 'store',
-    dest    = 'str_xcrdir',
-    type    = str,
-    default = '/tmp',
-    help    = 'Directory containing a received study'
-    )
-parser.add_argument(
-    '-f', '--xcrfile',
-    action  = 'store',
-    dest    = 'str_xcrfile',
-    type    = str,
-    default = '',
-    help    = 'File in <xcrdir> to process'
-    )
-parser.add_argument(
-    '--xcrdirfile',
-    action  = 'store',
-    dest    = 'str_xcrdirfile',
-    type    = str,
-    default = '',
-    help    = 'Fully qualified file to process'
-    )
-parser.add_argument(
-    '--action',
-    action  = 'store',
-    dest    = 'str_action',
-    type    = str,
-    default = '',
-    help    = 'DB action to perform'
-    )
-parser.add_argument(
-    '-l', '--logdir',
-    action  = 'store',
-    dest    = 'str_logDir',
-    type    = str,
-    default = '/tmp/log',
-    help    = 'Directory to store log files'
-    )
+# parser.add_argument(
+#     '-p', '--xcrdir',
+#     action  = 'store',
+#     dest    = 'str_xcrdir',
+#     type    = str,
+#     default = '/tmp',
+#     help    = 'Directory containing a received study'
+#     )
+# parser.add_argument(
+#     '-f', '--xcrfile',
+#     action  = 'store',
+#     dest    = 'str_xcrfile',
+#     type    = str,
+#     default = '',
+#     help    = 'File in <xcrdir> to process'
+#     )
+# parser.add_argument(
+#     '--xcrdirfile',
+#     action  = 'store',
+#     dest    = 'str_xcrdirfile',
+#     type    = str,
+#     default = '',
+#     help    = 'Fully qualified file to process'
+#     )
+# parser.add_argument(
+#     '--action',
+#     action  = 'store',
+#     dest    = 'str_action',
+#     type    = str,
+#     default = '',
+#     help    = 'DB action to perform'
+#     )
+# parser.add_argument(
+#     '-l', '--logdir',
+#     action  = 'store',
+#     dest    = 'str_logDir',
+#     type    = str,
+#     default = '/tmp/log',
+#     help    = 'Directory to store log files'
+#     )
 
-parser.add_argument(
-    '--cleanup',
-    action  = 'store_true',
-    dest    = 'b_cleanup',
-    default = False,
-    help    = 'If specified, then cleanup temporary files'
-    )
-parser.add_argument(
-    '--debug',
-    action  = 'store_true',
-    dest    = 'b_debug',
-    default = False,
-    help    = 'If specified, then also log debug info to <logdir>'
-    )
-parser.add_argument(
-    "-v", "--verbosity",
-    help    = "verbosity level for app",
-    dest    = 'verbosity',
-    type    = int,
-    default = 1)
-parser.add_argument(
-    "-x", "--desc",
-    help    = "show long synopsis",
-    dest    = 'b_desc',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-y", "--synopsis",
-    help    = "show short synopsis",
-    dest    = 'b_synopsis',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--version',
-    help    = 'if specified, print version number',
-    dest    = 'b_version',
-    action  = 'store_true',
-    default = False
-)
+# parser.add_argument(
+#     '--cleanup',
+#     action  = 'store_true',
+#     dest    = 'b_cleanup',
+#     default = False,
+#     help    = 'If specified, then cleanup temporary files'
+#     )
+# parser.add_argument(
+#     '--debug',
+#     action  = 'store_true',
+#     dest    = 'b_debug',
+#     default = False,
+#     help    = 'If specified, then also log debug info to <logdir>'
+#     )
+# parser.add_argument(
+#     "-v", "--verbosity",
+#     help    = "verbosity level for app",
+#     dest    = 'verbosity',
+#     type    = int,
+#     default = 1)
+# parser.add_argument(
+#     "-x", "--desc",
+#     help    = "show long synopsis",
+#     dest    = 'b_desc',
+#     action  = 'store_true',
+#     default = False
+# )
+# parser.add_argument(
+#     "-y", "--synopsis",
+#     help    = "show short synopsis",
+#     dest    = 'b_synopsis',
+#     action  = 'store_true',
+#     default = False
+# )
+# parser.add_argument(
+#     '--version',
+#     help    = 'if specified, print version number',
+#     dest    = 'b_version',
+#     action  = 'store_true',
+#     default = False
+# )
 
-args        = parser.parse_args()
+# args        = parser.parse_args()
 
 if args.b_desc or args.b_synopsis:
     print(str_desc)
