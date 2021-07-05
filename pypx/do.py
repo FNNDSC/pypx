@@ -130,7 +130,7 @@ def parser_setup(str_desc):
 
 def parser_interpret(parser, *args):
     """
-    Interpret the list space of *args, or sys.argv[1:] if 
+    Interpret the list space of *args, or sys.argv[1:] if
     *args is empty
     """
     if len(args):
@@ -185,13 +185,19 @@ class Do(Base):
         # current namespace.
         #
         # NOTE:
-        # * the merge is on the 'dest' of the namespace
+        #
+        # * the merge is on the *dest* of the argparse namespace, not
+        #   the CLI keys -- so on 'b_json' and not '--json' for example.
+        #
         # * this merge WILL OVERWRITE/CLOBBER any CLI specified
         #   for this app in favor of upstream ones *except* for
         #   the 'withFeedBack' and 'json'!
-        # this merge is on the 'dest' of the namespace, not the
-        # CLI keys! Also, only update values in the original
-        # arg space that are shadowed by the upstream args.
+        #
+        # * CLI dest keys that are not in the CLI space of this app
+        #   are nonetheless still added to the arg structure -- this
+        #   allows for downstream tranmission to apps with different
+        #   CLI dest spaces.
+
         # pudb.set_trace()
         if 'reportData' in arg.keys():
             if 'args' in arg['reportData']:
@@ -284,10 +290,11 @@ class Do(Base):
             nonlocal series, studyIndex, seriesIndex
             seriesInstances : int   = series['NumberOfSeriesRelatedInstances']['value']
             d_then          : dict  = {}
-            d_db            : dict  = db.seriesMapMeta(
-                                        'NumberOfSeriesRelatedInstances',
-                                        seriesInstances
-                                    )
+            d_db            : dict  = {}
+            d_db            = db.seriesMetaFile(
+                                    'NumberOfSeriesRelatedInstances',
+                                    seriesInstances
+            )
             str_line        = presenter.seriesRetrieve_print(
                 studyIndex  = studyIndex, seriesIndex = seriesIndex
             )
@@ -315,7 +322,7 @@ class Do(Base):
             series['PACS_retrieve'] = {
                 'requested' :   '%s' % datetime.now()
             }
-            d_db    = db.seriesMapMeta('retrieve', d_then)
+            d_db    = db.seriesMetaFile('retrieve', d_then)
             return d_then
 
         def status_do() -> dict:
