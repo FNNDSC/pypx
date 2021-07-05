@@ -12,7 +12,246 @@ from    os.path             import  isfile, join
 from    .pfstorage          import  swiftStorage
 
 # PYPX modules
-from .base import Base
+import  pypx.smdb
+from    .base               import Base
+from    argparse            import  Namespace, ArgumentParser
+from    argparse            import  RawTextHelpFormatter
+
+def parser_setup(str_desc):
+    parser = ArgumentParser(
+                description         = str_desc,
+                formatter_class     = RawTextHelpFormatter
+            )
+
+    # db access settings
+    parser.add_argument(
+        '--db',
+        action  = 'store',
+        dest    = 'dblogbasepath',
+        type    = str,
+        default = '/tmp/log',
+        help    = 'path to base dir of receipt database')
+
+    # File/dir settings
+    parser.add_argument(
+        '-p', '--xcrdir',
+        action  = 'store',
+        dest    = 'str_xcrdir',
+        type    = str,
+        default = '/tmp',
+        help    = 'Directory containing a received study'
+        )
+    parser.add_argument(
+        '-f', '--xcrfile',
+        action  = 'store',
+        dest    = 'str_xcrfile',
+        type    = str,
+        default = '',
+        help    = 'File in <xcrdir> to process'
+        )
+    parser.add_argument(
+        '--xcrdirfile',
+        action  = 'store',
+        dest    = 'str_xcrdirfile',
+        type    = str,
+        default = '',
+        help    = 'Fully qualified file to process'
+        )
+    parser.add_argument(
+        '--parseAllFilesWithSubStr',
+        action  = 'store',
+        dest    = 'str_filesubstr',
+        type    = str,
+        default = '',
+        help    = 'Parse all files in <xcrdir> that contain <substr>'
+        )
+
+    # PACS settings
+    parser.add_argument(
+        '--aet',
+        action  = 'store',
+        dest    = 'aet',
+        type    = str,
+        default = 'CHRIS-ULTRON-AET',
+        help    = 'aet')
+    parser.add_argument(
+        '--aec',
+        action  = 'store',
+        dest    = 'aec',
+        type    = str,
+        default = 'CHRIS-ULTRON-AEC',
+        help    = 'aec')
+    parser.add_argument(
+        '--PACSserverIP',
+        action  = 'store',
+        dest    = 'str_PACSserverIP',
+        type    = str,
+        default = '192.168.1.110',
+        help    = 'PACS server IP')
+    parser.add_argument(
+        '--PACSserverPort',
+        action  = 'store',
+        dest    = 'str_PACSserverPort',
+        type    = str,
+        default = '4242',
+        help    = 'PACS server port')
+    parser.add_argument(
+        '--movescu',
+        action  = 'store',
+        dest    = 'movescu',
+        type    = str,
+        default = '/usr/bin/movescu',
+        help    = '"movescu"" executable absolute location')
+
+    # Swift settings
+    parser.add_argument(
+        '--swiftIP',
+        action  = 'store',
+        dest    = 'str_swiftIP',
+        type    = str,
+        default = '',
+        help    = 'swift IP')
+    parser.add_argument(
+        '--swiftPort',
+        action  = 'store',
+        dest    = 'str_swiftPort',
+        type    = str,
+        default = '',
+        help    = 'swift port')
+    parser.add_argument(
+        '--swiftLogin',
+        action  = 'store',
+        dest    = 'str_swiftLogin',
+        type    = str,
+        default = '',
+        help    = 'swift login')
+    parser.add_argument(
+        '--swiftServicesPACS',
+        action  = 'store',
+        dest    = 'str_swiftServicesPACS',
+        type    = str,
+        default = '',
+        help    = 'swift PACS location within SERVICE/PACS to push files')
+    parser.add_argument(
+        "--swiftPackEachDICOM",
+        help    = "If specified, determine the pack location of _each_ DICOM file",
+        dest    = 'b_swiftPackEachDICOM',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--swiftBaseLocation',
+        action  = 'store',
+        dest    = 'str_swiftBaseLocation',
+        type    = str,
+        default = '',
+        help    = 'swift base location to push files')
+
+    # CUBE settings
+    parser.add_argument(
+        '--CUBEURL',
+        action  = 'store',
+        dest    = 'str_CUBEURL',
+        type    = str,
+        default = 'http://localhost:8000/api/v1/',
+        help    = 'CUBE URL'
+        )
+    parser.add_argument(
+        '--CUBEusername',
+        action  = 'store',
+        dest    = 'str_CUBEusername',
+        type    = str,
+        default = 'chris',
+        help    = 'Username with which to log into CUBE'
+        )
+    parser.add_argument(
+        '--CUBEuserpasswd',
+        action  = 'store',
+        dest    = 'str_CUBEuserpasswd',
+        type    = str,
+        default = 'chris1234',
+        help    = 'CUBE user password'
+        )
+
+
+    # Data settings
+    parser.add_argument(
+        '--SeriesInstanceUID',
+        action  = 'store',
+        dest    = 'SeriesInstanceUID',
+        type    = str,
+        default = '',
+        help    = 'Series Instance UID')
+    parser.add_argument(
+        '--StudyInstanceUID',
+        action  = 'store',
+        dest    = 'StudyInstanceUID',
+        type    = str,
+        default = '',
+        help    = 'Study Instance UID')
+
+    parser.add_argument(
+        "-v", "--verbosity",
+        help    = "verbosity level for app",
+        dest    = 'verbosity',
+        type    = int,
+        default = 1)
+    parser.add_argument(
+        "--json",
+        help    = "return a JSON payload",
+        dest    = 'json',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-x", "--desc",
+        help    = "long synopsis",
+        dest    = 'desc',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-y", "--synopsis",
+        help    = "short synopsis",
+        dest    = 'synopsis',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--version',
+        help    = 'if specified, print version number',
+        dest    = 'b_version',
+        action  = 'store_true',
+        default = False
+    )
+
+    return parser
+
+def parser_interpret(parser, *args):
+    """
+    Interpret the list space of *args, or sys.argv[1:] if 
+    *args is empty
+    """
+    if len(args):
+        args    = parser.parse_args(*args)
+    else:
+        args    = parser.parse_args(sys.argv[1:])
+    return args
+
+def parser_JSONinterpret(parser, d_JSONargs):
+    """
+    Interpret a JSON dictionary in lieu of CLI.
+
+    For each <key>:<value> in the d_JSONargs, append to
+    list two strings ["--<key>", "<value>"] and then
+    argparse.
+    """
+    l_args  = []
+    for k, v in d_JSONargs.items():
+        l_args.append('--%s' % k)
+        if type(v) == type(True): continue
+        l_args.append('%s' % v)
+    return parser_interpret(parser, l_args)
 
 class Push(Base):
     """
@@ -35,14 +274,31 @@ class Push(Base):
         self.l_files        : list  = []
 
         # Check if an upstream 'reportData' exists, and if so
-        # merge those args with the current namespace:
+        # merge those the upstream process's CLI args into the
+        # current namespace.
+        #
+        # NOTE:
+        #
+        # * the merge is on the *dest* of the argparse namespace, not
+        #   the CLI keys -- so on 'b_json' and not '--json' for example.
+        #
+        # * this merge WILL OVERWRITE/CLOBBER any CLI specified
+        #   for this app in favor of upstream ones *except* for
+        #   the 'withFeedBack' and 'json'!
+        #
+        # * CLI dest keys that are not in the CLI space of this app
+        #   are nonetheless still added to the arg structure -- this
+        #   allows for downstream tranmission to apps with different
+        #   CLI dest spaces.
+
+        # pudb.set_trace()
         if 'reportData' in arg.keys():
-            d_argCopy           = arg.copy()
-            # "merge" these 'arg's with upstream.
-            arg.update(arg['reportData']['args'])
-            # Since this might overwrite some args specific to this
-            # app, we update again to the copy.
-            arg.update(d_argCopy)
+            if 'args' in arg['reportData']:
+                for k,v in arg['reportData']['args'].items():
+                    # if k in arg and len('%s' % v):
+                    if len('%s' % v):
+                        if k not in ['json', 'withFeedBack']:
+                            arg[k] = v
 
         super(Push, self).__init__(arg)
         self.dp             = pfmisc.debug(
@@ -52,20 +308,6 @@ class Push(Base):
         )
         self.log            = self.dp.qprint
         self.arg['name']    = "Push/PfStorage"
-
-    def movescu_command(self, opt={}) -> str:
-        command = '-S --move ' + opt['aet']
-        command += ' --timeout 5'
-        command += ' -k QueryRetrieveLevel=SERIES'
-        command += ' -k StudyInstanceUID='  + opt['study_uid']
-        command += ' -k SeriesInstanceUID=' + opt['series_uid']
-
-        str_cmd     = "%s %s %s" % (
-                        self.movescu,
-                        command,
-                        self.commandSuffix()
-        )
-        return str_cmd
 
     def pushToPACS_true(self):
         """
