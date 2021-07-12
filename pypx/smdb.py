@@ -661,39 +661,48 @@ class SMDB():
                 }, fj)
         return self.d_studyMeta
 
-    def seriesMetaFile(self, *args)   -> dict:
+    def seriesData(self, str_table, *args)   -> dict:
         """
         This is the main entry point to performing set/get operations on the
-        seriesMetaFile.
+        seriesData "tables".
 
-        If called without any parameters,
+        If called without any parameters other than the table name,
 
-                d_data = seriesMetaFile()
+                d_data = seriesData('meta')
 
         the method will return the whole meta file contents within the 'meta'
         field return, i.e. d_data['meta']
 
         If called with a field name,
 
-                d_data = seriesMetaFile('NumberOfSeriesRelatedInstances')
+                d_data = seriesData('retrieve', 'NumberOfSeriesRelatedInstances')
 
-        will return a status bool on whether or not that field exists and the
-        contents of that specific field in a similarly named key,
+        will return a status bool on whether or not that field exists in the 
+        table, and the contents of that specific field in a similarly named key,
 
                 d_data['NumberOfSeriesRelatedIntances']
 
-        If called with a field name and value, set that specific field in the
-        file to the passed value, and return a named key with that value
+        If called with a field name and value for a table, set that specific 
+        field in the table file to the passed value, and return a named key
+        with that value
 
-                d_data = seriesMetaFile('NumberOfSeriesRelatedInstances', 10)
+                d_data = seriesData('retrieve', 'NumberOfSeriesRelatedInstances', 10)
 
                 d_data['NumberOfSeriesRelatedIntances'] == 10
+
+        NOTE:
+
+            * A "write" to a seriesMetaFile is always followed by a read check!
+              The post-write read check is to be a failsafe to catch any edge 
+              cases where a write *might* have gotten lost due to access 
+              collisions.
 
         """
         b_status        : bool          = False
         str_error       : str           = 'File does not exist at time of read'
         str_field       : str           = ""
         d_meta          : dict          = {}
+        d_check         : dict          = {}
         d_ret           : dict          = {}
         d_seriesTable   : dict          = self.seriesData_DBtablesGet(
                 SeriesInstanceUID       = self.d_DICOM['SeriesInstanceUID']
@@ -702,8 +711,9 @@ class SMDB():
         if d_seriesTable['status']:
 
             # The "read" from file...
-            if d_seriesTable['seriesMetaFile']['exists']:
-                with open(d_seriesTable['seriesMetaFile']['name']) as fj:
+            str_tableName   = 'series-%s' % str_table
+            if d_seriesTable[str_tableName]['exists']:
+                with open(d_seriesTable[str_tableName]['name']) as fj:
                     self.json_read(fj, d_meta)
                 fj.close()
                 if len(str_field):
@@ -723,9 +733,10 @@ class SMDB():
             # Optional "write" info to file... if file does not exist yet
             # this code will create it.
             if len(args) == 2:
-                d_meta[str_field]       = args[1]
+                value                   = args[1]
+                d_meta[str_field]       = value
                 try:
-                    with open(d_seriesTable['seriesMetaFile']['name'], 'w') as fj:
+                    with open(d_seriesTable[str_tableName]['name'], 'w') as fj:
                         self.json_write(d_meta, fj)
                     fj.close()
                     str_error           = ''
@@ -734,6 +745,12 @@ class SMDB():
                 except Exception as e:
                     str_error           = '%s' % e
                     b_status            = False
+                # # Tight loop to check if str_field has in fact been written
+                # d_check[str_field]      = None
+                # d_check                 = self.seriesMetaFile(str_field)
+                # while d_check[str_field] != value:
+                #     d_check             = self.seriesMetaFile(str_field, value)
+                #     d_check             = self.seriesMetaFile(str_field)
         return {
             'status'        : b_status,
             'error'         : str_error,
@@ -858,6 +875,9 @@ class SMDB():
         else:
             d_count['state']    = 'ImagesInFlight'
             d_count['status']   = False
+        if d_count['requested']['count'] == -1:
+            d_count['state']    = 'ImagesReceiveCountOK'
+            d_count['status']   = True
         return d_count
 
     def series_statusGet(self, str_SeriesInstanceUID) -> dict:
@@ -868,7 +888,7 @@ class SMDB():
         d_seriesTable   : dict  = self.seriesData_DBtablesGet(
                             SeriesInstanceUID = str_SeriesInstanceUID
         )
-        b_status        = d_seriesTable['seriesMetaFile']['exists']
+        b_status        = d_seriesTable['series-meta']['exists']
         return {
             'status'        : b_status,
             'seriesTable'   : d_seriesTable
@@ -886,14 +906,17 @@ class SMDB():
         """
         b_status        : bool  = False
         d_DICOM         = self.d_DICOM.copy()
+        count           = -1
         self.d_DICOM['SeriesInstanceUID'] = str_SeriesInstanceUID
         d_get           : dict  = \
-            self.seriesMetaFile('NumberOfSeriesRelatedInstances')
+            self.seriesData('retrieve', 'NumberOfSeriesRelatedInstances')
         self.d_DICOM    = d_DICOM.copy()
         b_status        = d_get['status']
+        if b_status:
+            count       = int(d_get['NumberOfSeriesRelatedInstances'])
         return {
             'status'    :   b_status,
-            'count'     :   int(d_get['NumberOfSeriesRelatedInstances'])
+            'count'     :   count
         }
 
     def series_receivedFilesCount(self, str_SeriesInstanceUID) -> dict:
@@ -910,7 +933,7 @@ class SMDB():
         l_files             : list  = []
         str_processedDir    : str   = os.path.join( self.args.str_logDir,
                                                     self.str_seriesData,
-                                                    str_SeriesInstanceUID)
+                                                    str_SeriesInstanceUID) + '-img'
         if os.path.isdir(str_processedDir):
             b_status        = True
             l_files         : list  = [
@@ -932,20 +955,24 @@ class SMDB():
         str_outputFile                  = ''
         str_seriesBaseDir               = ''
         str_seriesMetaFile              = ''
+        str_seriesRetrieve              = ''
         str_seriesImageFile             = ''
         for k, v in kwargs.items():
             if k == 'SeriesInstanceUID' :   str_SeriesInstanceUID   = v
             if k == 'outputFile'        :   str_outputFile          = v
         if len(str_SeriesInstanceUID):
             b_status                    = True
-            str_seriesBaseDir           = '%s/%s-img'           % \
+            str_seriesBaseDir           = '%s/%s-img'               % \
                     (self.str_seriesDataDir,
                      str_SeriesInstanceUID)
-            str_seriesMetaFile           = '%s/%s-meta.json' % \
+            str_seriesMetaFile          = '%s/%s-meta.json'         % \
+                    (self.str_seriesDataDir,
+                     str_SeriesInstanceUID)
+            str_seriesRetrieveFile      = '%s/%s-retrieve.json'     % \
                     (self.str_seriesDataDir,
                      str_SeriesInstanceUID)
             if len(str_outputFile):
-                str_seriesImageFile    = '%s/%s.json'  % (
+                str_seriesImageFile    = '%s/%s.json'               % (
                     str_seriesBaseDir, str_outputFile
                 )
         return {
@@ -954,11 +981,15 @@ class SMDB():
                 'name'      :   str_seriesBaseDir,
                 'exists'    :   os.path.isdir(str_seriesBaseDir)
             },
-            'seriesMetaFile'        : {
+            'series-meta'        : {
                 'name'      :   str_seriesMetaFile,
                 'exists'    :   os.path.isfile(str_seriesMetaFile)
             },
-            'seriesImageFile'       : {
+            'series-retrieve'    : {
+                'name'      :   str_seriesRetrieveFile,
+                'exists'    :   os.path.isfile(str_seriesRetrieveFile)
+            },
+            'series-image'       : {
                 'name'      :   str_seriesImageFile,
                 'exists'    :   os.path.isfile(str_seriesImageFile)
             }
@@ -999,8 +1030,8 @@ class SMDB():
                 except Exception as e:
                     d_seriesTables['error']     = 'Some error occured in output dir creation.'
                     d_seriesTables['status']    = False
-            if d_seriesTables['seriesMetaFile']['exists']:
-                with open(d_seriesTables['seriesMetaFile']['name']) as fj:
+            if d_seriesTables['series-meta']['exists']:
+                with open(d_seriesTables['series-meta']['name']) as fj:
                     self.json_read(fj, self.d_seriesMeta)
                 fj.close()
             else:
@@ -1013,8 +1044,8 @@ class SMDB():
             Initialize some data within a single JSON image file.
             """
             self.d_seriesImage.clear()
-            if d_seriesTables['seriesImageFile']['exists']:
-                with open(d_seriesTables['seriesImageFile']['name']) as fj:
+            if d_seriesTables['series-image']['exists']:
+                with open(d_seriesTables['series-image']['name']) as fj:
                     self.json_read(fj, self.d_seriesImage)
                 fj.close()
             if self.d_DICOM['SeriesInstanceUID'] not in self.d_seriesImage.keys():
@@ -1070,7 +1101,7 @@ class SMDB():
             """
             nonlocal d_seriesTables
             if d_update['status']:
-                with open(d_seriesTables['seriesImageFile']['name'], 'w') as fj:
+                with open(d_seriesTables['series-image']['name'], 'w') as fj:
                     self.json_write(d_update['image'], fj)
                 fj.close()
             return {
@@ -1092,7 +1123,8 @@ class SMDB():
         self.seriesModel_init()
 
         # Write the seriesModel data to the series meta file
-        d_seriesInfo    = self.seriesMetaFile(
+        d_seriesInfo    = self.seriesData(
+                                    'meta',
                                     self.d_DICOM['SeriesInstanceUID'],
                                     self.d_seriesModel
                         )
