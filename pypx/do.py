@@ -291,7 +291,8 @@ class Do(Base):
             seriesInstances : int   = series['NumberOfSeriesRelatedInstances']['value']
             d_then          : dict  = {}
             d_db            : dict  = {}
-            d_db            = db.seriesMetaFile(
+            d_db            = db.seriesData(
+                                    'retrieve',
                                     'NumberOfSeriesRelatedInstances',
                                     seriesInstances
             )
@@ -322,7 +323,7 @@ class Do(Base):
             series['PACS_retrieve'] = {
                 'requested' :   '%s' % datetime.now()
             }
-            d_db    = db.seriesMetaFile('retrieve', d_then)
+            d_db    = db.seriesData('retrieve', 'command', d_then)
             return d_then
 
         def status_do() -> dict:
