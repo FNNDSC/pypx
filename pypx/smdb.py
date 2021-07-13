@@ -46,6 +46,7 @@ import  inspect
 from    argparse        import  Namespace, ArgumentParser
 from    argparse        import  RawTextHelpFormatter
 
+import  pudb
 
 def parser_setup(str_desc):
     parser = ArgumentParser(
@@ -92,6 +93,14 @@ def parser_setup(str_desc):
         type    = str,
         default = '',
         help    = 'DB action to perform'
+        )
+    parser.add_argument(
+        '--actionArgs',
+        action  = 'store',
+        dest    = 'str_actionArgs',
+        type    = str,
+        default = '',
+        help    = 'DB action args'
         )
     parser.add_argument(
         '-l', '--logdir',
@@ -362,7 +371,7 @@ class SMDB():
     def housingDirs_create(self):
         """
         Create various directories to contain logging, data, and
-        maps.
+        services.
         """
         # Probably not scrictly speaking necessary to create
         # dirs here, but for completeness sake...
@@ -371,7 +380,8 @@ class SMDB():
                     'str_dataDir',
                     'str_patientDataDir',
                     'str_studyDataDir',
-                    'str_seriesDataDir'
+                    'str_seriesDataDir',
+                    'str_servicesDir'
                 ]
         for ns in [self, self.args]:
             for k,v in vars(ns).items():
@@ -411,21 +421,43 @@ class SMDB():
         self.str_studyData      : str   = "studyData"
         self.str_seriesData     : str   = "seriesData"
 
+        self.str_servicesBaseDir: str   = os.path.join(
+                                            self.args.str_logDir,
+                                            '../'
+                                        )
+        self.str_services       : str   = "services"
+        self.str_swiftService   : str   = "swift.json"
+        self.str_CUBEservice    : str   = "cube.json"
+
+        self.str_dataBaseDir    : str   = os.path.join(
+                                            self.args.str_logDir,
+                                            '../'
+                                        )
+        self.str_data           : str   = "data"
+
         if 'str_logDir' not in self.args:
             self.args.str_logDir        = '/tmp'
-        self.str_patientDataDir  : str  = os.path.join(
+        self.str_patientDataDir : str   = os.path.join(
                                             self.args.str_logDir,
                                             self.str_patientData
                                         )
-        self.str_studyDataDir    : str  = os.path.join(
+        self.str_studyDataDir   : str   = os.path.join(
                                             self.args.str_logDir,
                                             self.str_studyData
                                         )
-        self.str_seriesDataDir   : str  = os.path.join(
+        self.str_seriesDataDir  : str   = os.path.join(
                                             self.args.str_logDir,
                                             self.str_seriesData
                                         )
-
+        self.str_servicesDir    : str   = os.path.join(
+                                            self.str_servicesBaseDir,
+                                            self.str_services
+                                        )
+        self.str_dataDir        : str   = os.path.join(
+                                            self.str_dataBaseDir,
+                                            self.str_data
+                                        )
+                                    
         self.models                     = SMDB_models()
 
         # The Info structures are the defaults/intialization parameters
@@ -433,13 +465,6 @@ class SMDB():
 
         self.d_patientModel     : dict  = self.models.patientModel_get()
         self.d_patientMeta      : dict  = {}
-        # self.d_patientModel      : dict  = {
-        #     'PatientID'                         : 'Not defined',
-        #     'PatientName'                       : 'Not defined',
-        #     'PatientAge'                        : 'Not defined',
-        #     'PatientSex'                        : 'Not defined',
-        #     'PatientBirthDate'                  : 'Not defined'
-        # }
 
         # Default study meta model
         self.d_studyModel       : dict  = self.models.studyModel_get()
@@ -451,27 +476,13 @@ class SMDB():
         # Information relevant to a single series in the study is
         # stored in the d_studySeries
         self.d_studySeries      : dict  = {}
-        # self.d_studyModel        : dict  = {
-        #     'PatientID'                         : 'Not defined',
-        #     'StudyDescription'                  : 'Not defined',
-        #     'StudyDate'                         : 'Not defined',
-        #     'StudyInstanceUID'                  : 'Not defined',
-        #     'PerformedStationAETitle'           : 'Not defined'
-        # }
 
         # Default series meta info model
         self.d_seriesModel      : dict  = self.models.seriesModel_get()
         self.d_seriesMeta       : dict  = {}
         self.d_seriesImage      : dict  = {}
-        # self.d_seriesModel       : dict  = {
-        #     'PatientID'                         : 'Not defined',
-        #     'StudyInstanceUID'                  : 'Not defined',
-        #     'SeriesInstanceUID'                 : 'Not defined',
-        #     'SeriesDescription'                 : 'Not defined',
-        #     'SeriesNumber'                      : 'Not defined',
-        #     'SeriesDate'                        : 'Not defined',
-        #     'Modality'                          : 'Not defined'
-        # }
+
+        pudb.set_trace()
         self.housingDirs_create()
         self.debugloggers_create()
 
@@ -573,6 +584,7 @@ class SMDB():
                 )
             with open(d_patientTable['patientDataFile']['name'], 'w') as fj:
                 self.json_write(self.d_patientMeta, fj)
+            fj.close()
                 # json.dump(self.d_patientMeta, fj, indent = 4)
         self.d_patientModel   = self.d_patientMeta[self.d_DICOM['PatientID']]
         return self.d_patientModel
@@ -659,6 +671,7 @@ class SMDB():
                         'DICOM'             :   self.dictexpand(self.d_DICOM)
                     }
                 }, fj)
+            fj.close()
         return self.d_studyMeta
 
     def seriesData(self, str_table, *args)   -> dict:
@@ -1299,6 +1312,58 @@ class SMDB():
             d_run['seriesDirLocation'] = self.seriesDirLocation_get()
             return d_run
 
+        def swift_keyAccess() -> dict:
+            nonlocal d_run
+            d_swiftService      : dict  = {}
+            d_swiftUpdate       : dict  = {}
+            str_swiftService    : str   = os.path.join(
+                                    self.str_servicesDir,
+                                    self.str_swiftService
+                                )
+            if os.path.isfile(str_swiftService):
+                with open(str_swiftService) as fj:
+                    self.json_read(fj, self.d_swiftService)
+                fj.close()
+
+            if len(self.args.str_actionArgs):
+                try:
+                    d_swiftUpdate   = json.loads(self.args.str_actionArgs)
+                    d_swiftService.update(d_swiftUpdate)
+                    with open(str_swiftService, 'w') as fj:
+                        self.json_write(d_swiftService, fj)
+                    fj.close()
+                    d_run['swiftService']   = d_swiftService
+                    d_run['status']         = True
+                except:
+                    d_run['status']         = False
+
+            return d_run
+
+        def CUBE_keyAccess() -> dict:
+            nonlocal d_run
+            d_CUBEservice       : dict  = {}
+            d_CUBEupdate        : dict  = {}
+            str_CUBEservice     : str   = os.path.join(
+                                    self.str_servicesDir,
+                                    self.str_swiftService
+                                )
+            if os.path.isfile(str_CUBEservice):
+                with open(str_CUEBservice) as fj:
+                    self.json_read(fj, self.d_CUBEservice)
+                fj.close()
+
+            if len(self.str_actionArgs):
+                try:
+                    d_CUBEdate   = json.loads(self.str_actionArgs)
+                    d_CUBEservice.update(d_CUBEupdate)
+                    with open(str_CUBEservice, 'w') as fj:
+                        self.json_write(d_CUBEservice, fj)
+                    fj.close()
+                except:
+                    d_run['status'] = False
+
+            return d_run
+
         def DBtablesGet_do() -> dict:
             nonlocal d_run
             if self.fileSpec_process():
@@ -1335,9 +1400,12 @@ class SMDB():
             'status'    : False
         }
 
+        pudb.set_trace()
+
         if self.args.str_action == 'mapsUpdateForFile':     mapsUpdateForFile_do()
         if 'seriesDirLocation'  in self.args.str_action:    seriesDirLocation_doget()
         if 'DBtablesGet'        in self.args.str_action:    DBtablesGet_do()
+        if 'swift'              in self.args.str_action:    swift_keyAccess()
 
         if not d_run['status']:
             d_run['error']  = "An error occurred while executing '%s'" %    \

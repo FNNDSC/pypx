@@ -25,7 +25,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-smdb"
-str_version = "3.0.2"
+str_version = "3.2.0"
 str_desc    = Colors.CYAN + """
                                          _  _
                                         | || |
@@ -70,6 +70,7 @@ def synopsis(ab_shortOnly = False):
                 [--xcrdirfile <xcrdirfile>]                         \\
                 [--logdir|-l <logdir>]                              \\
                 [--action <action>]                                 \\
+                [--actionArgs <actionArgs>]                         \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
@@ -102,6 +103,10 @@ def synopsis(ab_shortOnly = False):
             * endOfStudy
             * seriesMap_DBtablesGet
             * seriesDirLocation_get
+
+        [--actionArgs <actionArgs>]
+        Depending on the <action>, this flag allows arbitrary passing
+        of additional parameters to the <action>.
 
         [--logdir|-l <logdir>]
         The directory containing log files relevant to smdb operation.
@@ -154,92 +159,6 @@ def synopsis(ab_shortOnly = False):
 
 parser      = parser_setup(str_desc)
 args        = parser_interpret(parser)
-
-# Settings
-# parser.add_argument(
-#     '-p', '--xcrdir',
-#     action  = 'store',
-#     dest    = 'str_xcrdir',
-#     type    = str,
-#     default = '/tmp',
-#     help    = 'Directory containing a received study'
-#     )
-# parser.add_argument(
-#     '-f', '--xcrfile',
-#     action  = 'store',
-#     dest    = 'str_xcrfile',
-#     type    = str,
-#     default = '',
-#     help    = 'File in <xcrdir> to process'
-#     )
-# parser.add_argument(
-#     '--xcrdirfile',
-#     action  = 'store',
-#     dest    = 'str_xcrdirfile',
-#     type    = str,
-#     default = '',
-#     help    = 'Fully qualified file to process'
-#     )
-# parser.add_argument(
-#     '--action',
-#     action  = 'store',
-#     dest    = 'str_action',
-#     type    = str,
-#     default = '',
-#     help    = 'DB action to perform'
-#     )
-# parser.add_argument(
-#     '-l', '--logdir',
-#     action  = 'store',
-#     dest    = 'str_logDir',
-#     type    = str,
-#     default = '/tmp/log',
-#     help    = 'Directory to store log files'
-#     )
-
-# parser.add_argument(
-#     '--cleanup',
-#     action  = 'store_true',
-#     dest    = 'b_cleanup',
-#     default = False,
-#     help    = 'If specified, then cleanup temporary files'
-#     )
-# parser.add_argument(
-#     '--debug',
-#     action  = 'store_true',
-#     dest    = 'b_debug',
-#     default = False,
-#     help    = 'If specified, then also log debug info to <logdir>'
-#     )
-# parser.add_argument(
-#     "-v", "--verbosity",
-#     help    = "verbosity level for app",
-#     dest    = 'verbosity',
-#     type    = int,
-#     default = 1)
-# parser.add_argument(
-#     "-x", "--desc",
-#     help    = "show long synopsis",
-#     dest    = 'b_desc',
-#     action  = 'store_true',
-#     default = False
-# )
-# parser.add_argument(
-#     "-y", "--synopsis",
-#     help    = "show short synopsis",
-#     dest    = 'b_synopsis',
-#     action  = 'store_true',
-#     default = False
-# )
-# parser.add_argument(
-#     '--version',
-#     help    = 'if specified, print version number',
-#     dest    = 'b_version',
-#     action  = 'store_true',
-#     default = False
-# )
-
-# args        = parser.parse_args()
 
 if args.b_desc or args.b_synopsis:
     print(str_desc)
