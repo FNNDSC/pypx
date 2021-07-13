@@ -457,7 +457,7 @@ class SMDB():
                                             self.str_dataBaseDir,
                                             self.str_data
                                         )
-                                    
+
         self.models                     = SMDB_models()
 
         # The Info structures are the defaults/intialization parameters
@@ -482,7 +482,7 @@ class SMDB():
         self.d_seriesMeta       : dict  = {}
         self.d_seriesImage      : dict  = {}
 
-        pudb.set_trace()
+        # pudb.set_trace()
         self.housingDirs_create()
         self.debugloggers_create()
 
@@ -690,12 +690,12 @@ class SMDB():
 
                 d_data = seriesData('retrieve', 'NumberOfSeriesRelatedInstances')
 
-        will return a status bool on whether or not that field exists in the 
+        will return a status bool on whether or not that field exists in the
         table, and the contents of that specific field in a similarly named key,
 
                 d_data['NumberOfSeriesRelatedIntances']
 
-        If called with a field name and value for a table, set that specific 
+        If called with a field name and value for a table, set that specific
         field in the table file to the passed value, and return a named key
         with that value
 
@@ -706,8 +706,8 @@ class SMDB():
         NOTE:
 
             * A "write" to a seriesMetaFile is always followed by a read check!
-              The post-write read check is to be a failsafe to catch any edge 
-              cases where a write *might* have gotten lost due to access 
+              The post-write read check is to be a failsafe to catch any edge
+              cases where a write *might* have gotten lost due to access
               collisions.
 
         """
@@ -1313,6 +1313,20 @@ class SMDB():
             return d_run
 
         def swift_keyAccess() -> dict:
+            """
+            This method saves the details of accessing a given swift
+            instance as a named key. Saved parameters should be:
+
+
+                {
+                    "<keyname>":  {
+                            "ip":       "<IPofSwiftServer>",
+                            "port":     "<PortOfSwiftServer>",
+                            "login":    "<username>:<passwd>"
+                        }
+                }
+
+            """
             nonlocal d_run
             d_swiftService      : dict  = {}
             d_swiftUpdate       : dict  = {}
@@ -1338,6 +1352,73 @@ class SMDB():
                     d_run['status']         = False
 
             return d_run
+
+        def service_keyAccess(astr_service) -> dict:
+            """
+            This method saves the details of accessing a given service
+            instance as a named key. Two services are supported:
+
+                * 'swift'
+                * 'CUBE'
+
+            For 'swift':
+
+                {
+                    "<keyname>":  {
+                            "ip":       "<IPofSwiftServer>",
+                            "port":     "<PortOfSwiftServer>",
+                            "login":    "<username>:<passwd>"
+                        }
+                }
+
+            For 'CUBE':
+
+                {
+                    "<keyname>":  {
+                            "url":      "<URLofCUBEAPI>",
+                            "username": "<CUBEusername>",
+                            "password": "<CUBEuserpasswd>"
+                        }
+                }
+
+            NOTE:
+
+                * Currently no models or error checking on the passed CLI
+                  <self.args.str_actionArgs>!!!
+
+            """
+            nonlocal d_run
+            d_service      : dict  = {}
+            d_update       : dict  = {}
+            if astr_service.lower().strip() == 'swift':
+                str_service    : str   = os.path.join(
+                                        self.str_servicesDir,
+                                        self.str_swiftService
+                                    )
+            if astr_service.lower().strip() == 'cube':
+                str_service    : str   = os.path.join(
+                                        self.str_servicesDir,
+                                        self.str_CUBEservice
+                                    )
+            if os.path.isfile(str_service):
+                with open(str_service) as fj:
+                    self.json_read(fj, d_service)
+                fj.close()
+
+            if len(self.args.str_actionArgs):
+                try:
+                    d_update   = json.loads(self.args.str_actionArgs)
+                    d_service.update(d_update)
+                    with open(str_service, 'w') as fj:
+                        self.json_write(d_service, fj)
+                    fj.close()
+                    d_run[astr_service]     = d_service
+                    d_run['status']         = True
+                except:
+                    d_run['status']         = False
+
+            return d_run
+
 
         def CUBE_keyAccess() -> dict:
             nonlocal d_run
@@ -1400,12 +1481,13 @@ class SMDB():
             'status'    : False
         }
 
-        pudb.set_trace()
+        # pudb.set_trace()
 
         if self.args.str_action == 'mapsUpdateForFile':     mapsUpdateForFile_do()
         if 'seriesDirLocation'  in self.args.str_action:    seriesDirLocation_doget()
         if 'DBtablesGet'        in self.args.str_action:    DBtablesGet_do()
-        if 'swift'              in self.args.str_action:    swift_keyAccess()
+        if 'swift'              in self.args.str_action:    service_keyAccess('swift')
+        if 'CUBE'               in self.args.str_action:    service_keyAccess('CUBE')
 
         if not d_run['status']:
             d_run['error']  = "An error occurred while executing '%s'" %    \
