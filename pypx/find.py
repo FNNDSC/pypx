@@ -50,6 +50,30 @@ def parser_setup(str_desc):
         default = '/tmp/log',
         help    = 'path to base dir of receipt database')
 
+    # service access settings
+    parser.add_argument(
+        '--PACS',
+        action  = 'store',
+        dest    = 'PACS',
+        type    = str,
+        default = '',
+        help    = 'PACS lookup service identifier')
+    parser.add_argument(
+        '--CUBE',
+        action  = 'store',
+        dest    = 'CUBE',
+        type    = str,
+        default = '',
+        help    = 'CUBE lookup service identifier')
+    parser.add_argument(
+        '--swift',
+        action  = 'store',
+        dest    = 'swift',
+        type    = str,
+        default = '',
+        help    = 'swift lookup service identifier')
+
+
     # PACS access settings
     parser.add_argument(
         '--aet',
@@ -215,6 +239,12 @@ def parser_setup(str_desc):
         dest    = 'then',
         default = "",
         help    = 'If specified, perform another set operations "next" after the find')
+    parser.add_argument(
+        '--thenArgs',
+        action  = 'store',
+        dest    = 'thenArgs',
+        default = "",
+        help    = 'If specified, associate the corresponding JSON string in the list to a then operation')
     parser.add_argument(
         '--intraSeriesRetrieveDelay',
         action  = 'store',
