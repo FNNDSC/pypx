@@ -91,6 +91,7 @@ def synopsis(ab_shortOnly = False):
                 [--reportData <JSONdump>]                           \\
                 [--reportDataFile <file>]                           \\
                 [--then retrieve|status|push|register]              \\
+                [--thenArgs <strJSONargListPerThen>]                \\
                 [--withFeedBack]                                    \\
                 [--intraSeriesRetrieveDelay <seconds>]              \\
                 [--json]                                            \\
@@ -139,6 +140,12 @@ def synopsis(ab_shortOnly = False):
         If specified, define an operation to do "next". This can be a comma
         separated string of actions, in which case each action will be
         executed in turn over the input space.
+
+        [--thenArgs strJSONargListPerThen]
+        If specified, define additional parameters specific to a downstream
+        'then' operation. This is a comma separated string of JSONstrings, each
+        element of which corresponds to a given --then. Obviously the number of
+        JSONstrings MUST correspond to the number of --then operations.
 
         [--intraSeriesRetrieveDelay <amount>]
         When operating in a tight loop (with the innermost loop being a per-
