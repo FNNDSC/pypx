@@ -29,16 +29,16 @@ str_version = "3.0.2"
 str_desc    = Colors.CYAN + """
 
 
-                                                  _     _             
-                                                 (_)   | |            
-                  _ ____  ________ _ __ ___  __ _ _ ___| |_  ___ _ __ 
+                                                  _     _
+                                                 (_)   | |
+                  _ ____  ________ _ __ ___  __ _ _ ___| |_  ___ _ __
                  | '_ \ \/ /______| '__/ _ \/ _` | / __| __|/ _ \ '__|
-                 | |_) >  <       | | |  __/ (_| | \__ \ |_|  __/ |   
-                 | .__/_/\_\      |_|  \___|\__, |_|___/\__|\___|_|   
-                 | |                         __/ |                    
-                 |_|                        |___/                     
+                 | |_) >  <       | | |  __/ (_| | \__ \ |_|  __/ |
+                 | .__/_/\_\      |_|  \___|\__, |_|___/\__|\___|_|
+                 | |                         __/ |
+                 |_|                        |___/
 
-             
+
                                 PACS ToolKit Wrapper
                                     px-register
 
@@ -96,11 +96,11 @@ def synopsis(ab_shortOnly = False):
         processing.
 
         [--localFileList <listOfFiles>]
-        Not passed usually on the CLI but used to store results from 
+        Not passed usually on the CLI but used to store results from
         upstream JSON compute.
 
         [--objectFileList <listOfNamesInStorage>]
-        Not passed usually on the CLI but used to store results from 
+        Not passed usually on the CLI but used to store results from
         upstream JSON compute.
 
         [--xcrdir|-p <xcrdir>]
