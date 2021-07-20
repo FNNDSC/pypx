@@ -74,6 +74,9 @@ def synopsis(ab_shortOnly = False):
             px-find                                                 \\
                 [--JSONargs <JSONargStringStructure>]               \\
                 [--db <dblogbasepath>]                              \\
+                [--PACS <PACSkeyServiceID>]                         \\
+                [--swift <swiftKeyServiceID>]                       \\
+                [--CUBE <CUBEkeyServiceID>]                         \\
                 [--aet <AETitle>]                                   \\
                 [--aec <CalledAETitle>]                             \\
                 [--serverIP <PACSserverIP>]                         \\
@@ -96,6 +99,7 @@ def synopsis(ab_shortOnly = False):
                 [--AcquisitionProtocolDescription <APDescription>]  \\
                 [--AcquisitionProtocolName <APName>]                \\
                 [--then <actionlist>] [--withFeedBack]              \\
+                [--thenArgs JSONargListPerThen]                     \\
                 [--intraSeriesRetrieveDelay <seconds>]              \\
                 [--json]                                            \\
                 [--waitForUserTerminate]                            \\
@@ -134,6 +138,40 @@ def synopsis(ab_shortOnly = False):
         allows `px-find` to access db tables needed to track the number
         of DICOM files that are received in the case of a 'retrieve'
         event.
+
+        [--PACS <PACSkeyServiceID>]
+        A key lookup into an smdb data element that defines all the fields
+        required for PACS access. This is pre-instantiated by calling the
+        smdb element a priori. Fields are:
+
+                    "<PACSkeyServiceID>":  {
+                            "aet":      "<AETitle>",
+                            "aec":      "<CalledAETitle>",
+                            "ip":       "<PACSip>",
+                            "port":     "<PACSport>",
+                        }
+
+        [--CUBE <CUBEkeyServiceID>]
+        A key lookup into an smdb data element that defines all the fields
+        required for CUBE access. This is pre-instantiated by calling the
+        smdb element a priori. Fields are:
+
+                    "<CUBEkeyServiceID>":  {
+                            "url":      "<URLofCUBEAPI>",
+                            "username": "<CUBEusername>",
+                            "password": "<CUBEuserpasswd>"
+                        }
+
+        [--swift <swiftKeyServiceID>]
+        A key lookup into an smdb data element that defines all the fields
+        required for swift access. This is pre-instantiated by calling the
+        smdb element a priori. Fields are:
+
+                    "<swiftKeyServiceID>":  {
+                            "ip":       "<IPofSwiftServer>",
+                            "port":     "<PortOfSwiftServer>",
+                            "login":    "<username>:<passwd>"
+                        }
 
         [--aet <AETitle>]
         The AETitle of *this* entity.
@@ -207,6 +245,12 @@ def synopsis(ab_shortOnly = False):
                              of retrieved study/series data).
             * "push"        (push study/series data to some destination
                              node)
+
+        [--thenArgs JSONargListPerThen]
+        If specified, define additional parameters specific to a downstream
+        'then' operation. This is a comma separated string of JSONstrings, each
+        element of which corresponds to a given --then. Obviously the number of
+        JSONstrings MUST correspond to the number of --then operations.
 
         [--withFeedBack]
         If specified, provide console level feedback on the next operation as
