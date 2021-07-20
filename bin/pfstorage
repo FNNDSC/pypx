@@ -17,7 +17,7 @@ from    pfmisc._colors      import Colors
 
 
 str_name    = "pfstorage"
-str_version = "3.0.0"
+str_version = "3.2.0"
 str_desc    = Colors.CYAN + """
 
                  __       _
@@ -147,6 +147,8 @@ def synopsis(ab_shortOnly = False):
 
         [--type <storageBackendType>]
         The type of object storage. Currently this is 'swift'.
+
+        This supercedes the need for additional --swift[IP,Port,Login] flags.
 
         [--swiftIP <swiftStorage>]
         [--swiftPort <swiftPort>]
