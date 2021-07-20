@@ -57,6 +57,7 @@ class Status(Base):
             'images'    : {
                 'received'      : {'count' : -1},
                 'requested'     : {'count' : -1},
+                'packed'        : {'count' : -1}
             }
         }
         return d_status
