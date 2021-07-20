@@ -1,13 +1,11 @@
 # Global modules
-import  argparse
-import  subprocess, re, collections
+# import  argparse
+# import  subprocess, re, collections
 from    pfmisc.other import list_removeDuplicates
 import  pudb
 import  json
 
 from    datetime            import  datetime
-from    dateutil            import  relativedelta
-from    terminaltables      import  SingleTable
 from    argparse            import  Namespace, ArgumentParser
 from    argparse            import  RawTextHelpFormatter
 import  time
@@ -24,6 +22,10 @@ from    .move               import Move
 import  pypx
 from    pypx                import smdb
 from    pypx                import report
+from    pypx.push           import parser_setup         as pushParser_setup
+from    pypx.push           import parser_JSONinterpret as pushParser_JSONinterpret
+
+
 
 def parser_setup(str_desc):
     parser = ArgumentParser(
@@ -70,6 +72,12 @@ def parser_setup(str_desc):
         dest    = 'then',
         default = "",
         help    = 'If specified, then perform the set of operations')
+    parser.add_argument(
+        '--thenArgs',
+        action  = 'store',
+        dest    = 'thenArgs',
+        default = "",
+        help    = 'If specified, associate the corresponding JSON string in the list to a then operation')
     parser.add_argument(
         '--intraSeriesRetrieveDelay',
         action  = 'store',
@@ -230,13 +238,11 @@ class Do(Base):
             * status query on retrieved images
             * find query on the internal smdb "database"
             * push images to a swift/CUBE
+            * register images from a push into CUBE
 
         and are performed with additional processing on the STUDY/SERIES
         level. This essentially loops over all the SeriesInstanceUID in the
         query space structure.
-
-        For the special case of a dockerized run, this method will attempt
-        to also restart the 'xinet.d' service within the container.
 
         NOTE: The architecture/infrastructure could be overwhelmed if
         too many concurrent requests are presented. Note that a separate
@@ -353,12 +359,30 @@ class Do(Base):
 
             return d_then
 
+        def push_do(d_pushArgsCLI) -> dict:
+            """
+            Nested push handler
+            """
+            nonlocal    series
+            str_seriesInstanceUID   : str   = series['SeriesInstanceUID']['value']
+            str_line                : str   = presenter.seriesPush_print(
+                studyIndex  = studyIndex,
+                seriesIndex = seriesIndex,
+                fileCounts  = db.series_receivedAndRequested(str_seriesInstanceUID)
+            )
 
-        # self.systemlevel_run(self.arg,
-        #     {
-        #         'f_commandGen': self.xinetd_command
-        #     }
-        # )
+            if self.arg['withFeedBack']: self.log(str_line)
+
+            d_then                  : dict  = {}
+            d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
+            pushParser                      = pushParser_setup("Push Parser")
+            d_pushArgs                      = pushParser_JSONinterpret(pushParser, d_pushArgsCLI)
+            d_pushArgs.str_xcrdir           = d_seriesDir[str_seriesInstanceUID]
+            d_then      = pypx.push(
+                            vars(d_pushArgs),
+                        )
+
+            return d_then
 
         db              = smdb.SMDB(
                             Namespace(str_logDir = self.arg['dblogbasepath'])
@@ -375,14 +399,23 @@ class Do(Base):
                                         'reportData':   d_filteredHits
                                     })
         presenter.run()
-        l_run           = []
-        d_ret           = {
+        l_run               = []
+        d_ret               = {
             'do'        : False
         }
-        l_then          = self.arg['then'].split(',')
-        b_headerPrinted = False
-        thenIndex       = -1
-        for then in l_then:
+
+        l_then              = self.arg['then'].split(',')
+        l_thenArgs          = self.arg['thenArgs'].split(';')
+        d_thenArgs : dict   = {}
+        if len(l_thenArgs) != len(l_then):
+            l_thenArgs      = [''] * len(l_then)
+        b_headerPrinted     = False
+        thenIndex           = -1
+        for (then, thenArgs) in zip(l_then, l_thenArgs):
+            if len(thenArgs):
+                d_thenArgs  = json.loads(thenArgs)
+            else:
+                d_thenArgs  = {}
             thenIndex  += 1
             studyIndex  = 0
             d_ret['status'] = False
@@ -399,14 +432,15 @@ class Do(Base):
                     print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ SERIES %s ]"\
                             % then + Colors.NO_COLOUR)
                 for series in study['series']:
-                    str_seriesDescription   = series['SeriesDescription']['value']
-                    str_seriesUID           = series['SeriesInstanceUID']['value']
-                    str_studyUID            = study['StudyInstanceUID']['value']
+                    str_seriesDescription           = series['SeriesDescription']['value']
+                    str_seriesUID                   = series['SeriesInstanceUID']['value']
+                    str_studyUID                    = study['StudyInstanceUID']['value']
                     db.d_DICOM['SeriesInstanceUID'] = str_seriesUID
                     self.arg['SeriesInstanceUID']   = str_seriesUID
                     self.arg['StudyInstanceUID']    = str_studyUID
                     if then == "retrieve":  d_then  = retrieve_do()
                     if then == "status"  :  d_then  = status_do()
+                    if then == "push"    :  d_then  = push_do(d_thenArgs)
                     l_run.append(d_then)
                     seriesIndex += 1
                 d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
