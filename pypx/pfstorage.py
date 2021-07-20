@@ -492,14 +492,17 @@ class swiftStorage(PfStorage):
                 'objectFileList'    : []
             }
             for f in d_fileList['l_fileFS']:
-                d_pack = toLocation_updateWithDICOMtags(f)
-                d_args['file']      = f
-                d_put               = self.objPut(**d_args)
-                d_args['toLocation'] = d_pack['originalLocation']
-                d_ret['status']     = d_put['status']
+                d_pack                  = toLocation_updateWithDICOMtags(f)
+                d_args['file']          = f
+                d_put                   = self.objPut(**d_args)
+                d_ret[f]                = d_put
+                d_args['toLocation']    = d_pack['originalLocation']
+                d_ret['status']         = d_put['status']
                 if d_ret['status']:
                     d_ret['localFileList'].append(d_put['localFileList'][0])
                     d_ret['objectFileList'].append(d_put['objectFileList'][0])
+                else:
+                    break
             return d_ret
 
         d_ret           :   dict  = {
@@ -612,7 +615,7 @@ class swiftStorage(PfStorage):
                             contents=fp.read()
                         )
                 except Exception as e:
-                    d_ret['error']  = e
+                    d_ret['error']  = '%s' % e
                     d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
                 d_ret['objectFileList'].append(str_storagefilename)
