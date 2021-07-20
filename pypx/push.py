@@ -8,6 +8,7 @@ from    pfmisc._colors      import  Colors
 import  os
 from    os                  import  listdir
 from    os.path             import  isfile, join
+import  sys
 
 from    .pfstorage          import  swiftStorage
 
@@ -23,11 +24,20 @@ def parser_setup(str_desc):
                 formatter_class     = RawTextHelpFormatter
             )
 
+    # JSONarg
+    parser.add_argument(
+        '--JSONargs',
+        action  = 'store',
+        dest    = 'JSONargString',
+        type    = str,
+        default = '',
+        help    = 'JSON equivalent of CLI key/values')
+
     # db access settings
     parser.add_argument(
         '--db',
         action  = 'store',
-        dest    = 'dblogbasepath',
+        dest    = 'str_logDir',
         type    = str,
         default = '/tmp/log',
         help    = 'path to base dir of receipt database')
@@ -105,6 +115,14 @@ def parser_setup(str_desc):
 
     # Swift settings
     parser.add_argument(
+        '--swift',
+        action  = 'store',
+        dest    = 'swift',
+        type    = str,
+        default = '',
+        help    = 'swift lookup service identifier')
+
+    parser.add_argument(
         '--swiftIP',
         action  = 'store',
         dest    = 'str_swiftIP',
@@ -125,6 +143,14 @@ def parser_setup(str_desc):
         type    = str,
         default = '',
         help    = 'swift login')
+
+    parser.add_argument(
+        '--PACS',
+        action  = 'store',
+        dest    = 'PACS',
+        type    = str,
+        default = '',
+        help    = 'PACS lookup service identifier')
     parser.add_argument(
         '--swiftServicesPACS',
         action  = 'store',
@@ -229,7 +255,7 @@ def parser_setup(str_desc):
 
 def parser_interpret(parser, *args):
     """
-    Interpret the list space of *args, or sys.argv[1:] if 
+    Interpret the list space of *args, or sys.argv[1:] if
     *args is empty
     """
     if len(args):
@@ -264,6 +290,23 @@ class Push(Base):
         to the CUBE instance.
     """
 
+    def serviceKey_process(self) -> dict:
+        """
+        If a service key (--swift <key>) has been specified, read from
+        smdb service storage and set the CLI flags to pass on along to
+        pfstorage.
+        """
+        d_swiftInfo :   dict    = {}
+        d_swiftInfo['status']   = False
+        if len(self.arg['swift']):
+            d_swiftInfo = self.smdb.service_keyAccess('swift')
+            if d_swiftInfo['status']:
+                self.arg['str_swiftIP']     = d_swiftInfo['swift'][self.arg['swift']]['ip']
+                self.arg['str_swiftPort']   = d_swiftInfo['swift'][self.arg['swift']]['port']
+                self.arg['str_swiftLogin']  = d_swiftInfo['swift'][self.arg['swift']]['login']
+
+        return d_swiftInfo
+
     def __init__(self, arg):
         """
         Constructor.
@@ -291,7 +334,6 @@ class Push(Base):
         #   allows for downstream tranmission to apps with different
         #   CLI dest spaces.
 
-        # pudb.set_trace()
         if 'reportData' in arg.keys():
             if 'args' in arg['reportData']:
                 for k,v in arg['reportData']['args'].items():
@@ -300,7 +342,9 @@ class Push(Base):
                         if k not in ['json', 'withFeedBack']:
                             arg[k] = v
 
+        self.smdb                           = pypx.smdb.SMDB(Namespace(**arg))
         super(Push, self).__init__(arg)
+        self.serviceKey_process()
         self.dp             = pfmisc.debug(
                                 verbosity   = self.verbosity,
                                 within      = 'Push',
