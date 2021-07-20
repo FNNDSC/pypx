@@ -2,11 +2,60 @@
 # this script assumes fish conventions
 #
 
-
+# Manually run a storescp:
+storescp        -od /tmp/data                                                  \
+                -pm -sp                                                        \
+                -xcr "/home/rudolphpienaar/src/pypx/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data"                                                \
+                -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \ 
+                11113
 
 set SWIFTHOST 192.168.1.200
 set SWIFTPORT 8080
 set SWIFTLOGIN chris:chris1234
+set SWIFTKEY swiftStorage
+
+# Set the swift login info in a key-ref'd service
+px-smdb         --logdir /home/dicom/log                                       \
+                --action swift                                                 \
+                --actionArgs '
+{
+        "'$SWIFTKEY'": {
+                        "ip": "'$SWIFTHOST'", 
+                        "port":"'$SWIFTPORT'", 
+                        "login":"'$SWIFTLOGIN'"
+        }
+}'
+
+px-smdb         --logdir /home/dicom/log                                       \
+                --action swift                                                 \
+                --actionArgs '
+{
+        "swiftStorage": {
+                        "ip": "localhost", 
+                        "port":"8080", 
+                        "login":"chris:chris1234"
+        }
+}'
+
+# Get the swift login details for all keys
+px-smdb         --logdir /home/dicom/log                                       \
+                --action swift
+
+# Query smdb for all image dirs on a patient
+px-smdb         --action imageDirsForPatientID                                 \
+                --actionArgs 5644810                                           \
+                --logdir /home/dicom/log
+
+# Query smdb for dir on a SeriesInstanceUID
+px-smdb         --action imageDirsSeriesInstanceUID                            \
+                --actionArgs 1.3.12.2.1107.5.2.19.45479.2021061717351923347817670.0.0.0 \
+                --logdir /home/dicom/log
+
+# Explicitly update all maps/catalogues for a Patient
+px-smdb         --action mapsUpdateForPatient                                  \
+                --actionArgs 5644810                                           \
+                --logdir /home/dicom/log 
+
 
 # on the metal
 pfstorage                                                                      \
@@ -34,6 +83,18 @@ docker run --rm -ti local/pypx  --pfstorage                                    \
                 --debugToDir /tmp                                              \
                 --do '{\"action\":\"ls\",\"args\":{\"path\":\"SERVICES/PACS/covidnet\"}}' --json
 
+# Retrieve:
+px-find       --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID 5644810                                            \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then retrieve                                                \
+                --intraSeriesRetrieveDelay dynamic:10                          \
+                --withFeedBack
 
 # Push some data to swift storage:
 px-push                                                                        \
@@ -41,15 +102,60 @@ px-push                                                                        \
                    --swiftPort $SWIFTPORT                                      \
                    --swiftLogin $SWIFTLOGIN                                    \
                    --swiftServicesPACS covidnet                                \
+                   --db /home/dicom/log                                        \
                    --swiftPackEachDICOM                                        \
                    --xcrdir /home/rudolphpienaar/data/WithProtocolName/all     \
                    --parseAllFilesWithSubStr dcm                               \
                    --verbosity 1                                               \
                    --json > push.json
 
+px-push                                                                        \
+                   --swift $SWIFTKEY                                           \
+                   --swiftServicesPACS covidnet                                \
+                   --db /home/dicom/log                                        \
+                   --swiftPackEachDICOM                                        \
+                   --xcrdir /home/rudolphpienaar/data/WithProtocolName/all     \
+                   --parseAllFilesWithSubStr dcm                               \
+                   --verbosity 1                                               \
+                   --json > push.json
+
+# Push from a find event:
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID 5644810                                            \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then push                                                    \
+                --thenArgs '
+                {
+                        "db":                   "/home/dicom/log", 
+                        "swift":                "swiftStorage", 
+                        "swiftServicesPACS":    "BCH", 
+                        "swiftPackEachDICOM":   true
+                }'                                                             \
+                --withFeedBack
+
+
+set CUBEKEY megalodon
 set CUBEURL http://localhost:84444/api/v1/
 set CUBEusername chris
 set CUBEuserpasswd chris1234
+
+# Set lookup in smbdb
+px-smdb         --logdir /home/dicom/log                                       \
+                --action CUBE                                                 \
+                --actionArgs '
+{
+        "'$CUBEKEY'": {
+                        "url": "'$CUBEURL'", 
+                        "username":"'$CUBEusername'", 
+                        "password":"'$CUBEuserpasswd'"
+        }
+}'
+
 px-register                                                                    \
                        --upstreamFile push.json                                \
                        --CUBEURL $CUBEURL                                      \
