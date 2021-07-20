@@ -46,6 +46,8 @@ import  inspect
 from    argparse        import  Namespace, ArgumentParser
 from    argparse        import  RawTextHelpFormatter
 
+import  fcntl
+import  time
 import  pudb
 
 def parser_setup(str_desc):
@@ -421,6 +423,9 @@ class SMDB():
         self.str_studyData      : str   = "studyData"
         self.str_seriesData     : str   = "seriesData"
 
+        if not hasattr(self.args, 'str_logDir'):
+            self.args.str_logDir        = '/tmp/log'
+
         self.str_servicesBaseDir: str   = os.path.join(
                                             self.args.str_logDir,
                                             '../'
@@ -428,7 +433,7 @@ class SMDB():
         self.str_services       : str   = "services"
         self.str_swiftService   : str   = "swift.json"
         self.str_CUBEservice    : str   = "cube.json"
-
+        self.str_PACSservice    : str   = "pacs.json"
         self.str_dataBaseDir    : str   = os.path.join(
                                             self.args.str_logDir,
                                             '../'
@@ -661,7 +666,10 @@ class SMDB():
                 self.d_studyModel
             with open(d_studyTable['studyMetaFile']['name'], 'w') as fj:
                 self.json_write(self.d_studyMeta, fj)
-            fj.close()
+        else:
+            with open(d_studyTable['studyMetaFile']['name']) as fj:
+                self.json_read(fj, self.d_studyMeta)
+        fj.close()
         if not d_studyTable['studySeriesFile']['exists']:
             with open(d_studyTable['studySeriesFile']['name'], 'w') as fj:
                 self.json_write({
@@ -671,8 +679,15 @@ class SMDB():
                         'DICOM'             :   self.dictexpand(self.d_DICOM)
                     }
                 }, fj)
-            fj.close()
-        return self.d_studyMeta
+        else:
+            with open(d_studyTable['studySeriesFile']['name']) as fj:
+                self.json_read(fj, self.d_studySeries)
+        fj.close()
+        return {
+            'status'        : True,
+            'd_studyMeta'   : self.d_studyMeta,
+            'd_studySeries' : self.d_studySeries
+        }
 
     def seriesData(self, str_table, *args)   -> dict:
         """
@@ -710,8 +725,38 @@ class SMDB():
               cases where a write *might* have gotten lost due to access
               collisions.
 
+            * THIS METHOD IS A POTENTIAL BREAKPOINT IN HIGHLY ASYNCHRONOUS AND
+              CONCURRENT CALLING ENVIRONMENTS!
+
+              This method might attempt to write to the exact same *-meta.json file
+              in a flood of storescp which might break.
+
         """
+
+        # @retry(Exception, delay = 1, backoff = 2, max_delay = 4, tries = 10)
+        def seriesData_write(str_filename, d_obj):
+            """
+            Multiprocess safe write
+            """
+            d_ret       : dict  = {
+                'status'    : True
+            }
+            try:
+                with open(str_filename, 'w') as fj:
+                    # Lock it!
+                    fcntl.flock(fj, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    # Edit it!
+                    self.json_write(d_obj, fj)
+                    # Unlock it!
+                    fcntl.flock(fj, fcntl.LOCK_UN)
+            except Exception as e:
+                d_ret['status']     = False
+                d_ret['error']      = "Concurrent write failure!"
+            return d_ret
+
         b_status        : bool          = False
+        b_fileRead      : bool          = False
+        b_canWrite      : bool          = True
         str_error       : str           = 'File does not exist at time of read'
         str_field       : str           = ""
         d_meta          : dict          = {}
@@ -729,6 +774,7 @@ class SMDB():
                 with open(d_seriesTable[str_tableName]['name']) as fj:
                     self.json_read(fj, d_meta)
                 fj.close()
+                b_fileRead                  = True
                 if len(str_field):
                     if str_field in d_meta.keys():
                         b_status            = True
@@ -744,26 +790,32 @@ class SMDB():
                     d_ret                   = d_meta
 
             # Optional "write" info to file... if file does not exist yet
-            # this code will create it.
+            # this code will create it. It is possible that multiple processes
+            # might collide here. We use fcntl to lock access, write, and then
+            # release. If a file is locked, we wait a bit and try again.
+            #
+            # Only write to the file if there is a file content change
+            #
             if len(args) == 2:
                 value                   = args[1]
-                d_meta[str_field]       = value
-                try:
-                    with open(d_seriesTable[str_tableName]['name'], 'w') as fj:
-                        self.json_write(d_meta, fj)
-                    fj.close()
-                    str_error           = ''
-                    b_status            = True
-                    d_ret               = d_meta[str_field]
-                except Exception as e:
-                    str_error           = '%s' % e
-                    b_status            = False
-                # # Tight loop to check if str_field has in fact been written
-                # d_check[str_field]      = None
-                # d_check                 = self.seriesMetaFile(str_field)
-                # while d_check[str_field] != value:
-                #     d_check             = self.seriesMetaFile(str_field, value)
-                #     d_check             = self.seriesMetaFile(str_field)
+                if b_fileRead:
+                    if str_field in d_meta.keys():
+                        if d_meta[str_field] == value:
+                            b_canWrite  = False
+                if b_canWrite:
+                    d_meta[str_field]       = value
+                    str_fileName            = d_seriesTable[str_tableName]['name']
+                    d_write                 = seriesData_write(str_fileName, d_meta)
+                    b_status                = d_write['status']
+                    if d_write['status']:
+                        d_ret               = value
+                    else:
+                        str_error               = d_write['error'] + "\nConcurrency write error!"
+                        d_check                 = self.seriesData(str_table, str_field)
+                        while d_check[str_field] != value:
+                            d_check             = self.seriesData('meta', str_field)
+                            time.sleep(0.5)
+
         return {
             'status'        : b_status,
             'error'         : str_error,
@@ -836,12 +888,12 @@ class SMDB():
         """
         d_status                    : dict      = {}
         d_status['status']                      = False
-        d_status['error']           : str       = 'Study not found'
-        d_status['study']           : dict      = self.study_statusGet(
-                                                str_StudyInstanceUID
+        d_status['error']                       = 'Study not found'
+        d_status['study']                       = self.study_statusGet(
+                                                    str_StudyInstanceUID
                                                 )
-        d_status['study']['state']  : str       = 'StudyNotFound'
-        d_status['series']          : dict      = {}
+        d_status['study']['state']              = 'StudyNotFound'
+        d_status['series']                      = {}
 
         if d_status['study']['status'] or not b_verifySeriesInStudy:
             if d_status['study']['status']:
@@ -870,13 +922,16 @@ class SMDB():
 
     def series_receivedAndRequested(self, str_SeriesInstanceUID) -> dict:
         """
-        Return a dictionary with requested vs received file count.
+        Return a dictionary with requested / received / packed file count.
         """
         d_count                 : dict  = {}
         d_count['received']     = self.series_receivedFilesCount(
                                         str_SeriesInstanceUID
                                 )
         d_count['requested']    = self.series_requestedFilesCount(
+                                        str_SeriesInstanceUID
+                                )
+        d_count['packed']       = self.series_packedFilesCount(
                                         str_SeriesInstanceUID
                                 )
         if d_count['received']['count'] >= d_count['requested']['count']:
@@ -953,6 +1008,28 @@ class SMDB():
                 f for f in os.listdir(str_processedDir)
                         if os.path.isfile(os.path.join(str_processedDir, f))
             ]
+        return {
+            'status'    : b_status,
+            'count'     : len(l_files)
+        }
+
+    def series_packedFilesCount(self, str_SeriesInstanceUID) -> dict:
+        """
+        Return the number of actual packed files by "counting" the
+        image DICOMS files for a given series.
+
+        """
+        b_status            : bool  = False
+        l_files             : list  = []
+        d_imageDir          : dict  = self.imageDirs_getOnSeriesInstanceUID(str_SeriesInstanceUID)
+        if d_imageDir['status']:
+            str_processedDir    : str   = d_imageDir[str_SeriesInstanceUID]
+            if os.path.isdir(str_processedDir):
+                b_status        = True
+                l_files         : list  = [
+                    f for f in os.listdir(str_processedDir)
+                            if os.path.isfile(os.path.join(str_processedDir, f))
+                ]
         return {
             'status'    : b_status,
             'count'     : len(l_files)
@@ -1056,21 +1133,30 @@ class SMDB():
             """
             Initialize some data within a single JSON image file.
             """
+            str_seriesInstanceUID : str     = self.d_DICOM['SeriesInstanceUID']
+
             self.d_seriesImage.clear()
+
             if d_seriesTables['series-image']['exists']:
                 with open(d_seriesTables['series-image']['name']) as fj:
                     self.json_read(fj, self.d_seriesImage)
                 fj.close()
-            if self.d_DICOM['SeriesInstanceUID'] not in self.d_seriesImage.keys():
-                self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']] =           \
-                    self.d_seriesMeta[self.d_DICOM['SeriesInstanceUID']].copy()
-            self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]['outputFile'] = \
-                    d_seriesTables['outputFile']
-            if 'imageObj' not in self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]:
-                self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]['imageObj'] = {}
-            return self.d_seriesImage
 
-        def seriesData_singleImageFile_update(d_init) -> bool:
+            if str_seriesInstanceUID not in self.d_seriesImage.keys():
+                try:
+                    self.d_seriesImage[str_seriesInstanceUID] =             \
+                        self.d_seriesMeta[str_seriesInstanceUID].copy()
+                except Exception as e:
+                    print("An error occurred with the seriesMeta data")
+                    print("self.d_seriesMeta = %s" % self.d_seriesMeta)
+            self.d_seriesImage[str_seriesInstanceUID]['outputFile'] =       \
+                    d_seriesTables['outputFile']
+            if 'imageObj' not in self.d_seriesImage[str_seriesInstanceUID]:
+                self.d_seriesImage[str_seriesInstanceUID]['imageObj'] = {}
+
+            return d_seriesTables
+
+        def seriesData_singleImageFile_update(d_seriesTables) -> bool:
             """
             Update data specific to *this* image file, only if this output
             file is not already present in the JSON dictionary.
@@ -1079,7 +1165,7 @@ class SMDB():
             """
             b_updatesMade   : bool  = False
             try:
-                if d_init[self.d_DICOM['SeriesInstanceUID']]['outputFile'] not in                                      \
+                if self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]['outputFile'] not in                                      \
                     self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]           \
                                                     ['imageObj'].keys():
                     ofs = os.stat('%s/%s' % (str_outputDir, str_outputFile))
@@ -1095,16 +1181,13 @@ class SMDB():
                                             [str_outputFile]['FSlocation'] =        \
                                                 '%s/%s' % (str_outputDir, str_outputFile)
                     b_updatesMade   = True
-                    # with open(d_seriesTable['seriesImageFile']['name'], 'w') as fj:
-                    #     self.json_write(self.d_seriesMeta, fj)
-                        # json.dump(self.d_seriesMeta, fj, indent = 4)
                 else:
                     self.d_seriesModel     = self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]
             except:
-                pudb.set_trace()
+                # pudb.set_trace()
+                b_updatesMade   = False
             return {
                 'status'    : b_updatesMade,
-                'init'      : d_init,
                 'image'     : self.d_seriesImage
             }
 
@@ -1118,7 +1201,7 @@ class SMDB():
                     self.json_write(d_update['image'], fj)
                 fj.close()
             return {
-                'status'    : True,
+                'status'    : d_update['status'],
                 'update'    : d_update
             }
 
@@ -1126,6 +1209,7 @@ class SMDB():
         str_outputFile  : str       = self.str_outputFile
         d_seriesMeta    : dict      = {}
         d_seriesTables  : dict      = {}
+        d_seriesInfo    : dict      = {}
         d_ret           : dict      = {}
 
         for k, v in kwargs.items():
@@ -1135,12 +1219,18 @@ class SMDB():
         # Initialize the seriesModel (as modeled by the constructor)
         self.seriesModel_init()
 
-        # Write the seriesModel data to the series meta file
-        d_seriesInfo    = self.seriesData(
-                                    'meta',
-                                    self.d_DICOM['SeriesInstanceUID'],
-                                    self.d_seriesModel
-                        )
+        # Write the seriesModel data to the series meta file --
+        # This is a potential bottleneck/collision as mulitple
+        # processes might attempt to write to the same file, so
+        # we place in a while/backoff/timeout
+        d_seriesInfo['status'] = False
+        while not d_seriesInfo['status']:
+            d_seriesInfo    = self.seriesData(
+                                        'meta',
+                                        self.d_DICOM['SeriesInstanceUID'],
+                                        self.d_seriesModel
+                            )
+
 
         # Now create, for each image file, a series map entry
         d_ret = seriesData_singleImageFile_save(
@@ -1151,60 +1241,15 @@ class SMDB():
             )
         )
 
-        # Get the series tables and create dir if needed
-        # d_seriesTables  = seriesTables_get()
-        # d_seriesTable       = self.seriesData_DBtablesGet(
-        #         outputDir           = str_outputDir,
-        #         outputFile          = str_outputFile,
-        #         SeriesInstanceUID   = self.d_DICOM['SeriesInstanceUID'],
-        #         **kwargs
-        # )
-        # if not d_seriesTable['seriesBaseDir']['exists']:
-        #     os.makedirs(
-        #             d_seriesTable['seriesBaseDir']['name'],
-        #             exist_ok = True
-        #     )
-
-        # Add some seriesModel to the JSON object that will be stored per
-        # individual incoming file.
-        # seriesData_singleImageFile_init(d_seriesTables)
-        # if d_seriesTable['seriesImageFile']['exists']:
-        #     with open(d_seriesTable['seriesImageFile']['name']) as fj:
-        #         self.json_read(fj, self.d_seriesMeta)
-        #     fj.close()
-        # if self.d_DICOM['SeriesInstanceUID'] not in self.d_seriesMeta.keys():
-        #     self.d_seriesMeta[self.d_DICOM['SeriesInstanceUID']] =           \
-        #         self.d_seriesModel
-        # if str_outputFile not in                                            \
-        #     self.d_seriesMeta[self.d_DICOM['SeriesInstanceUID']]             \
-        #                                     ['imageObj'].keys():
-        #     ofs = os.stat('%s/%s' % (str_outputDir, str_outputFile))
-        #     self.d_seriesMeta[self.d_DICOM['SeriesInstanceUID']]['imageObj'] \
-        #                             [str_outputFile] =                      \
-        #         {k.replace('st_', '') :                                     \
-        #             ('%s' % datetime.datetime.fromtimestamp(getattr(ofs, k))\
-        #             if 'time' in k and not 'ns' in k                        \
-        #                 else getattr(ofs, k))                               \
-        #                     for k in dir(ofs)                               \
-        #                         if 'st' in k and not 'ns' in k and not '__'  in k}
-        #     self.d_seriesMeta[self.d_DICOM['SeriesInstanceUID']]['imageObj'] \
-        #                             [str_outputFile]['FSlocation'] =        \
-        #                                 '%s/%s' % (str_outputDir, str_outputFile)
-        #     with open(d_seriesTable['seriesImageFile']['name'], 'w') as fj:
-        #         self.json_write(self.d_seriesMeta, fj)
-        #         # json.dump(self.d_seriesMeta, fj, indent = 4)
-        # else:
-        #     self.d_seriesModel     = self.d_seriesMeta[self.d_DICOM['SeriesInstanceUID']]
-        # if seriesData_singleImageFile_update(str_outputFile):
-        #     seriesData_singleImageFile_save(d_seriesTables)
         return d_ret
 
     def mapsUpdateForFile(self, str_file):
         """
         NOTE:
-            *   This is typically once per processed file, most often by a
+            *   This is typically called once per DICOM file, most often by a
                 repack.py process as it handles DICOM files received from a
-                storescp.
+                storescp and repacks them. The mapsUpdate is performed relative
+                to the repacked location.
 
             *   When called via storescp, particular care must be taken to
                 avoid collisions writing to the same file! This is somewhat
@@ -1213,30 +1258,32 @@ class SMDB():
                 still occur, and an extra layer in the JSON file writing is
                 used with a @retry decorator and backoff on the write.
 
+            *   Due also to the highly parallel nature of storescp handling,
+                maps _might_ not be complete -- particularly on less powerful
+                machines. In that case a mapsCheck() can be called.
+
         PRECONDITIONS:
             *   self.d_DICOM exists and has been set.
         """
-        b_status                :   bool    = True
-        d_patientData_process    :   dict    = {}
-        d_studyData_process      :   dict    = {}
-        d_seriesData_process     :   dict    = {}
+        b_status                :   bool    = False
+        d_patientData_process   :   dict    = {}
+        d_studyData_process     :   dict    = {}
+        d_seriesData_process    :   dict    = {}
 
         # Store the <str_file>, i.e. the file location where the DICOM
         # has been repacked.
         self.str_outputDir      = os.path.dirname(str_file)
         self.str_outputFile     = os.path.basename(str_file)
 
-        # pudb.set_trace()
-
-        d_patientData_process    = self.patientData_process()
-        d_studyData_process      = self.studyData_process()
-        d_seriesData_process     = self.seriesData_process()
+        # Only process files that actually exist!
+        if os.path.isfile(str_file):
+            # pudb.set_trace()
+            d_patientData_process    = self.patientData_process()
+            d_studyData_process      = self.studyData_process()
+            d_seriesData_process     = self.seriesData_process()
 
         return {
             'status'                : b_status,
-            'd_patientMeta'         : self.d_patientModel,
-            'd_studyMeta'           : self.d_studyModel,
-            'd_seriesMeta'          : self.d_seriesModel,
             'd_patientData_process' : d_patientData_process,
             'd_studyData_process'   : d_studyData_process,
             'd_seriesData_process'  : d_seriesData_process
@@ -1273,6 +1320,256 @@ class SMDB():
         d_seriesStatus                  = self.series_statusGet(str_seriesInstanceUID)
         d_seriesReceivedAndRequested    = self.series_receivedAndRequested(str_seriesInstanceUID)
 
+    def imageDirs_getOnPatientID(self, astr_PatientID) -> dict:
+        """
+        Return a structure that contains a list of all directories containing
+        DICOM files for a given PatientID.
+        """
+        d_ret               : dict  = {}
+        b_status            : bool  = False
+        l_studies           : list  = []
+        d_series            : dict  = {}
+        d_imageDirs         : dict  = {}
+        d_imageInfo         : dict  = {}
+        d_patientData       : dict  = {}
+        str_patientDataFile : str   = '%s/%s.json' % (self.str_patientDataDir, astr_PatientID)
+        str_imageFile       : str   = ""
+        str_imageObj        : str   = ""
+        str_imageLocation   : str   = ""
+        str_imageDataDir    : str   = ""
+        str_imageDir        : str   = ""
+
+        if os.path.isfile(str_patientDataFile):
+            with open(str_patientDataFile) as fp:
+                self.json_read(fp, d_patientData)
+            fp.close()
+            l_studies       = d_patientData[astr_PatientID]['StudyList']
+            for study in l_studies:
+                d_series[study] = [os.path.splitext(f)[0] for f in os.listdir(
+                                                '%s/%s-series' % (self.str_studyDataDir, study)
+                                                        )]
+                d_imageDirs[study]  = []
+                for series in d_series[study]:
+                    str_imageDataDir    = '%s/%s-img' % (self.str_seriesDataDir, series)
+                    str_imageFile       = os.listdir(str_imageDataDir)[0]
+                    if os.path.isfile('%s/%s' % (str_imageDataDir, str_imageFile)):
+                        with open('%s/%s' % (str_imageDataDir, str_imageFile)) as fp:
+                            self.json_read(fp, d_imageInfo)
+                        fp.close()
+                        str_imageObj        = os.path.splitext(str_imageFile)[0]
+                        str_imageLocation   = d_imageInfo[series]['imageObj'][str_imageObj]['FSlocation']
+                        str_imageDir        = os.path.dirname(str_imageLocation)
+                        d_imageDirs[study].append(str_imageDir)
+                b_status    = True
+
+        d_ret = {
+            'status'        : b_status,
+            'PatientID'     : astr_PatientID,
+            'd_series'      : d_series,
+            'd_imageDirs'   : d_imageDirs
+        }
+        return d_ret
+
+    def imageDirs_getOnSeriesInstanceUID(self, astr_SeriesInstanceUID) -> dict:
+        """
+        Return a structure that contains a list of all directories containing
+        DICOM files for a given SeriesInstanceUID
+        """
+        d_ret               : dict  = {}
+        b_status            : bool  = False
+        d_imageInfo         : dict  = {}
+        str_imageFile       : str   = ""
+        str_imageObj        : str   = ""
+        str_imageLocation   : str   = ""
+        str_imageDataDir    : str   = ""
+        str_imageDir        : str   = "Non-existant meta directory: "
+        str_error           : str   = ""
+
+        str_imageDataDir    = '%s/%s-img' % (
+                                    self.str_seriesDataDir,
+                                    astr_SeriesInstanceUID
+                            )
+        str_imageDir        += str_imageDataDir
+        if os.path.isdir(str_imageDataDir):
+            str_imageFile       = os.listdir(str_imageDataDir)[0]
+            try:
+                if os.path.isfile('%s/%s' % (str_imageDataDir, str_imageFile)):
+                    with open('%s/%s' % (str_imageDataDir, str_imageFile)) as fp:
+                        self.json_read(fp, d_imageInfo)
+                    fp.close()
+                    str_imageObj        = os.path.splitext(str_imageFile)[0]
+                    str_imageLocation   = d_imageInfo[astr_SeriesInstanceUID][
+                                                    'imageObj'][str_imageObj]['FSlocation']
+                    str_imageDir        = os.path.dirname(str_imageLocation)
+                    b_status            = True
+            except Exception as e:
+                str_error               = '%s' % e
+
+        d_ret = {
+            'status'                    : b_status,
+            'error'                     : str_error,
+            astr_SeriesInstanceUID      : str_imageDir
+        }
+        return d_ret
+
+    def mapsUpdateForPatient_do(self, astr_PatientID) -> dict:
+        """
+        Update all the DB data for a given PatientID.
+
+        This method is used most often to "correct" or "pick up"
+        any DB entries that might have been lost "in the wash"
+        during a high load of asynchronous storescp originating
+        pack operations.
+
+        Anecdotally it has been observed that while all image files
+        are correctly repacked in their image directories, the logging
+        of these files in the smdb catalogue can sometimes miss a few
+        individual image cataloging here and there.
+
+        This method redoes the cataloguing for a Patient to refresh
+        all the internal tracking.
+        """
+        b_status        : bool  = False
+        d_ret           : dict  = {}
+        d_imageInfo     : dict  = {}
+        l_studies       : list  = []
+        l_seriesFiles   : list  = []
+        str_seriesDir   : str   = ""
+
+        d_imageInfo             = self.imageDirs_getOnPatientID(astr_PatientID)
+        d_ret['d_imageInfo']    = d_imageInfo
+        b_status                = d_imageInfo['status']
+        d_ret['status']         = b_status
+        if b_status:
+            l_studies           = list(d_imageInfo['d_imageDirs'].keys())
+            for study in l_studies:
+                for str_seriesDir in d_imageInfo['d_imageDirs'][study]:
+                    l_images    = ['%s/%s' % (str_seriesDir, f) for f in os.listdir(str_seriesDir)]
+                    for self.args.str_xcrdirfile in l_images:
+                        d_ret[self.args.str_xcrdirfile]     = self.mapsUpdateForFile_do()
+        return d_ret
+
+    def service_keyAccess(self, astr_service) -> dict:
+        """
+        This method saves the details of accessing a given service
+        instance as a named key. Three services are supported:
+
+            * 'PACS'
+            * 'swift'
+            * 'CUBE'
+
+        The point/idea of these services is to store a short hand for
+        parameters useful to some upstream services, for example:
+
+            * px-find ...
+            * px-push ...
+            * px-register ...
+
+        For 'PACS':
+
+            {
+                "<keyname>":  {
+                        "aet":      "<AETitle>",
+                        "aec":      "<CalledAETitle>",
+                        "ip":       "<PACSip>",
+                        "port":     "<PACSport>",
+                    }
+            }
+
+        For 'swift':
+
+            {
+                "<keyname>":  {
+                        "ip":       "<IPofSwiftServer>",
+                        "port":     "<PortOfSwiftServer>",
+                        "login":    "<username>:<passwd>"
+                    }
+            }
+
+        For 'CUBE':
+
+            {
+                "<keyname>":  {
+                        "url":      "<URLofCUBEAPI>",
+                        "username": "<CUBEusername>",
+                        "password": "<CUBEuserpasswd>"
+                    }
+            }
+
+        NOTE:
+
+            * Currently no models or error checking on the passed CLI
+                <self.args.str_actionArgs>!!!
+
+        """
+        d_ret           : dict  = {}
+        d_service       : dict  = {}
+        d_update        : dict  = {}
+        d_ret['status']         = False
+
+        if astr_service.lower().strip() == 'swift':
+            str_service : str   = os.path.join(
+                                    self.str_servicesDir,
+                                    self.str_swiftService
+                                )
+        if astr_service.lower().strip() == 'cube':
+            str_service : str   = os.path.join(
+                                    self.str_servicesDir,
+                                    self.str_CUBEservice
+                                )
+        if astr_service.lower().strip() == 'pacs':
+            str_service: str   = os.path.join(
+                                    self.str_servicesDir,
+                                    self.str_PACSservice
+                                )
+        if os.path.isfile(str_service):
+            with open(str_service) as fj:
+                self.json_read(fj, d_service)
+            fj.close()
+            d_ret['status']     = True
+            d_ret[astr_service] = d_service
+
+        if hasattr(self.args, 'str_actionArgs'):
+            if len(self.args.str_actionArgs):
+                try:
+                    d_update   = json.loads(self.args.str_actionArgs)
+                    d_service.update(d_update)
+                    with open(str_service, 'w') as fj:
+                        self.json_write(d_service, fj)
+                    fj.close()
+                    d_ret[astr_service]     = d_service
+                    d_ret['status']         = True
+                except:
+                    d_ret['status']         = False
+
+        return d_ret
+
+    def mapsUpdateForFile_do(self) -> dict:
+        d_run   : dict  = {}
+        # pudb.set_trace()
+        if self.fileSpec_process():
+            d_DICOMread     = repack.Process.DICOMfile_read(
+                                file = '%s/%s' % (
+                                    self.args.str_xcrdir,
+                                    self.args.str_xcrfile
+                                )
+                            )
+            if d_DICOMread['status']:
+                self.DICOMobj_set(d_DICOMread['d_DICOM']['d_dicomSimple'])
+                d_run['status'] = True
+                d_run['mapsUpdateForFile'] = \
+                    self.mapsUpdateForFile('%s/%s' % (
+                                self.args.str_xcrdir,
+                                self.args.str_xcrfile
+                            )
+                    )
+            d_DICOM                 = d_DICOMread['d_DICOM']
+            d_DICOM['dcm']          = "Not JSON serializable"
+            d_DICOM['d_dcm']        = "Not JSON serializable"
+            d_DICOM['d_dicom']      = "Not JSON serializable"
+            # d_run['d_DICOMread']    = d_DICOMread
+        return d_run
+
     def run(self) -> dict:
         """
         Generic run handler -- mostly called when an "action" needs
@@ -1282,167 +1579,9 @@ class SMDB():
         process as #p/#f
         """
 
-        def mapsUpdateForFile_do() -> dict:
-            nonlocal d_run
-            if self.fileSpec_process():
-                d_DICOMread     = repack.Process.DICOMfile_read(
-                                    file = '%s/%s' % (
-                                        self.args.str_xcrdir,
-                                        self.args.str_xcrfile
-                                    )
-                                )
-                if d_DICOMread['status']:
-                    self.DICOMobj_set(d_DICOMread['d_DICOM']['d_dicomSimple'])
-                    d_run['status'] = True
-                    d_run['mapsUpdateForFile'] = \
-                        self.mapsUpdateForFile('%s/%s' % (
-                                    self.args.str_xcrdir,
-                                    self.args.str_xcrfile
-                                )
-                        )
-                d_DICOM                 = d_DICOMread['d_DICOM']
-                d_DICOM['dcm']          = "Not JSON serializable"
-                d_DICOM['d_dcm']        = "Not JSON serializable"
-                d_DICOM['d_dicom']      = "Not JSON serializable"
-                d_run['d_DICOMread']    = d_DICOMread
-            return d_run
-
         def seriesDirLocation_doget() -> dict:
             nonlocal d_run
             d_run['seriesDirLocation'] = self.seriesDirLocation_get()
-            return d_run
-
-        def swift_keyAccess() -> dict:
-            """
-            This method saves the details of accessing a given swift
-            instance as a named key. Saved parameters should be:
-
-
-                {
-                    "<keyname>":  {
-                            "ip":       "<IPofSwiftServer>",
-                            "port":     "<PortOfSwiftServer>",
-                            "login":    "<username>:<passwd>"
-                        }
-                }
-
-            """
-            nonlocal d_run
-            d_swiftService      : dict  = {}
-            d_swiftUpdate       : dict  = {}
-            str_swiftService    : str   = os.path.join(
-                                    self.str_servicesDir,
-                                    self.str_swiftService
-                                )
-            if os.path.isfile(str_swiftService):
-                with open(str_swiftService) as fj:
-                    self.json_read(fj, self.d_swiftService)
-                fj.close()
-
-            if len(self.args.str_actionArgs):
-                try:
-                    d_swiftUpdate   = json.loads(self.args.str_actionArgs)
-                    d_swiftService.update(d_swiftUpdate)
-                    with open(str_swiftService, 'w') as fj:
-                        self.json_write(d_swiftService, fj)
-                    fj.close()
-                    d_run['swiftService']   = d_swiftService
-                    d_run['status']         = True
-                except:
-                    d_run['status']         = False
-
-            return d_run
-
-        def service_keyAccess(astr_service) -> dict:
-            """
-            This method saves the details of accessing a given service
-            instance as a named key. Two services are supported:
-
-                * 'swift'
-                * 'CUBE'
-
-            For 'swift':
-
-                {
-                    "<keyname>":  {
-                            "ip":       "<IPofSwiftServer>",
-                            "port":     "<PortOfSwiftServer>",
-                            "login":    "<username>:<passwd>"
-                        }
-                }
-
-            For 'CUBE':
-
-                {
-                    "<keyname>":  {
-                            "url":      "<URLofCUBEAPI>",
-                            "username": "<CUBEusername>",
-                            "password": "<CUBEuserpasswd>"
-                        }
-                }
-
-            NOTE:
-
-                * Currently no models or error checking on the passed CLI
-                  <self.args.str_actionArgs>!!!
-
-            """
-            nonlocal d_run
-            d_service      : dict  = {}
-            d_update       : dict  = {}
-            if astr_service.lower().strip() == 'swift':
-                str_service    : str   = os.path.join(
-                                        self.str_servicesDir,
-                                        self.str_swiftService
-                                    )
-            if astr_service.lower().strip() == 'cube':
-                str_service    : str   = os.path.join(
-                                        self.str_servicesDir,
-                                        self.str_CUBEservice
-                                    )
-            if os.path.isfile(str_service):
-                with open(str_service) as fj:
-                    self.json_read(fj, d_service)
-                fj.close()
-
-            if len(self.args.str_actionArgs):
-                try:
-                    d_update   = json.loads(self.args.str_actionArgs)
-                    d_service.update(d_update)
-                    with open(str_service, 'w') as fj:
-                        self.json_write(d_service, fj)
-                    fj.close()
-                    d_run[astr_service]     = d_service
-                    d_run['status']         = True
-                except:
-                    d_run['status']         = False
-
-            return d_run
-
-
-        def CUBE_keyAccess() -> dict:
-            nonlocal d_run
-            d_CUBEservice       : dict  = {}
-            d_CUBEupdate        : dict  = {}
-            str_CUBEservice     : str   = os.path.join(
-                                    self.str_servicesDir,
-                                    self.str_swiftService
-                                )
-            if os.path.isfile(str_CUBEservice):
-                with open(str_CUEBservice) as fj:
-                    self.json_read(fj, self.d_CUBEservice)
-                fj.close()
-
-            if len(self.str_actionArgs):
-                try:
-                    d_CUBEdate   = json.loads(self.str_actionArgs)
-                    d_CUBEservice.update(d_CUBEupdate)
-                    with open(str_CUBEservice, 'w') as fj:
-                        self.json_write(d_CUBEservice, fj)
-                    fj.close()
-                except:
-                    d_run['status'] = False
-
             return d_run
 
         def DBtablesGet_do() -> dict:
@@ -1482,12 +1621,24 @@ class SMDB():
         }
 
         # pudb.set_trace()
-
-        if self.args.str_action == 'mapsUpdateForFile':     mapsUpdateForFile_do()
-        if 'seriesDirLocation'  in self.args.str_action:    seriesDirLocation_doget()
-        if 'DBtablesGet'        in self.args.str_action:    DBtablesGet_do()
-        if 'swift'              in self.args.str_action:    service_keyAccess('swift')
-        if 'CUBE'               in self.args.str_action:    service_keyAccess('CUBE')
+        if 'mapsUpdateForFile'          in self.args.str_action:
+            d_run = self.mapsUpdateForFile_do()
+        if 'imageDirsPatientID'         in self.args.str_action:
+            d_run = self.imageDirs_getOnPatientID(self.args.str_actionArgs)
+        if 'imageDirsSeriesInstanceUID' in self.args.str_action:
+            d_run = self.imageDirs_getOnSeriesInstanceUID(self.args.str_actionArgs)
+        if 'mapsUpdateForPatient'       in self.args.str_action:
+            d_run = self.mapsUpdateForPatient_do(self.args.str_actionArgs)
+        if 'seriesDirLocation'          in self.args.str_action:
+            d_run = seriesDirLocation_doget()
+        if 'DBtablesGet'                in self.args.str_action:
+            d_run = DBtablesGet_do()
+        if 'swift'                      in self.args.str_action:
+            d_run = self.service_keyAccess('swift')
+        if 'CUBE'                       in self.args.str_action:
+            d_run = self.service_keyAccess('CUBE')
+        if 'PACS'                       in self.args.str_action:
+            d_run = self.service_keyAccess('PACS')
 
         if not d_run['status']:
             d_run['error']  = "An error occurred while executing '%s'" %    \
