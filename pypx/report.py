@@ -640,6 +640,7 @@ class Report(Base):
             if seriesIndex >= 0:
                 str_receivedCount       = '%03d' % d_status['images']['received']['count']
                 str_requestedCount      = '%03d' % d_status['images']['requested']['count']
+                str_packedCount         = '%03d' % d_status['images']['packed']['count']
                 str_status              = '%25s : %20s : %20s ' % \
                     (
                         d_status['state']['study'],
@@ -649,13 +650,55 @@ class Report(Base):
                 str_seriesDescription   =           \
                     self.report_getBodyField(studyIndex, seriesIndex,
                                             'SeriesDescription')
+                str_seriesInstanceUID   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesInstanceUID')
                 if d_status['status']:
                     str_line                = str_status               +\
-                        ' [ %s/%s ] for ' %                             \
-                            (str_receivedCount, str_requestedCount)
+                        ' [ PACS:%s/JSON:%s/DCM:%s ] for ' %                             \
+                            (str_receivedCount, str_requestedCount, str_packedCount)
                 else:
                     str_line                =  str_status
-                str_line = '%38s' % str_line + ' ' + str_seriesDescription
+
+                str_line += ' ' + str_seriesDescription
+                str_line = '%-160s' % str_line
+                str_line += str_seriesInstanceUID
+            else:
+                str_line    = 'Invalid seriesIndex specified'
+        else:
+            str_line    = 'Invalid studyIndex specified'
+        return str_line
+
+    def seriesPush_print(self, **kwargs) -> str:
+        """
+        Return an inline study/series push string based on the kwargs
+        """
+        studyIndex              : int   = -1
+        seriesIndex             : int   = -1
+        str_seriesInstances     : str   = ''
+        str_seriesDescription   : str   = ''
+        str_line                : str   = ''
+        d_count                 : dict  = {}
+        for k,v in kwargs.items():
+            if k == 'studyIndex'        : studyIndex    = int(v)
+            if k == 'seriesIndex'       : seriesIndex   = int(v)
+            if k == 'fileCounts'        : d_count       = v
+        if studyIndex >= 0:
+            if seriesIndex >= 0:
+                str_receivedCount       = '%03d' % d_count['received']['count']
+                str_requestedCount      = '%03d' % d_count['requested']['count']
+                str_seriesDescription   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesDescription')
+                str_seriesInstanceUID   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesInstanceUID')
+
+                str_line += str_seriesDescription
+                str_line = '%-40s' % str_line
+                str_line = "Pushing [ %s/%s ]: "    \
+                            % (str_receivedCount, str_requestedCount)       \
+                            + str_line + str_seriesInstanceUID
             else:
                 str_line    = 'Invalid seriesIndex specified'
         else:
