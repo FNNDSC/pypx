@@ -11,6 +11,7 @@ from    argparse            import  Namespace
 import  os
 from    os                  import  listdir
 from    os.path             import  isfile, join
+import  sys
 import  subprocess
 import  uuid
 import  shutil
@@ -20,6 +21,7 @@ from    pathlib             import  Path
 import  uuid
 import  pathlib
 import  datetime
+from    datetime            import  date, datetime
 import  inspect
 
 import  re
@@ -38,6 +40,222 @@ import  pudb
 from    pudb.remote         import  set_trace
 import  pfmisc
 
+from    argparse            import  Namespace, ArgumentParser
+from    argparse            import  RawTextHelpFormatter
+
+def parser_setup(str_desc):
+    parser = ArgumentParser(
+                description         = str_desc,
+                formatter_class     = RawTextHelpFormatter
+            )
+
+    # JSONarg
+    parser.add_argument(
+        '--JSONargs',
+        action  = 'store',
+        dest    = 'JSONargString',
+        type    = str,
+        default = '',
+        help    = 'JSON equivalent of CLI key/values')
+
+    # db access settings
+    parser.add_argument(
+        '--db',
+        action  = 'store',
+        dest    = 'str_logDir',
+        type    = str,
+        default = '/tmp/log',
+        help    = 'path to base dir of receipt database')
+
+    parser.add_argument(
+        '--upstreamFile',
+        action  = 'store',
+        dest    = 'upstreamFile',
+        type    = str,
+        default = '',
+        help    = 'JSON report contained in file from upstream process')
+    parser.add_argument(
+        '--upstream',
+        action  = 'store',
+        dest    = 'reportData',
+        type    = str,
+        default = '',
+        help    = 'JSON report from upstream process')
+
+    parser.add_argument(
+        '-p', '--xcrdir',
+        action  = 'store',
+        dest    = 'str_xcrdir',
+        type    = str,
+        default = '',
+        help    = 'Directory containing a received study'
+        )
+    parser.add_argument(
+        '-f', '--xcrfile',
+        action  = 'store',
+        dest    = 'str_xcrfile',
+        type    = str,
+        default = '',
+        help    = 'File in <xcrdir> to process'
+        )
+    parser.add_argument(
+        '--xcrdirfile',
+        action  = 'store',
+        dest    = 'str_xcrdirfile',
+        type    = str,
+        default = '',
+        help    = 'Fully qualified file to process'
+        )
+    parser.add_argument(
+        '--parseAllFilesWithSubStr',
+        action  = 'store',
+        dest    = 'str_filesubstr',
+        type    = str,
+        default = '',
+        help    = 'Parse all files in <xcrdir> that contain <substr>'
+        )
+    parser.add_argument(
+        '--localFileList',
+        action  = 'store',
+        dest    = 'localFileList',
+        default = [],
+        help    = 'a list of local files -- not used by CLI!'
+        )
+    parser.add_argument(
+        '--objectFileList',
+        action  = 'store',
+        dest    = 'objectFileList',
+        default = [],
+        help    = 'a list of object files -- not used by CLI!'
+        )
+    parser.add_argument(
+        '--PACS',
+        action  = 'store',
+        dest    = 'str_PACS',
+        type    = str,
+        default = '',
+        help    = 'PACS name ID within swift storage'
+        )
+
+    # CUBE settings
+
+    parser.add_argument(
+        '--CUBE',
+        action  = 'store',
+        dest    = 'CUBE',
+        type    = str,
+        default = '',
+        help    = 'CUBE lookup service identifier')
+
+    parser.add_argument(
+        '--CUBEURL',
+        action  = 'store',
+        dest    = 'str_CUBEURL',
+        type    = str,
+        default = 'http://localhost:8000/api/v1/',
+        help    = 'CUBE URL'
+        )
+    parser.add_argument(
+        '--CUBEusername',
+        action  = 'store',
+        dest    = 'str_CUBEusername',
+        type    = str,
+        default = 'chris',
+        help    = 'Username with which to log into CUBE'
+        )
+    parser.add_argument(
+        '--CUBEuserpasswd',
+        action  = 'store',
+        dest    = 'str_CUBEuserpasswd',
+        type    = str,
+        default = 'chris1234',
+        help    = 'CUBE user password'
+        )
+    parser.add_argument(
+        '--swiftServicesPACS',
+        action  = 'store',
+        dest    = 'str_swiftServicesPACS',
+        type    = str,
+        default = '',
+        help    = 'swift PACS location within SERVICE/PACS to push files')
+
+    parser.add_argument(
+        '--cleanup',
+        action  = 'store_true',
+        dest    = 'b_cleanup',
+        default = False,
+        help    = 'If specified, then cleanup temporary files'
+        )
+    parser.add_argument(
+        '--debug',
+        action  = 'store_true',
+        dest    = 'b_debug',
+        default = False,
+        help    = 'If specified, then also log debug info to <logdir>'
+        )
+    parser.add_argument(
+        "-v", "--verbosity",
+        help    = "verbosity level for app",
+        dest    = 'verbosity',
+        type    = int,
+        default = 1)
+    parser.add_argument(
+        "--json",
+        help    = "return a JSON payload",
+        dest    = 'json',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-x", "--desc",
+        help    = "show long synopsis",
+        dest    = 'b_desc',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-y", "--synopsis",
+        help    = "show short synopsis",
+        dest    = 'b_synopsis',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--version',
+        help    = 'if specified, print version number',
+        dest    = 'b_version',
+        action  = 'store_true',
+        default = False
+    )
+
+    return parser
+
+def parser_interpret(parser, *args):
+    """
+    Interpret the list space of *args, or sys.argv[1:] if
+    *args is empty
+    """
+    if len(args):
+        args    = parser.parse_args(*args)
+    else:
+        args    = parser.parse_args(sys.argv[1:])
+    return args
+
+def parser_JSONinterpret(parser, d_JSONargs):
+    """
+    Interpret a JSON dictionary in lieu of CLI.
+
+    For each <key>:<value> in the d_JSONargs, append to
+    list two strings ["--<key>", "<value>"] and then
+    argparse.
+    """
+    l_args  = []
+    for k, v in d_JSONargs.items():
+        l_args.append('--%s' % k)
+        if type(v) == type(True): continue
+        l_args.append('%s' % v)
+    return parser_interpret(parser, l_args)
+
 class Register():
     """
     The core class of the register module -- this class essentially reads
@@ -45,6 +263,23 @@ class Register():
     with a ChRIS/CUBE instance. This of course assumes that the file has been
     pushed to CUBE using some mechanism (most typically ``pfstorage``).
     """
+
+    def serviceKey_process(self) -> dict:
+        """
+        If a service key (--CUBE <key>) has been specified, read from
+        smdb service storage and set the CLI flags to pass on along to
+        pfstorage.
+        """
+        d_CUBEinfo :   dict    = {}
+        d_CUBEinfo['status']   = False
+        if len(self.args.CUBE):
+            d_CUBEinfo = self.smdb.service_keyAccess('CUBE')
+            if d_CUBEinfo['status']:
+                self.args.str_CUBEURL           = d_CUBEinfo['CUBE'][self.args.CUBE]['url']
+                self.args.str_CUBEusername      = d_CUBEinfo['CUBE'][self.args.CUBE]['username']
+                self.args.str_CUBEuserpasswd    = d_CUBEinfo['CUBE'][self.args.CUBE]['password']
+
+        return d_CUBEinfo
 
     def loggers_create(self):
         """
@@ -110,6 +345,7 @@ class Register():
                                         )
 
         self.smdb                       = pypx.smdb.SMDB(args)
+        self.serviceKey_process()
         self.packer                     = pypx.repack.Process(
                                             pypx.repack.args_impedanceMatch(args)
                                         )
@@ -169,6 +405,37 @@ class Register():
             'run'       : dl_run
         }
 
+    def PACSdata_checkFormatting(self, d_pacsData):
+        """
+        A simple method to check on some values in the d_pacsData
+        dictionary. In particular, convert dates from the DICOM DA
+        format of YYYYMMDD to YYYY-MM-DD, and PatientAge is recast
+        as age in days.
+        """
+        for field in d_pacsData.keys():
+            if 'date' in  field.lower():
+                try:
+                    d_pacsData[field]  = datetime.strptime(
+                                            d_pacsData[field], 
+                                            "%Y%m%d").strftime('%Y-%m-%d'
+                                        )
+                except:
+                    pass
+            if 'patientage' in field.lower():
+                str_age     = d_pacsData['PatientAge']
+                if not str_age[-1].isnumeric():
+                    try:
+                        age     = int(str_age[0:-1])
+                    except:
+                        age     = -1
+                    AS      = str_age[-1]
+                    if AS == 'Y':   age *= 365
+                    if AS == 'M':   age *= 30
+                    if AS == 'W':   age *= 7
+                    if AS == 'D':   age *= 1
+                    d_pacsData['PatientAge']    = '%s' % age
+        return d_pacsData
+
     def DICOMfile_register(self, d_DICOMfile_read, str_file)    -> dict:
         """
         Register the DICOM file described by the passed dictionary
@@ -188,8 +455,12 @@ class Register():
         ]
         if d_DICOMfile_read['status']:
             for k in l_DICOMtags:
-                d_pacsData[k] = d_DICOMfile_read['d_DICOM']['d_dicomSimple'][k]
+                try:
+                    d_pacsData[k] = d_DICOMfile_read['d_DICOM']['d_dicomSimple'][k]
+                except Exception as e:
+                    d_pacsData[k]   = "%s" % e
             d_pacsData['pacs_name']     = self.args.str_swiftServicesPACS
+            d_pacsData                  = self.PACSdata_checkFormatting(d_pacsData)
             if len(self.args.objectFileList):
                 i = self.args.localFileList.index(str_file)
                 d_pacsData['path']      = self.args.objectFileList[i]
@@ -198,9 +469,9 @@ class Register():
 
                 d_pacsData['path']      = 'SERVICES/PACS/%s/%s/%s' % \
                     (
-                        self.arg['str_swiftPACS'],
+                        self.args.str_swiftServicesPACS,
                         d_path['packDir'],
-                        d_path['imageFIle']
+                        d_path['imageFile']
                     )
             try:
                 d_register = self.CUBE.register_pacs_file(d_pacsData)
@@ -218,26 +489,28 @@ class Register():
     def DICOMfile_mapsUpdate(self, d_DICOMfile_register)    -> dict:
         """
         Interact with the SMDB object to update JSON mapping information
-        relative to this save operation.
+        recording this registration operation.
         """
         b_status        :   bool    = False
+        d_register      :   dict    = {}
 
         if d_DICOMfile_register['status']:
             b_status    = True
             self.smdb.housingDirs_create()
-            # self.smdb.DICOMobj_set(d_DICOMfile_save ['d_DICOMfile_read']\
-            #                                         ['d_DICOM']\
-            #                                         ['d_dicomSimple'])
-            # self.smdb.mapsUpdateForFile(
-            #         '%s/%s' % ( d_DICOMfile_save['outputDir'],
-            #                     d_DICOMfile_save['outputFile'])
-            # )
+            d_register  = d_DICOMfile_register['d_CUBE_register_pacs_file']
+            if 'id' in d_register.keys():
+                l_pop       = [d_register.pop(k) for k in ['id', 'creation_date', 'fname', 'fsize']]
+            # Record in the smdb an entry for each series
+            self.smdb.d_DICOM   = d_DICOMfile_register['d_DICOMfile_read']['d_DICOM']['d_dicomSimple']
+            now                 = datetime.now()
+            self.smdb.seriesData('register', 'info',        d_register)
+            self.smdb.seriesData('register', 'timestamp',   now.strftime("%Y-%m-%d, %H:%M:%S"))
+            if len(self.args.CUBE):
+                self.smdb.seriesData('register', 'CUBE',
+                    self.smdb.service_keyAccess('CUBE')['CUBE'][self.args.CUBE])
 
         return {
             'status'                : b_status,
-            'd_patientInfo'         : self.smdb.d_patientInfo,
-            'd_studyInfo'           : self.smdb.d_studyInfo,
-            'd_seriesInfo'          : self.smdb.d_seriesInfo,
             'd_DICOMfile_register'  : d_DICOMfile_register
         }
 

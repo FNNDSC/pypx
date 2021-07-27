@@ -20,12 +20,14 @@ from        pypx                import repack
 from        pypx                import register
 
 import      json
+from        pypx.register       import parser_setup, parser_interpret, parser_JSONinterpret
+
 
 import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-register"
-str_version = "3.0.2"
+str_version = "3.2.0"
 str_desc    = Colors.CYAN + """
 
 
@@ -63,6 +65,8 @@ def synopsis(ab_shortOnly = False):
     SYNOPSIS
 
             px-register                                             \\
+                [--JSONargs <JSONargStringStructure>]               \\
+                [--db <dblogbasepath>]                              \\
                 [--xcrdir|-p <xcrdir>]                              \\
                 [--xcrfile|-f <xcrfile>]                            \\
                 [--xcrdirfile <xcrdirfile>]                         \\
@@ -70,6 +74,7 @@ def synopsis(ab_shortOnly = False):
                 [--localFileList <listOfFiles>]                     \\
                 [--objectFileList <listOfNamesInStorage>]           \\
                 [--logdir|-l <logdir>]                              \\
+                [--CUBE <CUBEkeyServiceID>]                         \\
                 [--CUBEURL <CUBEURL>]                               \\
                 [--CUBEusername <CUBEusername>]                     \\
                 [--CUBEuserpasswd <CUBEuserpasswd>]                 \\
@@ -86,6 +91,16 @@ def synopsis(ab_shortOnly = False):
     description = Colors.LIGHT_GREEN + '''
 
     ARGS
+
+        [--JSONargs <JSONargStringStructure>]
+        An alternate mechanism of specifying all the args to this script.
+        Essentially every key/value in the <JSONargStringStructure> can
+        mirror a CLI key/value. The JSONargs is parsed first, so key/values
+        in that structure can be overriden by explicit CLI.
+
+        [--db <dblogbasepath>]
+        A path to the base directory of the DB contents/files that track
+        received files. This is typically the <logDir> of the `smdb` DB.
 
         [--upstreamFile]
         A JSON formatted file containing information to pack into the
@@ -119,6 +134,18 @@ def synopsis(ab_shortOnly = False):
 
         [--logdir|-l <logdir>]
         The directory containing log files relevant to px-register operation.
+
+        [--CUBE <CUBEkeyServiceID>]
+        A key lookup into an smdb data element that defines all the fields
+        required for CUBE access. This is pre-instantiated by calling the
+        smdb element a priori. Fields are:
+
+                    "<CUBEkeyServiceID>":  {
+                            "url":      "<URLofCUBEAPI>",
+                            "username": "<CUBEusername>",
+                            "password": "<CUBEuserpasswd>"
+                        }
+
 
         [--CUBEURL <cubeURL>]
         The URL of the CUBE instance.
@@ -210,182 +237,19 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
-parser = ArgumentParser(
-            description         = str_desc,
-            formatter_class     = RawTextHelpFormatter
-        )
 
-# Settings
+parser      = parser_setup(str_desc)
+args        = parser_interpret(parser)
+if len(args.JSONargString):
+    # If the user has specified args in the JSONargString, then
+    # interpret this structure.
+    #
+    # NOTE:
+    # This will OVERWRITE any non-JSON args that may have been specified
+    # as per normal. Using the JSONargString is an either-or choice!
+    d_JSONargs  : dict  = json.loads(args.JSONargString)
+    args                = parser_JSONinterpret(parser, d_JSONargs)
 
-parser.add_argument(
-    '--upstreamFile',
-    action  = 'store',
-    dest    = 'upstreamFile',
-    type    = str,
-    default = '',
-    help    = 'JSON report contained in file from upstream process')
-parser.add_argument(
-    '--upstream',
-    action  = 'store',
-    dest    = 'reportData',
-    type    = str,
-    default = '',
-    help    = 'JSON report from upstream process')
-
-parser.add_argument(
-    '-p', '--xcrdir',
-    action  = 'store',
-    dest    = 'str_xcrdir',
-    type    = str,
-    default = '',
-    help    = 'Directory containing a received study'
-    )
-parser.add_argument(
-    '-f', '--xcrfile',
-    action  = 'store',
-    dest    = 'str_xcrfile',
-    type    = str,
-    default = '',
-    help    = 'File in <xcrdir> to process'
-    )
-parser.add_argument(
-    '--xcrdirfile',
-    action  = 'store',
-    dest    = 'str_xcrdirfile',
-    type    = str,
-    default = '',
-    help    = 'Fully qualified file to process'
-    )
-parser.add_argument(
-    '--parseAllFilesWithSubStr',
-    action  = 'store',
-    dest    = 'str_filesubstr',
-    type    = str,
-    default = '',
-    help    = 'Parse all files in <xcrdir> that contain <substr>'
-    )
-parser.add_argument(
-    '--localFileList',
-    action  = 'store',
-    dest    = 'localFileList',
-    default = [],
-    help    = 'a list of local files -- not used by CLI!'
-    )
-parser.add_argument(
-    '--objectFileList',
-    action  = 'store',
-    dest    = 'objectFileList',
-    default = [],
-    help    = 'a list of object files -- not used by CLI!'
-    )
-parser.add_argument(
-    '-l', '--logdir',
-    action  = 'store',
-    dest    = 'str_logDir',
-    type    = str,
-    default = '/tmp/log',
-    help    = 'Directory to store log files'
-    )
-parser.add_argument(
-    '-d', '--datadir',
-    action  = 'store',
-    dest    = 'str_dataDir',
-    type    = str,
-    default = '/tmp/data',
-    help    = 'Directory in which to pack final DICOM files'
-    )
-parser.add_argument(
-    '--PACS',
-    action  = 'store',
-    dest    = 'str_PACS',
-    type    = str,
-    default = '',
-    help    = 'PACS name ID within swift storage'
-    )
-
-# CUBE settings
-parser.add_argument(
-    '--CUBEURL',
-    action  = 'store',
-    dest    = 'str_CUBEURL',
-    type    = str,
-    default = 'http://localhost:8000/api/v1/',
-    help    = 'CUBE URL'
-    )
-parser.add_argument(
-    '--CUBEusername',
-    action  = 'store',
-    dest    = 'str_CUBEusername',
-    type    = str,
-    default = 'chris',
-    help    = 'Username with which to log into CUBE'
-    )
-parser.add_argument(
-    '--CUBEuserpasswd',
-    action  = 'store',
-    dest    = 'str_CUBEuserpasswd',
-    type    = str,
-    default = 'chris1234',
-    help    = 'CUBE user password'
-    )
-parser.add_argument(
-    '--swiftServicesPACS',
-    action  = 'store',
-    dest    = 'str_swiftServicesPACS',
-    type    = str,
-    default = '',
-    help    = 'swift PACS location within SERVICE/PACS to push files')
-
-parser.add_argument(
-    '--cleanup',
-    action  = 'store_true',
-    dest    = 'b_cleanup',
-    default = False,
-    help    = 'If specified, then cleanup temporary files'
-    )
-parser.add_argument(
-    '--debug',
-    action  = 'store_true',
-    dest    = 'b_debug',
-    default = False,
-    help    = 'If specified, then also log debug info to <logdir>'
-    )
-parser.add_argument(
-    "-v", "--verbosity",
-    help    = "verbosity level for app",
-    dest    = 'verbosity',
-    type    = int,
-    default = 1)
-parser.add_argument(
-    "--json",
-    help    = "return a JSON payload",
-    dest    = 'json',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-x", "--desc",
-    help    = "show long synopsis",
-    dest    = 'b_desc',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-y", "--synopsis",
-    help    = "show short synopsis",
-    dest    = 'b_synopsis',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--version',
-    help    = 'if specified, print version number',
-    dest    = 'b_version',
-    action  = 'store_true',
-    default = False
-)
-
-args        = parser.parse_args()
 
 if args.b_desc or args.b_synopsis:
     print(str_desc)
@@ -404,12 +268,6 @@ if args.b_version:
 if len(args.upstreamFile):
     with open(args.upstreamFile, 'r') as f:
         args.upstream = json.load(f)
-# else:
-#     # Or, more conveniently, read from input stream
-#     str_inputPipe           = ''
-#     for line in sys.stdin:
-#         str_inputPipe += line
-#     args.upstream   = json.loads(str_inputPipe)
 
 d_handler   = register(args)
 
