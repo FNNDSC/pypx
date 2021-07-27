@@ -9,6 +9,12 @@ storescp        -od /tmp/data                                                  \
                 -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \ 
                 11113
 
+# Pack a single file
+px-repack       --logdir /home/dicom/log                                       \
+                --datadir /home/dicom/data                                     \
+                --xcrdir ~/data/4665436-305/all                                \
+                --parseAllFilesWithSubStr dcm
+
 set SWIFTHOST 192.168.1.200
 set SWIFTPORT 8080
 set SWIFTLOGIN chris:chris1234
@@ -84,7 +90,7 @@ docker run --rm -ti local/pypx  --pfstorage                                    \
                 --do '{\"action\":\"ls\",\"args\":{\"path\":\"SERVICES/PACS/covidnet\"}}' --json
 
 # Retrieve:
-px-find       --aec ORTHANC                                                  \
+px-find         --aec ORTHANC                                                  \
                 --aet CHRISLOCAL                                               \
                 --serverIP 192.168.1.189                                       \
                 --serverPort 4242                                              \
@@ -111,13 +117,14 @@ px-push                                                                        \
 
 px-push                                                                        \
                    --swift $SWIFTKEY                                           \
-                   --swiftServicesPACS covidnet                                \
+                   --swiftServicesPACS test                                    \
                    --db /home/dicom/log                                        \
                    --swiftPackEachDICOM                                        \
                    --xcrdir /home/rudolphpienaar/data/WithProtocolName/all     \
                    --parseAllFilesWithSubStr dcm                               \
                    --verbosity 1                                               \
                    --json > push.json
+
 
 # Push from a find event:
 px-find         --aec ORTHANC                                                  \
@@ -156,12 +163,50 @@ px-smdb         --logdir /home/dicom/log                                       \
         }
 }'
 
+# Register from a find event
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID 5644810                                            \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then register                                                \
+                --thenArgs '
+                {
+                        "db":                           "/home/dicom/log", 
+                        "CUBE":                         "'$CUBEKEY'", 
+                        "swiftServicesPACS":            "BCH", 
+                        "parseAllFilesWithSubStr":      "dcm"
+                }'                                                             \
+                --withFeedBack
+
+# Register 
+px-register                                                                    \
+                --CUBE $CUBEKEY                                                \
+                --swiftServicesPACS test3                                      \
+                --db /home/dicom/log                                           \
+                --xcrdir /home/rudolphpienaar/data/WithProtocolName/all        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json 
+
+
 px-register                                                                    \
                        --upstreamFile push.json                                \
                        --CUBEURL $CUBEURL                                      \
                        --CUBEusername $CUBEusername                            \
                        --CUBEuserpasswd $CUBEuserpasswd                        \
                        --swiftServicesPACS covidnet                            \
+                       --verbosity 1                                           \
+                       --json                                                  \
+                       --logdir /home/dicom/log                                \
+                       --debug
+
+px-register                                                                    \
+                       --upstreamFile push.json                                \
+                       --CUBE $CUBEKEY                                         \
                        --verbosity 1                                           \
                        --json                                                  \
                        --logdir /home/dicom/log                                \
