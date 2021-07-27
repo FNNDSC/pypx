@@ -119,6 +119,10 @@ class PfStorage(metaclass = abc.ABCMeta):
         self.packer         = repack.Process(
                                 repack.args_impedanceMatch(Namespace(**arg))
                             )
+        # A generic member placeholder for an unspecified object --
+        # In the case of say a DICOM read, this object is assigned the
+        # result of the read and can be used by a friendly caller.
+        self.obj            = None
 
     def filesFind(self, *args, **kwargs) -> dict:
         """
@@ -462,12 +466,13 @@ class swiftStorage(PfStorage):
             Read the str_DICOMfilename, determine the pack path,
             and update the 'toLocation' if necessary.
 
-            Return the orginal and modified 'toLocation' and status flag.
+            Return the original and modified 'toLocation' and status flag.
             """
-            b_pack      = False
-            d_DICOMread = self.packer.DICOMfile_read(file = str_DICOMfilename)
-            d_path      = self.packer.packPath_resolve(d_DICOMread)
-            str_origTo  = d_args['toLocation']
+            b_pack                      = False
+            d_DICOMread                 = self.packer.DICOMfile_read(file = str_DICOMfilename)
+            d_path                      = self.packer.packPath_resolve(d_DICOMread)
+            self.obj[str_DICOMfilename] = d_DICOMread
+            str_origTo                  = d_args['toLocation']
             if '%pack' in d_args['toLocation']:
                 b_pack  = True
                 d_args['toLocation'] = \
@@ -475,6 +480,7 @@ class swiftStorage(PfStorage):
             return {
                 'pack'              : b_pack,
                 'originalLocation'  : str_origTo,
+                'path'              : d_path,
                 'toLocation'        : d_args['toLocation']
             }
 
@@ -491,9 +497,12 @@ class swiftStorage(PfStorage):
                 'localFileList'     : [],
                 'objectFileList'    : []
             }
+            self.obj                = {}
+            # pudb.set_trace()
             for f in d_fileList['l_fileFS']:
                 d_pack                  = toLocation_updateWithDICOMtags(f)
                 d_args['file']          = f
+                d_args['remoteFile']    = d_pack['path']['imageFile']
                 d_put                   = self.objPut(**d_args)
                 d_ret[f]                = d_put
                 d_args['toLocation']    = d_pack['originalLocation']
@@ -573,12 +582,14 @@ class swiftStorage(PfStorage):
         """
         b_status                : bool  = True
         l_localfile             : list  = []    # Name on the local file system
+        l_remotefileName        : list  = []    # A replacement for the remote filename
         l_objectfile            : list  = []    # Name in the object storage
         str_swiftLocation       : str   = ''
         str_mapLocationOver     : str   = ''
         str_localfilename       : str   = ''
         str_storagefilename     : str   = ''
         str_swiftLocation       : str   = ""
+        str_remoteFile          : str   = ""
         d_ret                   : dict  = {
                                             'status':           b_status,
                                             'localFileList':    [],
@@ -590,6 +601,8 @@ class swiftStorage(PfStorage):
 
         for k,v in kwargs.items():
             if k == 'file'              : l_localfile.append(v)
+            if k == 'remoteFile'        : l_remotefileName.append(v)
+            if k == 'remoteFileList'    : l_remotefileName      = v
             if k == 'fileList'          : l_localfile           = v
             if k == 'toLocation'        : str_swiftLocation     = v
             if k == 'mapLocationOver'   : str_mapLocationOver   = v
@@ -601,6 +614,13 @@ class swiftStorage(PfStorage):
         else:
             # Prepend the swiftlocation to each element in the localfile list:
             l_objectfile    = [str_swiftLocation + '{0}'.format(i) for i in l_localfile]
+
+        # Check and possibly change the actual file *names* to put into swift storage
+        # (the default is to use the same name as the local file -- however in the
+        # case of DICOM files, the actual final file name might also change)
+        if len(l_remotefileName):
+            l_objectfile    = [l.replace(os.path.basename(l), f) for l,f in
+                                    zip(l_objectfile, l_remotefileName)]
 
         d_ret['localpath']  = os.path.dirname(l_localfile[0])
 
