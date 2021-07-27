@@ -102,6 +102,19 @@ px-find         --aec ORTHANC                                                  \
                 --intraSeriesRetrieveDelay dynamic:10                          \
                 --withFeedBack
 
+# Check the status
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID 5644810                                            \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then status                                                  \
+                --withFeedBack
+
+
 # Push some data to swift storage:
 px-push                                                                        \
                    --swiftIP $SWIFTHOST                                        \
