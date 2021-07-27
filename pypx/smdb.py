@@ -813,7 +813,7 @@ class SMDB():
                         str_error               = d_write['error'] + "\nConcurrency write error!"
                         d_check                 = self.seriesData(str_table, str_field)
                         while d_check[str_field] != value:
-                            d_check             = self.seriesData('meta', str_field)
+                            d_check             = self.seriesData(str_table, str_field)
                             time.sleep(0.5)
 
         return {
@@ -1040,13 +1040,16 @@ class SMDB():
         Return the location in the DB (i.e. the file system) where
         the map information for a given SeriesInstanceUID is stored.
         """
-        b_status                        = False
-        str_SeriesInstanceUID           = ''
-        str_outputFile                  = ''
-        str_seriesBaseDir               = ''
-        str_seriesMetaFile              = ''
-        str_seriesRetrieve              = ''
-        str_seriesImageFile             = ''
+        b_status                    : bool  = False
+        str_SeriesInstanceUID       : str   = ''
+        str_outputFile              : str   = ''
+        str_seriesBaseDir           : str   = ''
+        str_seriesMetaFile          : str   = ''
+        str_seriesRetrieve          : str   = ''
+        str_seriesImageFile         : str   = ''
+        str_seriesPushFile          : str   = ''
+        str_seriesPackFile          : str   = ''
+        str_seriesRegisterFile      : str   = ''
         for k, v in kwargs.items():
             if k == 'SeriesInstanceUID' :   str_SeriesInstanceUID   = v
             if k == 'outputFile'        :   str_outputFile          = v
@@ -1061,6 +1064,15 @@ class SMDB():
             str_seriesRetrieveFile      = '%s/%s-retrieve.json'     % \
                     (self.str_seriesDataDir,
                      str_SeriesInstanceUID)
+            str_seriesPushFile          = '%s/%s-push.json'         % \
+                    (self.str_seriesDataDir,
+                     str_SeriesInstanceUID)
+            str_seriesPackFile          = '%s/%s-pack.json'         % \
+                    (self.str_seriesDataDir,
+                     str_SeriesInstanceUID)
+            str_seriesRegisterFile      = '%s/%s-register.json'     % \
+                    (self.str_seriesDataDir,
+                     str_SeriesInstanceUID)
             if len(str_outputFile):
                 str_seriesImageFile    = '%s/%s.json'               % (
                     str_seriesBaseDir, str_outputFile
@@ -1071,17 +1083,29 @@ class SMDB():
                 'name'      :   str_seriesBaseDir,
                 'exists'    :   os.path.isdir(str_seriesBaseDir)
             },
-            'series-meta'        : {
+            'series-meta'           : {
                 'name'      :   str_seriesMetaFile,
                 'exists'    :   os.path.isfile(str_seriesMetaFile)
             },
-            'series-retrieve'    : {
+            'series-retrieve'       : {
                 'name'      :   str_seriesRetrieveFile,
                 'exists'    :   os.path.isfile(str_seriesRetrieveFile)
             },
-            'series-image'       : {
+            'series-image'          : {
                 'name'      :   str_seriesImageFile,
                 'exists'    :   os.path.isfile(str_seriesImageFile)
+            },
+            'series-push'           : {
+                'name'      :   str_seriesPushFile,
+                'exists'    :   os.path.isfile(str_seriesPushFile)
+            },
+            'series-pack'           : {
+                'name'      :   str_seriesPackFile,
+                'exists'    :   os.path.isfile(str_seriesPackFile)
+            },
+            'series-register'       : {
+                'name'      :   str_seriesRegisterFile,
+                'exists'    :   os.path.isfile(str_seriesRegisterFile)
             }
         }
 

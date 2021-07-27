@@ -12,10 +12,7 @@
 import      sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-# from        argparse            import RawTextHelpFormatter
-# from        argparse            import ArgumentParser
 from        pfmisc._colors      import Colors
-# import      pypx
 from        pypx                import smdb
 from        pypx.smdb           import parser_setup, parser_interpret, parser_JSONinterpret
 
@@ -25,7 +22,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-smdb"
-str_version = "3.2.0"
+str_version = "3.2.2"
 str_desc    = Colors.CYAN + """
                                          _  _
                                         | || |
