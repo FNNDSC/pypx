@@ -24,7 +24,8 @@ from    pypx                import smdb
 from    pypx                import report
 from    pypx.push           import parser_setup         as pushParser_setup
 from    pypx.push           import parser_JSONinterpret as pushParser_JSONinterpret
-
+from    pypx.register       import parser_setup         as registerParser_setup
+from    pypx.register       import parser_JSONinterpret as registerParser_JSONinterpret
 
 
 def parser_setup(str_desc):
@@ -384,6 +385,49 @@ class Do(Base):
 
             return d_then
 
+        def register_do(d_registerArgsCLI) -> dict:
+            """
+            Nested register handler
+            """
+            nonlocal    series
+            str_seriesInstanceUID   : str   = series['SeriesInstanceUID']['value']
+            str_line                : str   = presenter.seriesRegister_print(
+                studyIndex  = studyIndex,
+                seriesIndex = seriesIndex,
+                fileCounts  = db.series_receivedAndRequested(str_seriesInstanceUID)
+            )
+
+            if self.arg['withFeedBack']: self.log(str_line)
+
+            d_then                  : dict  = {}
+            d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
+            registerParser                  = registerParser_setup("Register Parser")
+            d_registerArgs                  = pushParser_JSONinterpret(registerParser, d_registerArgsCLI)
+            d_registerArgs.str_xcrdir       = d_seriesDir[str_seriesInstanceUID]
+            d_then      = pypx.register(
+                            d_registerArgs,
+                        )
+            try:
+                str_msg     = next(gen_dict_extract('msg', d_then))
+            except:
+                str_msg     = ""
+            if len(str_msg):
+                self.log(json.dumps(json.loads(str_msg), indent = 4), comms = 'error')
+            return d_then
+
+        def gen_dict_extract(key, var):
+            if hasattr(var,'items'):
+                for k, v in var.items():
+                    if k == key:
+                        yield v
+                    if isinstance(v, dict):
+                        for result in gen_dict_extract(key, v):
+                            yield result
+                    elif isinstance(v, list):
+                        for d in v:
+                            for result in gen_dict_extract(key, d):
+                                yield result
+
         db              = smdb.SMDB(
                             Namespace(str_logDir = self.arg['dblogbasepath'])
                         )
@@ -441,10 +485,13 @@ class Do(Base):
                     if then == "retrieve":  d_then  = retrieve_do()
                     if then == "status"  :  d_then  = status_do()
                     if then == "push"    :  d_then  = push_do(d_thenArgs)
+                    if then == "register":  d_then  = register_do(d_thenArgs)
                     l_run.append(d_then)
                     seriesIndex += 1
                 d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
-                d_ret['%02d-%s' % (thenIndex, then)]['study'].append({ study['StudyInstanceUID']['value'] : l_run})
+                d_ret['%02d-%s' % (thenIndex, then)]['study'].append(
+                                { study['StudyInstanceUID']['value'] : l_run}
+                )
                 studyIndex += 1
                 d_ret['do'] = True
         return d_ret
