@@ -25,7 +25,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-repack"
-str_version = "3.2.0"
+str_version = "3.2.2"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
@@ -70,6 +70,7 @@ def synopsis(ab_shortOnly = False):
     SYNOPSIS
 
             px-repack                                               \\
+                [--JSONargs <JSONargStringStructure>]               \\
                 [--xcrdir|-p <xcrdir>]                              \\
                 [--xcrfile|-f <xcrfile>]                            \\
                 [--xcrdirfile <xcrdirfile>]                         \\

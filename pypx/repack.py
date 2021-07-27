@@ -46,6 +46,15 @@ def parser_setup(str_desc):
                 formatter_class     = RawTextHelpFormatter
             )
 
+    # JSONarg
+    parser.add_argument(
+        '--JSONargs',
+        action  = 'store',
+        dest    = 'JSONargString',
+        type    = str,
+        default = '',
+        help    = 'JSON equivalent of CLI key/values')
+
     parser.add_argument(
         '-p', '--xcrdir',
         action  = 'store',
