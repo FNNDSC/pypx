@@ -695,7 +695,7 @@ class Report(Base):
                                             'SeriesInstanceUID')
 
                 str_line += str_seriesDescription
-                str_line = '%-40s' % str_line
+                str_line = '%-50s' % str_line
                 str_line = "Pushing [ %s ]: "    \
                             % (str_receivedCount)       \
                             + str_line + str_seriesInstanceUID
@@ -731,7 +731,7 @@ class Report(Base):
                                             'SeriesInstanceUID')
 
                 str_line += str_seriesDescription
-                str_line = '%-40s' % str_line
+                str_line = '%-50s' % str_line
                 str_line = "Registering [ %s ]: "    \
                             % (str_receivedCount)       \
                             + str_line + str_seriesInstanceUID
