@@ -696,8 +696,44 @@ class Report(Base):
 
                 str_line += str_seriesDescription
                 str_line = '%-40s' % str_line
-                str_line = "Pushing [ %s/%s ]: "    \
-                            % (str_receivedCount, str_requestedCount)       \
+                str_line = "Pushing [ %s ]: "    \
+                            % (str_receivedCount)       \
+                            + str_line + str_seriesInstanceUID
+            else:
+                str_line    = 'Invalid seriesIndex specified'
+        else:
+            str_line    = 'Invalid studyIndex specified'
+        return str_line
+
+    def seriesRegister_print(self, **kwargs) -> str:
+        """
+        Return an inline study/series register string based on the kwargs
+        """
+        studyIndex              : int   = -1
+        seriesIndex             : int   = -1
+        str_seriesInstances     : str   = ''
+        str_seriesDescription   : str   = ''
+        str_line                : str   = ''
+        d_count                 : dict  = {}
+        for k,v in kwargs.items():
+            if k == 'studyIndex'        : studyIndex    = int(v)
+            if k == 'seriesIndex'       : seriesIndex   = int(v)
+            if k == 'fileCounts'        : d_count       = v
+        if studyIndex >= 0:
+            if seriesIndex >= 0:
+                str_receivedCount       = '%03d' % d_count['received']['count']
+                str_requestedCount      = '%03d' % d_count['requested']['count']
+                str_seriesDescription   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesDescription')
+                str_seriesInstanceUID   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesInstanceUID')
+
+                str_line += str_seriesDescription
+                str_line = '%-40s' % str_line
+                str_line = "Registering [ %s ]: "    \
+                            % (str_receivedCount)       \
                             + str_line + str_seriesInstanceUID
             else:
                 str_line    = 'Invalid seriesIndex specified'

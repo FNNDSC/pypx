@@ -28,8 +28,8 @@ str_defIP   = [l for l in (
                     [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
-str_name    = "px-find"
-str_version = "3.0.4"
+str_name    = "px-report"
+str_version = "3.2.0"
 str_desc    = Colors.CYAN + """
                                                               _   
                                                              | |  
