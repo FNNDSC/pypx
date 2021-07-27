@@ -9,6 +9,7 @@ import  os
 from    os                  import  listdir
 from    os.path             import  isfile, join
 import  sys
+from    datetime            import  date, datetime
 
 from    .pfstorage          import  swiftStorage
 
@@ -384,9 +385,20 @@ class Push(Base):
                 'mapLocationOver'   :   self.arg['str_xcrdir']
             }
         }
-        d_store     = swiftStorage(self.arg).run(d_do)
+        store               = swiftStorage(self.arg)
+        d_storeDo           = store.run(d_do)
 
-        return d_store
+        # Record in the smdb an entry for each series
+        for series in store.obj.keys():
+            self.smdb.d_DICOM   = store.obj[series]['d_DICOM']['d_dicomSimple']
+            if d_storeDo['status']:
+                now     = datetime.now()
+                self.smdb.seriesData('push', 'store',       d_storeDo[series])
+                self.smdb.seriesData('push', 'timestamp',   now.strftime("%Y-%m-%d, %H:%M:%S"))
+                if len(self.arg['swift']):
+                    self.smdb.seriesData('push', 'swift',
+                        self.smdb.service_keyAccess('swift')['swift'][self.arg['swift']])
+        return d_storeDo
 
     def run(self, opt={}) -> dict:
 
