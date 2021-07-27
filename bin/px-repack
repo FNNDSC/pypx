@@ -19,12 +19,13 @@ import      pypx
 from        pypx                import repack
 
 import      json
+from        pypx.repack         import parser_setup, parser_interpret, parser_JSONinterpret
 
 import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-repack"
-str_version = "3.0.10"
+str_version = "3.2.0"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
@@ -233,140 +234,18 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
-parser = ArgumentParser(
-            description         = str_desc,
-            formatter_class     = RawTextHelpFormatter
-        )
+parser          = parser_setup(str_desc)
+args, unknown   = parser_interpret(parser)
+if len(args.JSONargString):
+    # If the user has specified args in the JSONargString, then
+    # interpret this structure.
+    #
+    # NOTE:
+    # This will OVERWRITE any non-JSON args that may have been specified
+    # as per normal. Using the JSONargString is an either-or choice!
+    d_JSONargs  : dict  = json.loads(args.JSONargString)
+    args                = parser_JSONinterpret(parser, d_JSONargs)
 
-# Settings
-parser.add_argument(
-    '-p', '--xcrdir',
-    action  = 'store',
-    dest    = 'str_xcrdir',
-    type    = str,
-    default = '/tmp',
-    help    = 'Directory containing a received study'
-    )
-parser.add_argument(
-    '-f', '--xcrfile',
-    action  = 'store',
-    dest    = 'str_xcrfile',
-    type    = str,
-    default = '',
-    help    = 'File in <xcrdir> to process'
-    )
-parser.add_argument(
-    '--xcrdirfile',
-    action  = 'store',
-    dest    = 'str_xcrdirfile',
-    type    = str,
-    default = '',
-    help    = 'Fully qualified file to process'
-    )
-parser.add_argument(
-    '--parseAllFilesWithSubStr',
-    action  = 'store',
-    dest    = 'str_filesubstr',
-    type    = str,
-    default = '',
-    help    = 'Parse all files in <xcrdir> that contain <substr>'
-    )
-parser.add_argument(
-    '-l', '--logdir',
-    action  = 'store',
-    dest    = 'str_logDir',
-    type    = str,
-    default = '/tmp/log',
-    help    = 'Directory to store log files'
-    )
-parser.add_argument(
-    '-d', '--datadir',
-    action  = 'store',
-    dest    = 'str_dataDir',
-    type    = str,
-    default = '/tmp/data',
-    help    = 'Directory in which to pack final DICOM files'
-    )
-
-parser.add_argument(
-    '--rootDirTemplate',
-    action  = 'store',
-    dest    = 'str_rootDirTemplate',
-    type    = str,
-    default = '%PatientID-%PatientName-%PatientBirthDate',
-    help    = 'Template pattern for root unpack directory'
-    )
-parser.add_argument(
-    '--studyDirTemplate',
-    action  = 'store',
-    dest    = 'str_studyDirTemplate',
-    type    = str,
-    default = '%StudyDescription-%AccessionNumber-%StudyDate',
-    help    = 'Template pattern for study unpack directory'
-    )
-parser.add_argument(
-    '--seriesDirTemplate',
-    action  = 'store',
-    dest    = 'str_seriesDirTemplate',
-    type    = str,
-    default = '%_pad|5,0_SeriesNumber-%SeriesDescription',
-    help    = 'Template pattern for series unpack directory'
-    )
-parser.add_argument(
-    '--imageTemplate',
-    action  = 'store',
-    dest    = 'str_imageTemplate',
-    type    = str,
-    default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
-    help    = 'Template pattern for image file'
-    )
-
-parser.add_argument(
-    '--cleanup',
-    action  = 'store_true',
-    dest    = 'b_cleanup',
-    default = False,
-    help    = 'If specified, then cleanup temporary files'
-    )
-parser.add_argument(
-    '--debug',
-    action  = 'store_true',
-    dest    = 'b_debug',
-    default = False,
-    help    = 'If specified, then also log debug info to <logdir>'
-    )
-parser.add_argument(
-    "-v", "--verbosity",
-    help    = "verbosity level for app",
-    dest    = 'verbosity',
-    type    = int,
-    default = 1)
-parser.add_argument(
-    "-x", "--desc",
-    help    = "show long synopsis",
-    dest    = 'b_desc',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    "-y", "--synopsis",
-    help    = "show short synopsis",
-    dest    = 'b_synopsis',
-    action  = 'store_true',
-    default = False
-)
-parser.add_argument(
-    '--version',
-    help    = 'if specified, print version number',
-    dest    = 'b_version',
-    action  = 'store_true',
-    default = False
-)
-
-args        = parser.parse_args()
-
-# set_trace(host = "0.0.0.0", port = 5555, term_size = (252, 63))
-# rpudb.set_trace(addr='0.0.0.0', port=5555)
 if args.b_desc or args.b_synopsis:
     print(str_desc)
     if args.b_desc:

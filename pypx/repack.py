@@ -9,6 +9,7 @@ from    argparse            import  Namespace
 
 # Global modules
 import  os
+import  sys
 from    os                  import  listdir
 from    os.path             import  isfile, join
 import  subprocess
@@ -21,7 +22,7 @@ import  uuid
 import  pathlib
 import  datetime
 import  inspect
-
+import  hashlib
 import  re
 
 # PyDicom module
@@ -36,6 +37,167 @@ import  pudb
 from    pudb.remote         import  set_trace
 import  pfmisc
 
+from    argparse            import  Namespace, ArgumentParser
+from    argparse            import  RawTextHelpFormatter
+
+def parser_setup(str_desc):
+    parser = ArgumentParser(
+                description         = str_desc,
+                formatter_class     = RawTextHelpFormatter
+            )
+
+    parser.add_argument(
+        '-p', '--xcrdir',
+        action  = 'store',
+        dest    = 'str_xcrdir',
+        type    = str,
+        default = '/tmp',
+        help    = 'Directory containing a received study'
+        )
+    parser.add_argument(
+        '-f', '--xcrfile',
+        action  = 'store',
+        dest    = 'str_xcrfile',
+        type    = str,
+        default = '',
+        help    = 'File in <xcrdir> to process'
+        )
+    parser.add_argument(
+        '--xcrdirfile',
+        action  = 'store',
+        dest    = 'str_xcrdirfile',
+        type    = str,
+        default = '',
+        help    = 'Fully qualified file to process'
+        )
+    parser.add_argument(
+        '--parseAllFilesWithSubStr',
+        action  = 'store',
+        dest    = 'str_filesubstr',
+        type    = str,
+        default = '',
+        help    = 'Parse all files in <xcrdir> that contain <substr>'
+        )
+    parser.add_argument(
+        '-l', '--logdir',
+        action  = 'store',
+        dest    = 'str_logDir',
+        type    = str,
+        default = '/tmp/log',
+        help    = 'Directory to store log files'
+        )
+    parser.add_argument(
+        '-d', '--datadir',
+        action  = 'store',
+        dest    = 'str_dataDir',
+        type    = str,
+        default = '/tmp/data',
+        help    = 'Directory in which to pack final DICOM files'
+        )
+
+    parser.add_argument(
+        '--rootDirTemplate',
+        action  = 'store',
+        dest    = 'str_rootDirTemplate',
+        type    = str,
+        default = '%PatientID-%PatientName-%PatientBirthDate',
+        help    = 'Template pattern for root unpack directory'
+        )
+    parser.add_argument(
+        '--studyDirTemplate',
+        action  = 'store',
+        dest    = 'str_studyDirTemplate',
+        type    = str,
+        default = '%StudyDescription-%AccessionNumber-%StudyDate',
+        help    = 'Template pattern for study unpack directory'
+        )
+    parser.add_argument(
+        '--seriesDirTemplate',
+        action  = 'store',
+        dest    = 'str_seriesDirTemplate',
+        type    = str,
+        default = '%_pad|5,0_SeriesNumber-%SeriesDescription',
+        help    = 'Template pattern for series unpack directory'
+        )
+    parser.add_argument(
+        '--imageTemplate',
+        action  = 'store',
+        dest    = 'str_imageTemplate',
+        type    = str,
+        default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
+        help    = 'Template pattern for image file'
+        )
+
+    parser.add_argument(
+        '--cleanup',
+        action  = 'store_true',
+        dest    = 'b_cleanup',
+        default = False,
+        help    = 'If specified, then cleanup temporary files'
+        )
+    parser.add_argument(
+        '--debug',
+        action  = 'store_true',
+        dest    = 'b_debug',
+        default = False,
+        help    = 'If specified, then also log debug info to <logdir>'
+        )
+    parser.add_argument(
+        "-v", "--verbosity",
+        help    = "verbosity level for app",
+        dest    = 'verbosity',
+        type    = int,
+        default = 1)
+    parser.add_argument(
+        "-x", "--desc",
+        help    = "show long synopsis",
+        dest    = 'b_desc',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        "-y", "--synopsis",
+        help    = "show short synopsis",
+        dest    = 'b_synopsis',
+        action  = 'store_true',
+        default = False
+    )
+    parser.add_argument(
+        '--version',
+        help    = 'if specified, print version number',
+        dest    = 'b_version',
+        action  = 'store_true',
+        default = False
+    )
+    return parser
+
+def parser_interpret(parser, *args):
+    """
+    Interpret the list space of *args, or sys.argv[1:] if
+    *args is empty
+    """
+    if len(args):
+        args, unknown    = parser.parse_known_args(*args)
+    else:
+        args, unknown    = parser.parse_known_args(sys.argv[1:])
+    return args, unknown
+
+def parser_JSONinterpret(parser, d_JSONargs):
+    """
+    Interpret a JSON dictionary in lieu of CLI.
+
+    For each <key>:<value> in the d_JSONargs, append to
+    list two strings ["--<key>", "<value>"] and then
+    argparse.
+    """
+    l_args  = []
+    for k, v in d_JSONargs.items():
+        l_args.append('--%s' % k)
+        if type(v) == type(True): continue
+        l_args.append('%s' % v)
+    return parser_interpret(parser, l_args)
+
+
 def args_impedanceMatch(ns_arg):
     """
     This method is an "impedance matcher" that examines the
@@ -49,6 +211,12 @@ def args_impedanceMatch(ns_arg):
     """
     l_key   : list  = []
 
+    # Get the parser structure for this module
+    parser          = parser_setup("impedanceMatching")
+    args, unknown   = parser_interpret(parser)
+
+    str_rootDirTemplate     = args.str_rootDirTemplate
+
     l_key = [k for (k,v) in vars(ns_arg).items()]
     if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '/tmp')
     if 'str_xcrfile'    not in l_key:   setattr(ns_arg, 'str_xcrfile', '')
@@ -56,18 +224,14 @@ def args_impedanceMatch(ns_arg):
     if 'str_xcrdirfile' not in l_key:   setattr(ns_arg, 'str_xcrdirfile', '')
     if 'str_filesubstr' not in l_key:   setattr(ns_arg, 'str_filesubstr', '')
 
-    if 'str_rootDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_rootDirTemplate',
-                        '%PatientID-%PatientName-%PatientBirthDate')
-    if 'str_studyDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_studyDirTemplate',
-                        '%StudyDescription-%AccessionNumber-%StudyDate')
-    if 'str_studyDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_seriesDirTemplate',
-                        '%_pad|4,0_SeriesNumber-%SeriesDescription')
-    if 'str_studyDirTemplate' not in l_key:
-        setattr(ns_arg, 'str_imageTemplate',
-                        '%_pad|5,0_InstanceNumber-%SOPInstanceUID.dcm')
+    if 'str_rootDirTemplate'    not in l_key:
+        setattr(ns_arg, 'str_rootDirTemplate',      args.str_rootDirTemplate)
+    if 'str_studyDirTemplate'   not in l_key:
+        setattr(ns_arg, 'str_studyDirTemplate',     args.str_studyDirTemplate)
+    if 'str_seriesDirTemplate'  not in l_key:
+        setattr(ns_arg, 'str_seriesDirTemplate',    args.str_seriesDirTemplate)
+    if 'str_imageTemplate'      not in l_key:
+        setattr(ns_arg, 'str_imageTemplate',        args.str_imageTemplate)
     return ns_arg
 
 class Process():
@@ -358,15 +522,16 @@ class Process():
         d_mapsUpdate    :   dict    = {}
 
         if d_DICOMfile_save['status']:
-            b_status    = True
+            b_status        = True
             self.smdb.housingDirs_create()
             self.smdb.DICOMobj_set(d_DICOMfile_save ['d_DICOMfile_read']\
                                                     ['d_DICOM']\
                                                     ['d_dicomSimple'])
-            self.smdb.mapsUpdateForFile(
+            d_mapsUpdate    = self.smdb.mapsUpdateForFile(
                     '%s/%s' % ( d_DICOMfile_save['outputDir'],
                                 d_DICOMfile_save['outputFile'])
             )
+            self.smdb.seriesData('pack', 'seriesPack', True)
 
         return {
             'status'            : b_status,
@@ -444,7 +609,6 @@ class Process():
                 except:
                     str_err     = 'Failed to string convert key "%s"' % k
                     str_raw     += str_err + "\n"
-                    self.log(str_err, comms = 'error')
                     b_status    = False
             return {
                 'method'        : inspect.stack()[0][3],
