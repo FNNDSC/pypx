@@ -739,7 +739,8 @@ class SMDB():
             Multiprocess safe write
             """
             d_ret       : dict  = {
-                'status'    : True
+                'status'    : True,
+                'error'     : ""
             }
             try:
                 with open(str_filename, 'w') as fj:
@@ -1045,7 +1046,7 @@ class SMDB():
         str_outputFile              : str   = ''
         str_seriesBaseDir           : str   = ''
         str_seriesMetaFile          : str   = ''
-        str_seriesRetrieve          : str   = ''
+        str_seriesRetrieveFile      : str   = ''
         str_seriesImageFile         : str   = ''
         str_seriesPushFile          : str   = ''
         str_seriesPackFile          : str   = ''
@@ -1180,7 +1181,7 @@ class SMDB():
 
             return d_seriesTables
 
-        def seriesData_singleImageFile_update(d_seriesTables) -> bool:
+        def seriesData_singleImageFile_update(d_seriesTables) -> dict:
             """
             Update data specific to *this* image file, only if this output
             file is not already present in the JSON dictionary.
