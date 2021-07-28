@@ -578,10 +578,10 @@ class Report(Base):
         else:
             self.log('Invalid studyIndex referenced', comms = 'error')
 
-    def report_getBodyField(self, studyIndex, seriesIndex, str_field):
+    def report_getBodyField(self, studyIndex, seriesIndex, str_field) -> str:
         d_fieldBody = self.d_report['json'][studyIndex]['body'][seriesIndex]
         d_fieldMeta = self.d_report['json'][studyIndex]['bodySeriesUID'][seriesIndex]
-        ret         = None
+        ret         = ""
         if str_field in d_fieldBody.keys():
             ret =  d_fieldBody[str_field]
         elif str_field in d_fieldMeta.keys():
