@@ -110,7 +110,7 @@ class PfStorage(metaclass = abc.ABCMeta):
 
         # pudb.set_trace()
         self.arg            = arg
-        self.S              = D(arg, *args, **kwargs)
+        self.S              = D(arg, *args, **dict(kwargs, useGlobalState = True))
         self.dp             = pfmisc.debug(
                                 verbosity   = self.state('/this/verbosity'),
                                 within      = self.state('/this/name')
