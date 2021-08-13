@@ -22,7 +22,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-smdb"
-str_version = "3.2.4"
+str_version = "3.2.6"
 str_desc    = Colors.CYAN + """
                                          _  _
                                         | || |
@@ -159,6 +159,7 @@ parser      = parser_setup(str_desc)
 args        = parser_interpret(parser)
 
 if args.b_desc or args.b_synopsis:
+    str_help    : str   = ""
     print(str_desc)
     if args.b_desc:
         str_help     = synopsis(False)

@@ -48,7 +48,7 @@ px-smdb         --logdir /home/dicom/log                                       \
                 --action swift
 
 # Query smdb for all image dirs on a patient
-px-smdb         --action imageDirsForPatientID                                 \
+px-smdb         --action imageDirsPatientID                                    \
                 --actionArgs 5644810                                           \
                 --logdir /home/dicom/log
 
