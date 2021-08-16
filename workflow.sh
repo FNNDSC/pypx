@@ -89,6 +89,35 @@ docker run --rm -ti local/pypx  --pfstorage                                    \
                 --debugToDir /tmp                                              \
                 --do '{\"action\":\"ls\",\"args\":{\"path\":\"SERVICES/PACS/covidnet\"}}' --json
 
+# Simple "search":
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID 5644810                                            \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then report                                                  \
+                --withFeedBack
+
+# Simple "search" with more detailed reporting
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID 5644810                                            \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                        |\
+px-report       --colorize dark \
+                --printReport csv \
+                --csvPrettify \
+                --csvPrintHeaders \
+                --reportHeaderStudyTags PatientName,PatientID,StudyDate \
+                --reportBodySeriesTags SeriesDescription,SeriesInstanceUID
+
+
 # Retrieve:
 px-find         --aec ORTHANC                                                  \
                 --aet CHRISLOCAL                                               \
