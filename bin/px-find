@@ -32,7 +32,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "3.0.8"
+str_version = "3.2.0"
 str_desc    = Colors.CYAN + """
 
                                    __  _             _ 
@@ -441,6 +441,7 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
+# pudb.set_trace()
 parser      = parser_setup(str_desc)
 args        = parser_interpret(parser)
 if len(args.JSONargString):
@@ -454,6 +455,7 @@ if len(args.JSONargString):
     args                = parser_JSONinterpret(parser, d_JSONargs)
 
 if args.desc or args.synopsis:
+    str_help    : str   = ""
     print(str_desc)
     if args.desc:
         str_help     = synopsis(False)
