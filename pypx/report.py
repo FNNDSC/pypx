@@ -741,6 +741,48 @@ class Report(Base):
             str_line    = 'Invalid studyIndex specified'
         return str_line
 
+    def seriesReport_print(self, **kwargs) -> str:
+        """
+        Return an inline study/series register string based on the kwargs
+        """
+        studyIndex              : int   = -1
+        seriesIndex             : int   = -1
+        instanceNumber          : str   = ''
+        str_seriesInstances     : str   = ''
+        str_seriesDescription   : str   = ''
+        str_line                : str   = ''
+        for k,v in kwargs.items():
+            if k == 'studyIndex'        : studyIndex        = int(v)
+            if k == 'seriesIndex'       : seriesIndex       = int(v)
+            if k == 'instanceNumber'    : instanceNumber    = v
+        if studyIndex >= 0:
+            if seriesIndex >= 0:
+                str_seriesDescription   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesDescription')
+                str_seriesInstanceUID   =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesInstanceUID')
+                str_seriesNumber        =           \
+                    self.report_getBodyField(studyIndex, seriesIndex,
+                                            'SeriesNumber')
+                # Uncomment to show the InstanceNumber. This is NOT the same
+                # as the SeriesNumber, which isn't available at a QUERY level.
+                # The InstanceNumber in practice seemed less useful, so for now
+                # it is commented out.
+                # try:
+                #     str_line = '[ %03d ] ' % int(instanceNumber)
+                # except:
+                #     str_line = '[ --- ] '
+                str_line += str_seriesDescription
+                str_line = '%-55s' % str_line
+                str_line += str_seriesInstanceUID
+            else:
+                str_line    = 'Invalid seriesIndex specified'
+        else:
+            str_line    = 'Invalid studyIndex specified'
+        return str_line
+
     def report_print(self):
         """
         Print a report based on one of the <str_field> arguments.
