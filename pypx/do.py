@@ -360,6 +360,23 @@ class Do(Base):
 
             return d_then
 
+        def report_do() -> dict:
+            """
+            Nested simple "echo/show" handler -- can be used as a 'then' in lieu
+            of piping into the `px-report` module.
+            """
+            nonlocal    series
+            d_then              : dict  = {}
+            str_instanceNumber  : str    = series['InstanceNumber']['value']
+            str_line    = presenter.seriesReport_print(
+                studyIndex      = studyIndex,
+                seriesIndex     = seriesIndex,
+                instanceNumber  = str_instanceNumber
+            )
+            if self.arg['withFeedBack']: self.log(str_line)
+
+            return d_then
+
         def push_do(d_pushArgsCLI) -> dict:
             """
             Nested push handler
@@ -450,7 +467,9 @@ class Do(Base):
 
         l_then              = self.arg['then'].split(',')
         l_thenArgs          = self.arg['thenArgs'].split(';')
-        d_thenArgs : dict   = {}
+        d_then      : dict  = {}
+        d_thenArgs  : dict  = {}
+        then        : str   = ""
         if len(l_thenArgs) != len(l_then):
             l_thenArgs      = [''] * len(l_then)
         b_headerPrinted     = False
@@ -486,6 +505,7 @@ class Do(Base):
                     if then == "status"  :  d_then  = status_do()
                     if then == "push"    :  d_then  = push_do(d_thenArgs)
                     if then == "register":  d_then  = register_do(d_thenArgs)
+                    if then == "report" :   d_then  = report_do()
                     l_run.append(d_then)
                     seriesIndex += 1
                 d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
