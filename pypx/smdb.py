@@ -37,6 +37,7 @@ import  json
 import  pudb
 import  datetime
 import  copy
+import  re
 
 from    retry           import  retry
 from    pypx            import  repack
@@ -608,11 +609,13 @@ class SMDB():
                                     self.d_DICOM['StudyInstanceUID']
                                 )
         if 'SeriesInstanceUID' in self.d_DICOM.keys():
-            str_studySeries     = '%s/%s.json' % (
+            str_studySeries     = '%s/%s-meta.json' % (
                                     str_seriesDir,
                                     self.d_DICOM['SeriesInstanceUID']
                                 )
             if not os.path.isdir(str_seriesDir): os.makedirs(str_seriesDir)
+        else:
+            str_studySeries     = "-not applicable-"
         return {
             'status'            : True,
             'studyDataDir'       : self.str_studyDataDir,
@@ -935,6 +938,12 @@ class SMDB():
         d_count['packed']       = self.series_packedFilesCount(
                                         str_SeriesInstanceUID
                                 )
+        d_count['pushed']       = self.series_dbFilesCount(
+                                        str_SeriesInstanceUID, 'push'
+                                )
+        d_count['registered']    = self.series_dbFilesCount(
+                                        str_SeriesInstanceUID, 'register'
+                                )
         if d_count['received']['count'] >= d_count['requested']['count']:
             d_count['state']    = 'ImagesAllReceivedOK'
             d_count['status']   = True
@@ -946,6 +955,12 @@ class SMDB():
             d_count['status']   = False
         if d_count['requested']['count'] == -1:
             d_count['state']    = 'ImagesReceiveCountOK'
+            d_count['status']   = True
+        if d_count['pushed']['count'] == 1:
+            d_count['state']    = 'ImagesPushedOK'
+            d_count['status']   = True
+        if d_count['registered']['count'] == 1:
+            d_count['state']    = 'ImagesRegisteredOK'
             d_count['status']   = True
         return d_count
 
@@ -1013,6 +1028,32 @@ class SMDB():
             'status'    : b_status,
             'count'     : len(l_files)
         }
+
+    def series_dbFilesCount(self, str_SeriesInstanceUID, str_type) -> dict:
+        """
+        Return the number of actual str_type files by "counting" the
+        object json files for a given series.
+
+        Note this returns the count in the seriesDataDir for a given
+        series, which assumes that a file has been processed and
+        recorded -- this does not return the count of files in the
+        packed location.
+        """
+        b_status            : bool  = False
+        l_files             : list  = []
+        str_seriesDir       : str   = os.path.join( self.args.str_logDir,
+                                                    self.str_seriesData)
+        if os.path.isdir(str_seriesDir):
+            l_files         : list  = [
+                f for f in os.listdir(str_seriesDir)
+                        if re.match(r'%s-%s.json' %(str_SeriesInstanceUID, str_type), f)
+            ]
+            b_status        = bool(len(l_files))
+        return {
+            'status'    : b_status,
+            'count'     : len(l_files)
+        }
+
 
     def series_packedFilesCount(self, str_SeriesInstanceUID) -> dict:
         """
@@ -1091,10 +1132,6 @@ class SMDB():
             'series-retrieve'       : {
                 'name'      :   str_seriesRetrieveFile,
                 'exists'    :   os.path.isfile(str_seriesRetrieveFile)
-            },
-            'series-image'          : {
-                'name'      :   str_seriesImageFile,
-                'exists'    :   os.path.isfile(str_seriesImageFile)
             },
             'series-push'           : {
                 'name'      :   str_seriesPushFile,

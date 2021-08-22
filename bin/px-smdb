@@ -22,7 +22,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-smdb"
-str_version = "3.2.6"
+str_version = "3.2.8"
 str_desc    = Colors.CYAN + """
                                          _  _
                                         | || |
