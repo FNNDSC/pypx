@@ -631,6 +631,7 @@ class Report(Base):
         seriesIndex             : int   = -1
         str_seriesInstances     : str   = ''
         str_seriesDescription   : str   = ''
+        str_line                : str   = ''
         d_status                : dict  = {}
         for k,v in kwargs.items():
             if k == 'studyIndex'    : studyIndex    = int(v)
@@ -641,6 +642,8 @@ class Report(Base):
                 str_receivedCount       = '%03d' % d_status['images']['received']['count']
                 str_requestedCount      = '%03d' % d_status['images']['requested']['count']
                 str_packedCount         = '%03d' % d_status['images']['packed']['count']
+                str_pushedCount         = '%03d' % d_status['images']['pushed']['count']
+                str_registeredCount     = '%03d' % d_status['images']['registered']['count']
                 str_status              = '%25s : %20s : %20s ' % \
                     (
                         d_status['state']['study'],
@@ -654,14 +657,17 @@ class Report(Base):
                     self.report_getBodyField(studyIndex, seriesIndex,
                                             'SeriesInstanceUID')
                 if d_status['status']:
-                    str_line                = str_status               +\
-                        ' [ PACS:%s/JSON:%s/DCM:%s ] for ' %                             \
-                            (str_receivedCount, str_requestedCount, str_packedCount)
+                    str_line                =  \
+                        ' [ PACS:%s/JSON:%s/DCM:%s/PUSH:%s/REG:%s ] │ ' %                             \
+                            (
+                                str_receivedCount, str_requestedCount, str_packedCount,
+                                str_pushedCount, str_registeredCount
+                            )
                 else:
                     str_line                =  str_status
 
                 str_line += ' ' + str_seriesDescription
-                str_line = '%-160s' % str_line
+                str_line = '%-100s │ ' % str_line
                 str_line += str_seriesInstanceUID
             else:
                 str_line    = 'Invalid seriesIndex specified'
