@@ -21,7 +21,7 @@ import  pypx
 import  pudb
 
 str_name    = "px-status"
-str_version = "3.0.0"
+str_version = "3.0.2"
 str_desc    = Colors.CYAN + """
 
                                       _        _

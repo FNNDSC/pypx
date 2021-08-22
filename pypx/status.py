@@ -55,9 +55,11 @@ class Status(Base):
             'study'     : {},
             'series'    : {},
             'images'    : {
-                'received'      : {'count' : -1},
-                'requested'     : {'count' : -1},
-                'packed'        : {'count' : -1}
+                'received'      : {'count'  : -1},
+                'requested'     : {'count'  : -1},
+                'packed'        : {'count'  : -1},
+                'pushed'        : {'count'  : -1},
+                'registered'    : {'count'  : -1}
             }
         }
         return d_status
