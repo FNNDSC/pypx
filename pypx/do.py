@@ -464,6 +464,7 @@ class Do(Base):
         d_ret               = {
             'do'        : False
         }
+        b_status            : bool = False
 
         l_then              = self.arg['then'].split(',')
         l_thenArgs          = self.arg['thenArgs'].split(';')
@@ -481,7 +482,6 @@ class Do(Base):
                 d_thenArgs  = {}
             thenIndex  += 1
             studyIndex  = 0
-            d_ret['status'] = False
             for study in d_filteredHits['data']:
                 l_run       = []
                 seriesIndex = 0
