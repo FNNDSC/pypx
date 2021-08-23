@@ -146,9 +146,11 @@ class Report(Base):
             Process a study field lookup
             """
             str_value   = ""
+            nonlocal seriesCount, studyCount
             try:
                 str_value   = d_DICOMfields[str_DICOMtag]['value']
             except:
+                # pudb.set_trace()
                 if str_DICOMtag == 'PatientAge':
                     """
                     Sometimes the PatientAge is not returned
@@ -157,6 +159,20 @@ class Report(Base):
                     Note this my be unreliable!
                     """
                     str_value   = patientAge_calculate(d_DICOMfields)
+                if str_DICOMtag == 'seriesStatus':
+                    # pudb.set_trace()
+                    if 'then' in self.arg['reportData']:
+                        d_then      = self.arg['reportData']['then']
+                        d_status    = [v for k, v in d_then.items() if 'status' in k][0]
+                        d_study     = d_status['study'][studyCount]
+                        l_series    = d_study[next(iter(d_study))]
+                        d_series    = l_series[seriesCount]
+                        str_value   = self.seriesStatus_print(
+                            studyIndex          = studyCount,
+                            seriesIndex         = seriesCount,
+                            status              = d_series,
+                            SeriesDescription   = d_DICOMfields['SeriesDescription']['value']
+                                        )
             return str_value
 
         def block_build(
@@ -257,7 +273,12 @@ class Report(Base):
             tb_headerInstance.inner_heading_row_border  = False
             return tb_headerInstance.table, str_reportHeader, d_headerContents
 
-        def body_generate(study):
+        def status_addToSeries():
+            """
+            Inject "status" related info into the body series line.
+            """
+
+        def body_generate(study, studyCount):
             """
             For a given 'study' structure, generate a body block
             in various formats. Typically, the body contains tags
@@ -267,6 +288,7 @@ class Report(Base):
             str_reportSUID      = ""
             str_reportBody      = ""
             d_bodyFields        = self.d_reportTags['body']
+            nonlocal            seriesCount
             for k in d_bodyFields.keys():
                 l_bodyTable     = []
                 l_suidTable     = []
@@ -300,6 +322,8 @@ class Report(Base):
                         # add some "hidden" elements in the JSON return
                         # suitable for additional processing and defined
                         # in the l_seriesUID list
+                        if len(self.arg['seriesSpecial']):
+                            l_seriesUIDtag.append(self.arg['seriesSpecial'])
                         l_suidTable, str_reportSUID, d_seriesUID        = \
                             block_build(
                                     series,
@@ -309,6 +333,7 @@ class Report(Base):
                                     d_seriesUID
                             )
                         dl_seriesUID.append(d_seriesUID.copy())
+                        seriesCount += 1
 
                     tb_bodyInstance = SingleTable(l_bodyTable)
                     tb_bodyInstance.inner_heading_row_border    = False
@@ -320,6 +345,8 @@ class Report(Base):
         l_tabularHits       = []
         l_rawTextHits       = []
         l_jsonHits          = []
+        studyCount          = 0
+        seriesCount         = 0
         for study in self.arg['reportData']['data']:
             d_tabular       = {}
             d_rawText       = {}
@@ -336,11 +363,12 @@ class Report(Base):
             d_rawText['body'],          \
             d_json['body'],             \
             d_json['bodySeriesUID'] =   \
-                body_generate(study)
+                body_generate(study, studyCount)
 
             l_tabularHits.append(d_tabular)
             l_rawTextHits.append(d_rawText)
             l_jsonHits.append(d_json)
+            studyCount += 1
 
         return {
                 "tabular":  l_tabularHits,
@@ -631,12 +659,15 @@ class Report(Base):
         seriesIndex             : int   = -1
         str_seriesInstances     : str   = ''
         str_seriesDescription   : str   = ''
+        str_seriesInstanceUID   : str   = ''
         str_line                : str   = ''
         d_status                : dict  = {}
         for k,v in kwargs.items():
-            if k == 'studyIndex'    : studyIndex    = int(v)
-            if k == 'seriesIndex'   : seriesIndex   = int(v)
-            if k == 'status'        : d_status      = v
+            if k == 'studyIndex'        : studyIndex            = int(v)
+            if k == 'seriesIndex'       : seriesIndex           = int(v)
+            if k == 'status'            : d_status              = v
+            if k == 'SeriesDescription' : str_seriesDescription = v
+            if k == 'SeriesInstanceUID' : str_seriesInstanceUID = v
         if studyIndex >= 0:
             if seriesIndex >= 0:
                 str_receivedCount       = '%03d' % d_status['images']['received']['count']
@@ -650,12 +681,20 @@ class Report(Base):
                         d_status['state']['series'],
                         d_status['state']['images']
                      )
-                str_seriesDescription   =           \
-                    self.report_getBodyField(studyIndex, seriesIndex,
-                                            'SeriesDescription')
-                str_seriesInstanceUID   =           \
-                    self.report_getBodyField(studyIndex, seriesIndex,
-                                            'SeriesInstanceUID')
+                if not len(str_seriesDescription):
+                    try:
+                        str_seriesDescription   =           \
+                            self.report_getBodyField(studyIndex, seriesIndex,
+                                                    'SeriesDescription')
+                    except:
+                        str_seriesDescription   = ''
+                if not len(str_seriesInstanceUID):
+                    try:
+                        str_seriesInstanceUID   =           \
+                            self.report_getBodyField(studyIndex, seriesIndex,
+                                                    'SeriesInstanceUID')
+                    except:
+                        str_seriesInstanceUID   = ''
                 if d_status['status']:
                     str_line                =  \
                         ' [ PACS:%s/JSON:%s/DCM:%s/PUSH:%s/REG:%s ] │ ' %                             \
@@ -667,8 +706,9 @@ class Report(Base):
                     str_line                =  str_status
 
                 str_line += ' ' + str_seriesDescription
-                str_line = '%-100s │ ' % str_line
-                str_line += str_seriesInstanceUID
+                str_line = '%-100s' % str_line
+                if len(str_seriesInstanceUID):
+                    str_line += ' │ ' + str_seriesInstanceUID
             else:
                 str_line    = 'Invalid seriesIndex specified'
         else:
@@ -818,7 +858,6 @@ class Report(Base):
         interpreting if input JSON data is valid.
 
         """
-        # pudb.set_trace()
 
         b_status        : bool      = True
 

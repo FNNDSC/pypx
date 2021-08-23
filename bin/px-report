@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-report"
-str_version = "3.2.6"
+str_version = "3.2.8"
 str_desc    = Colors.CYAN + """
                                                               _   
                                                              | |  
@@ -74,6 +74,7 @@ def synopsis(ab_shortOnly = False):
             px-report
                 [--reportData <JSONdump>]                           \\
                 [--reportDataFile <file>]                           \\
+                [--seriesSpecial <type>]                            \\
                 [--colorize light|dark]                             \\
                 [--printReport tabular|rawText|csv|json]            \\
                 [--reportLayout <JSONstructure>]                    \\
@@ -108,10 +109,15 @@ def synopsis(ab_shortOnly = False):
         [--reportDataFile <file>]
         A file containing JSON report data.
 
-        [--reportTags <JSONdesc>]
+        [--reportLayout <JSONstructure>]
         If specified, print only the JSON specified result tags from either the
         STUDY or SERIES level. This argument is a JSON string value that provides
         the template for the report.
+
+        [--seriesSpecial <type>]
+        Use the internal 'series<type>_print' method to inject additional
+        information into the return. This will create a new tag called <type>
+        in the report body. Currently only supported for <status> handling.
 
         [--reportHeaderStudyTags <commaListOfStudyTags>]
         If specified, set the list of Study Tags in the report header to the
@@ -273,6 +279,13 @@ parser.add_argument(
     default = '',
     help    = 'The tag results to print at the STUDY or SERIES level')
 parser.add_argument(
+    '--seriesSpecial',
+    action  = 'store',
+    dest    = 'seriesSpecial',
+    type    = str,
+    default = '',
+    help    = 'Add a SERIES tag <seriesType> and set value to internal method result.')
+parser.add_argument(
     '--reportHeaderStudyTags',
     action  = 'store',
     dest    = 'reportHeaderStudyTags',
@@ -346,13 +359,17 @@ if args.b_version:
 
 if len(args.reportData):
     args.reportData     = json.loads(args.reportData)
+elif len(args.reportDataFile):
+    with open(args.reportDataFile) as reportFile:
+        args.reportData     = json.load(reportFile)
+else:
+    # Read from input stream
+    str_inputPipe           = ''
+    for line in sys.stdin:
+        str_inputPipe += line
 
-# Read from input stream
-str_inputPipe           = ''
-for line in sys.stdin:
-    str_inputPipe += line
+    args.reportData     = json.loads(str_inputPipe)
 
-args.reportData         = json.loads(str_inputPipe)
 report                  = pypx.report(vars(args))
 
 sys.exit(0)
