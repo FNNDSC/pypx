@@ -956,10 +956,10 @@ class SMDB():
         if d_count['requested']['count'] == -1:
             d_count['state']    = 'ImagesReceiveCountOK'
             d_count['status']   = True
-        if d_count['pushed']['count'] == 1:
+        if d_count['pushed']['count'] >= 1:
             d_count['state']    = 'ImagesPushedOK'
             d_count['status']   = True
-        if d_count['registered']['count'] == 1:
+        if d_count['registered']['count'] >= 1:
             d_count['state']    = 'ImagesRegisteredOK'
             d_count['status']   = True
         return d_count
@@ -1040,6 +1040,7 @@ class SMDB():
         packed location.
         """
         b_status            : bool  = False
+        count               : int   = 0
         l_files             : list  = []
         str_seriesDir       : str   = os.path.join( self.args.str_logDir,
                                                     self.str_seriesData)
@@ -1049,9 +1050,21 @@ class SMDB():
                         if re.match(r'%s-%s.json' %(str_SeriesInstanceUID, str_type), f)
             ]
             b_status        = bool(len(l_files))
+            if b_status:
+                """
+                A true status simply indicates the entire series has been processed.
+                In order to remain consistent with the other count measures, we set
+                the 'count' to number of packed files.
+                """
+                d_packed    = self.series_packedFilesCount(str_SeriesInstanceUID)
+                if d_packed['status']:
+                    count       = d_packed['count']
+                else:
+                    b_status    = False
+                    count       = -1
         return {
             'status'    : b_status,
-            'count'     : len(l_files)
+            'count'     : count
         }
 
 
