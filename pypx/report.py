@@ -319,11 +319,16 @@ class Report(Base):
                                     d_bodyContents
                             )
                         dl_bodyContents.append(d_bodyContents.copy())
-                        # add some "hidden" elements in the JSON return
+                        
+                        # Here, add some "hidden" elements in the JSON return
                         # suitable for additional processing and defined
-                        # in the l_seriesUID list
-                        if len(self.arg['seriesSpecial']):
-                            l_seriesUIDtag.append(self.arg['seriesSpecial'])
+                        # in the l_seriesUID list.
+                        #
+                        # First, check if a CLI '--seriesSpecial' has been passed,
+                        # and if so, append to the "hidden" element list.
+                        if 'seriesSpecial' in self.arg:
+                            if len(self.arg['seriesSpecial']):
+                                l_seriesUIDtag.append(self.arg['seriesSpecial'])
                         l_suidTable, str_reportSUID, d_seriesUID        = \
                             block_build(
                                     series,
