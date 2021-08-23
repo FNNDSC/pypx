@@ -143,6 +143,39 @@ px-find         --aec ORTHANC                                                  \
                 --then status                                                  \
                 --withFeedBack
 
+# Check the status using the report module:
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID LILLA-9729                                         \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then status                                                 |\
+px-report       --seriesSpecial seriesStatus                                   \
+                --printReport tabular                                          \
+                --colorize dark                                                \
+                --reportBodySeriesTags seriesStatus
+
+
+# Check the status using the report module and csv output:
+px-find         --aec ORTHANC                                                  \
+                --aet CHRISLOCAL                                               \
+                --serverIP 192.168.1.189                                       \
+                --serverPort 4242                                              \
+                --PatientID LILLA-9729                                         \
+                --db /home/dicom/log                                           \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then status                                                 |\
+px-report       --seriesSpecial seriesStatus                                   \
+                --printReport csv                                              \
+                --csvPrettify                                                  \
+                --csvPrintHeaders                                              \
+                --reportHeaderStudyTags PatientName,StudyDate		       \
+                --reportBodySeriesTags seriesStatus
+
 
 # Push some data to swift storage:
 px-push                                                                        \
