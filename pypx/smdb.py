@@ -1146,6 +1146,10 @@ class SMDB():
                 'name'      :   str_seriesRetrieveFile,
                 'exists'    :   os.path.isfile(str_seriesRetrieveFile)
             },
+            'series-image'          : {
+                'name'      :   str_seriesImageFile,
+                'exists'    :   os.path.isfile(str_seriesImageFile)
+            },
             'series-push'           : {
                 'name'      :   str_seriesPushFile,
                 'exists'    :   os.path.isfile(str_seriesPushFile)
