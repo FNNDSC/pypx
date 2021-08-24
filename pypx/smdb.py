@@ -1013,19 +1013,17 @@ class SMDB():
         recorded -- this does not return the count of files in the
         packed location.
         """
-        b_status            : bool  = False
         l_files             : list  = []
         str_processedDir    : str   = os.path.join( self.args.str_logDir,
                                                     self.str_seriesData,
                                                     str_SeriesInstanceUID) + '-img'
         if os.path.isdir(str_processedDir):
-            b_status        = True
             l_files         : list  = [
                 f for f in os.listdir(str_processedDir)
                         if os.path.isfile(os.path.join(str_processedDir, f))
             ]
         return {
-            'status'    : b_status,
+            'status'    : bool(len(l_files)),
             'count'     : len(l_files)
         }
 
@@ -1457,32 +1455,34 @@ class SMDB():
         d_ret               : dict  = {}
         b_status            : bool  = False
         d_imageInfo         : dict  = {}
+        l_filesInDir        : list  = []
         str_imageFile       : str   = ""
         str_imageObj        : str   = ""
         str_imageLocation   : str   = ""
         str_imageDataDir    : str   = ""
-        str_imageDir        : str   = "Non-existant meta directory: "
-        str_error           : str   = ""
-
+        str_imageDir        : str   = ""
+        str_error           : str   = "Non-existant image JSON directory"
         str_imageDataDir    = '%s/%s-img' % (
                                     self.str_seriesDataDir,
                                     astr_SeriesInstanceUID
                             )
         str_imageDir        += str_imageDataDir
         if os.path.isdir(str_imageDataDir):
-            str_imageFile       = os.listdir(str_imageDataDir)[0]
-            try:
-                if os.path.isfile('%s/%s' % (str_imageDataDir, str_imageFile)):
-                    with open('%s/%s' % (str_imageDataDir, str_imageFile)) as fp:
-                        self.json_read(fp, d_imageInfo)
-                    fp.close()
-                    str_imageObj        = os.path.splitext(str_imageFile)[0]
-                    str_imageLocation   = d_imageInfo[astr_SeriesInstanceUID][
-                                                    'imageObj'][str_imageObj]['FSlocation']
-                    str_imageDir        = os.path.dirname(str_imageLocation)
-                    b_status            = True
-            except Exception as e:
-                str_error               = '%s' % e
+            l_filesInDir        = os.listdir(str_imageDataDir)
+            if len(l_filesInDir):
+                str_imageFile       = l_filesInDir[0]
+                try:
+                    if os.path.isfile('%s/%s' % (str_imageDataDir, str_imageFile)):
+                        with open('%s/%s' % (str_imageDataDir, str_imageFile)) as fp:
+                            self.json_read(fp, d_imageInfo)
+                        fp.close()
+                        str_imageObj        = os.path.splitext(str_imageFile)[0]
+                        str_imageLocation   = d_imageInfo[astr_SeriesInstanceUID][
+                                                        'imageObj'][str_imageObj]['FSlocation']
+                        str_imageDir        = os.path.dirname(str_imageLocation)
+                        b_status            = True
+                except Exception as e:
+                    str_error               = '%s' % e
 
         d_ret = {
             'status'                    : b_status,
