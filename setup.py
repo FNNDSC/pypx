@@ -7,11 +7,10 @@ from setuptools import setup
 
 def readme():
     with open('README.rst') as f:
-        return f.read()
 
 setup(
         name                =   'pypx',
-        version             =   '3.2.18',
+        version             =   '3.2.20',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
