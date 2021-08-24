@@ -704,7 +704,7 @@ class Report(Base):
                     str_line                =  \
                         ' [ PACS:%s/JSON:%s/DCM:%s/PUSH:%s/REG:%s ] │ ' %                             \
                             (
-                                str_receivedCount, str_requestedCount, str_packedCount,
+                                str_requestedCount, str_receivedCount, str_packedCount,
                                 str_pushedCount, str_registeredCount
                             )
                 else:
