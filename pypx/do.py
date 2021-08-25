@@ -482,6 +482,7 @@ class Do(Base):
                 d_thenArgs  = {}
             thenIndex  += 1
             studyIndex  = 0
+            d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
             for study in d_filteredHits['data']:
                 l_run       = []
                 seriesIndex = 0
@@ -508,7 +509,6 @@ class Do(Base):
                     if then == "report" :   d_then  = report_do()
                     l_run.append(d_then)
                     seriesIndex += 1
-                d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
                 d_ret['%02d-%s' % (thenIndex, then)]['study'].append(
                                 { study['StudyInstanceUID']['value'] : l_run}
                 )
