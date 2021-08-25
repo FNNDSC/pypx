@@ -160,7 +160,6 @@ class Report(Base):
                     """
                     str_value   = patientAge_calculate(d_DICOMfields)
                 if str_DICOMtag == 'seriesStatus':
-                    # pudb.set_trace()
                     if 'then' in self.arg['reportData']:
                         d_then      = self.arg['reportData']['then']
                         d_status    = [v for k, v in d_then.items() if 'status' in k][0]
