@@ -318,7 +318,7 @@ class Report(Base):
                                     d_bodyContents
                             )
                         dl_bodyContents.append(d_bodyContents.copy())
-                        
+
                         # Here, add some "hidden" elements in the JSON return
                         # suitable for additional processing and defined
                         # in the l_seriesUID list.
@@ -350,8 +350,8 @@ class Report(Base):
         l_rawTextHits       = []
         l_jsonHits          = []
         studyCount          = 0
-        seriesCount         = 0
         for study in self.arg['reportData']['data']:
+            seriesCount     = 0
             d_tabular       = {}
             d_rawText       = {}
             d_json          = {}
