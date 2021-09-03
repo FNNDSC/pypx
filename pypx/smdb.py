@@ -613,7 +613,10 @@ class SMDB():
                                     str_seriesDir,
                                     self.d_DICOM['SeriesInstanceUID']
                                 )
-            if not os.path.isdir(str_seriesDir): os.makedirs(str_seriesDir)
+            if not os.path.isdir(str_seriesDir): os.makedirs(
+                                                        str_seriesDir,
+                                                        exist_ok=True
+                                                )
         else:
             str_studySeries     = "-not applicable-"
         return {
@@ -1223,13 +1226,13 @@ class SMDB():
                 try:
                     self.d_seriesImage[str_seriesInstanceUID] =             \
                         self.d_seriesMeta[str_seriesInstanceUID].copy()
+                    self.d_seriesImage[str_seriesInstanceUID]['outputFile'] =       \
+                            d_seriesTables['outputFile']
+                    if 'imageObj' not in self.d_seriesImage[str_seriesInstanceUID]:
+                        self.d_seriesImage[str_seriesInstanceUID]['imageObj'] = {}
                 except Exception as e:
                     print("An error occurred with the seriesMeta data")
                     print("self.d_seriesMeta = %s" % self.d_seriesMeta)
-            self.d_seriesImage[str_seriesInstanceUID]['outputFile'] =       \
-                    d_seriesTables['outputFile']
-            if 'imageObj' not in self.d_seriesImage[str_seriesInstanceUID]:
-                self.d_seriesImage[str_seriesInstanceUID]['imageObj'] = {}
 
             return d_seriesTables
 
