@@ -303,34 +303,39 @@ class Do(Base):
                                     'NumberOfSeriesRelatedInstances',
                                     seriesInstances
             )
-            str_line        = presenter.seriesRetrieve_print(
-                studyIndex  = studyIndex, seriesIndex = seriesIndex
-            )
-            if self.arg['withFeedBack']: self.log(str_line + "               ")
-            series['SeriesMetaDescription']  = {
-                                    'tag'   : "0,0",
-                                    'value' : str_line,
-                                    'label' : 'inlineRetrieveText'
-                                }
-            if self.move:
-                d_then      = pypx.move({
-                                **self.arg,
-                            })
-            else:
-                d_then = self.systemlevel_run(self.arg,
-                        {
-                            'f_commandGen'      : self.movescu_command,
-                            'series_uid'        : str_seriesUID,
-                            'study_uid'         : str_studyUID
-                        }
+            if d_db['status']:
+                str_line        = presenter.seriesRetrieve_print(
+                    studyIndex  = studyIndex, seriesIndex = seriesIndex
                 )
-            if 'intraSeriesRetrieveDelay' in self.arg.keys():
-                if self.arg['intraSeriesRetrieveDelay']:
-                    seriesRetrieveDelay_do(str_line)
-            series['PACS_retrieve'] = {
-                'requested' :   '%s' % datetime.now()
-            }
-            d_db    = db.seriesData('retrieve', 'command', d_then)
+                if self.arg['withFeedBack']: self.log(str_line + "               ")
+                series['SeriesMetaDescription']  = {
+                                        'tag'   : "0,0",
+                                        'value' : str_line,
+                                        'label' : 'inlineRetrieveText'
+                                    }
+                if self.move:
+                    d_then      = pypx.move({
+                                    **self.arg,
+                                })
+                else:
+                    d_then = self.systemlevel_run(self.arg,
+                            {
+                                'f_commandGen'      : self.movescu_command,
+                                'series_uid'        : str_seriesUID,
+                                'study_uid'         : str_studyUID
+                            }
+                    )
+                if 'intraSeriesRetrieveDelay' in self.arg.keys():
+                    if self.arg['intraSeriesRetrieveDelay']:
+                        seriesRetrieveDelay_do(str_line)
+                series['PACS_retrieve'] = {
+                    'requested' :   '%s' % datetime.now()
+                }
+                d_db    = db.seriesData('retrieve', 'command', d_then)
+            else:
+                if self.arg['withFeedBack']:
+                    self.log(d_db['error'])
+                d_then  = d_db
             return d_then
 
         def status_do() -> dict:
@@ -508,6 +513,8 @@ class Do(Base):
                     if then == "register":  d_then  = register_do(d_thenArgs)
                     if then == "report" :   d_then  = report_do()
                     l_run.append(d_then)
+                    if 'status' in d_then:
+                        if not d_then['status']: break
                     seriesIndex += 1
                 d_ret['%02d-%s' % (thenIndex, then)]['study'].append(
                                 { study['StudyInstanceUID']['value'] : l_run}
