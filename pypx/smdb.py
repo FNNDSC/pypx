@@ -758,13 +758,15 @@ class SMDB():
                     fcntl.flock(fj, fcntl.LOCK_UN)
             except Exception as e:
                 d_ret['status']     = False
-                d_ret['error']      = "Concurrent write failure!"
+                d_ret['error']      = "Possible multiprocess write failure."
             return d_ret
 
         b_status        : bool          = False
         b_fileRead      : bool          = False
         b_canWrite      : bool          = True
         str_error       : str           = 'File does not exist at time of read'
+        writeRetries    : int           = 10
+        writeAttempt    : int           = 1
         str_field       : str           = ""
         d_meta          : dict          = {}
         d_check         : dict          = {}
@@ -817,11 +819,17 @@ class SMDB():
                     if d_write['status']:
                         d_ret               = value
                     else:
-                        str_error               = d_write['error'] + "\nConcurrency write error!"
+                        str_error               = d_write['error'] + " Could not write DB entry."
                         d_check                 = self.seriesData(str_table, str_field)
-                        while d_check[str_field] != value:
+                        while d_check[str_field] != value and writeAttempt < writeRetries:
                             d_check             = self.seriesData(str_table, str_field)
                             time.sleep(0.5)
+                            writeAttempt       += 1
+                        if writeAttempt >= writeRetries:
+                            str_error          += "\nSeriesData DB write attempts to log space timed out. This means the DB could not store log data correctly."
+                            str_error          += "\n\t\tThis usually implies a permissions issue in the DB dir."
+                            str_error          += "\n\t\tDoes the current user (i.e. you) have write access?"
+                            str_error          += "\n\t\tCheck that the DB dir is not root-locked/owned."
 
         return {
             'status'        : b_status,
