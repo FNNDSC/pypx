@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.2.38
+pypx - 3.2.40
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -23,7 +23,7 @@ pypx - 3.2.38
 1.1 Complete **Client** Side
 ============================
 
-This solution is **client**-side and cannot operate fully independently of an appropriately configured PACS. In other words, you can't just download this repo/tools and point the scripts at some PACS and expect things to work unfortunately. The PACS itself (which is NOT part of this repo) needs to be configured to service communications and requests from these tools. See below for more information.
+This solution is **client**-side and cannot operate fully independently of an appropriately configured PACS. Unfortunately, simply downloading this repo/tools and pointing the scripts at some PACS is insufficient. The PACS itself (which is NOT part of this repo) needs to be configured to service communications and requests from these tools. See below for more information.
 
 1.1.1 Quick PACS Primer
 -----------------------
