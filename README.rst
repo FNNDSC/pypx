@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.2.6
+pypx - 3.2.32
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -23,7 +23,7 @@ pypx - 3.2.6
 1.1 Complete **Client** Side
 ============================
 
-This solution is **client**-side and cannot operate fully independently of an appropriately configured PACS. Having said that, in the dockerized mode (either by building a local container or using the container provided on dockerhub (``fnndsc/pypx``) all the necessary infrastructure is provided to listen for and store incoming image data. Some minor post configuration might however be required.
+This solution is **client**-side and cannot operate fully independently of an appropriately configured PACS. In other words, you can't just download this repo/tools and point the scripts at some PACS and expect things to work unfortunately. The PACS itself (which is NOT part of this repo) needs to be configured to service communications and requests from these tools. See below for more information.
 
 1.1.1 Quick PACS Primer
 -----------------------
