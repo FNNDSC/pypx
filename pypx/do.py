@@ -298,11 +298,11 @@ class Do(Base):
             seriesInstances : int   = series['NumberOfSeriesRelatedInstances']['value']
             d_then          : dict  = {}
             d_db            : dict  = {}
-            d_db            = db.seriesData(
-                                    'retrieve',
-                                    'NumberOfSeriesRelatedInstances',
-                                    seriesInstances
-            )
+            d_db                    = db.seriesData(
+                                            'retrieve',
+                                            'NumberOfSeriesRelatedInstances',
+                                            seriesInstances
+                                        )
             if d_db['status']:
                 str_line        = presenter.seriesRetrieve_print(
                     studyIndex  = studyIndex, seriesIndex = seriesIndex
@@ -514,7 +514,10 @@ class Do(Base):
                     if then == "report" :   d_then  = report_do()
                     l_run.append(d_then)
                     if 'status' in d_then:
-                        if not d_then['status']: break
+                        if not d_then['status'] and then != "status": break
+                        if d_then['status'] == 'error':
+                            if 'withFeedBack' in self.arg:
+                                if self.arg['withFeedBack']: print(json.dumps(d_then, indent=4))
                     seriesIndex += 1
                 d_ret['%02d-%s' % (thenIndex, then)]['study'].append(
                                 { study['StudyInstanceUID']['value'] : l_run}
