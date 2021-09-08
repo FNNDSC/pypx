@@ -1494,7 +1494,7 @@ class SMDB():
                         b_status            = True
                 except Exception as e:
                     str_error               = '%s' % e
-
+        if b_status : str_error             = ""
         d_ret = {
             'status'                    : b_status,
             'error'                     : str_error,
