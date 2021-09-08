@@ -710,7 +710,7 @@ class Report(Base):
                     str_line                =  str_status
 
                 str_line += ' ' + str_seriesDescription
-                str_line = '%-104s' % str_line
+                str_line = '%-108s' % str_line
                 if len(str_seriesInstanceUID):
                     str_line += ' │ ' + str_seriesInstanceUID
             else:
