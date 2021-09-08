@@ -679,7 +679,7 @@ class Report(Base):
                 str_packedCount         = '%03d' % d_status['images']['packed']['count']
                 str_pushedCount         = '%03d' % d_status['images']['pushed']['count']
                 str_registeredCount     = '%03d' % d_status['images']['registered']['count']
-                str_status              = '%25s : %20s : %20s ' % \
+                str_status              = '%15s : %15s : %15s │' % \
                     (
                         d_status['state']['study'],
                         d_status['state']['series'],
@@ -701,7 +701,7 @@ class Report(Base):
                         str_seriesInstanceUID   = ''
                 if d_status['status']:
                     str_line                =  \
-                        ' [ PACS:%s/JSON:%s/DCM:%s/PUSH:%s/REG:%s ] │ ' %                             \
+                        ' [ PACS:%s/JSON:%s/DCM:%s/PUSH:%s/REG:%s ] │ ' %      \
                             (
                                 str_requestedCount, str_receivedCount, str_packedCount,
                                 str_pushedCount, str_registeredCount
@@ -825,7 +825,7 @@ class Report(Base):
                 # except:
                 #     str_line = '[ --- ] '
                 str_line += str_seriesDescription
-                str_line = '%-55s' % str_line
+                str_line = '%-55s │ ' % str_line
                 str_line += str_seriesInstanceUID
             else:
                 str_line    = 'Invalid seriesIndex specified'
