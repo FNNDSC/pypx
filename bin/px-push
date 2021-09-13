@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-#                                                            _
+#
 # PACS ToolKit movescu wrapper
 #
-# (c) 2016-2019 Fetal-Neonatal Neuroimaging & Developmental Science Center
+# (c) 2016-2021 Fetal-Neonatal Neuroimaging & Developmental Science Center
 #                   Boston Children's Hospital
 #
 #              http://childrenshospital.org/FNNDSC/
@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-push"
-str_version = "3.2.0"
+str_version = "3.2.2"
 str_desc    = Colors.CYAN + """
 
                                                      _
