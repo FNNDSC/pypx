@@ -150,7 +150,6 @@ class Report(Base):
             try:
                 str_value   = d_DICOMfields[str_DICOMtag]['value']
             except:
-                # pudb.set_trace()
                 if str_DICOMtag == 'PatientAge':
                     """
                     Sometimes the PatientAge is not returned
@@ -160,18 +159,22 @@ class Report(Base):
                     """
                     str_value   = patientAge_calculate(d_DICOMfields)
                 if str_DICOMtag == 'seriesStatus':
+                    # pudb.set_trace()
                     if 'then' in self.arg['reportData']:
                         d_then      = self.arg['reportData']['then']
                         d_status    = [v for k, v in d_then.items() if 'status' in k][0]
                         d_study     = d_status['study'][studyCount]
                         l_series    = d_study[next(iter(d_study))]
-                        d_series    = l_series[seriesCount]
-                        str_value   = self.seriesStatus_print(
-                            studyIndex          = studyCount,
-                            seriesIndex         = seriesCount,
-                            status              = d_series,
-                            SeriesDescription   = d_DICOMfields['SeriesDescription']['value']
-                                        )
+                        try:
+                            d_series    = l_series[seriesCount]
+                            str_value   = self.seriesStatus_print(
+                                studyIndex          = studyCount,
+                                seriesIndex         = seriesCount,
+                                status              = d_series,
+                                SeriesDescription   = d_DICOMfields['SeriesDescription']['value']
+                            )
+                        except:
+                            str_value   = "Status error for studyIndex %d / seriesIndex %d."
             return str_value
 
         def block_build(
