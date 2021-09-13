@@ -1041,18 +1041,37 @@ class SMDB():
     def series_dbFilesCount(self, str_SeriesInstanceUID, str_type) -> dict:
         """
         Return the number of actual str_type files by "counting" the
-        object json files for a given series.
+        object json files for a given series <str_type>.
 
-        Note this returns the count in the seriesDataDir for a given
-        series, which assumes that a file has been processed and
-        recorded -- this does not return the count of files in the
-        packed location.
+        In the case of success, the return count will be the set to the
+        self.series_packedFilesCount() so to be consistent in a status
+        line with the return count of the retrieve/pack/DCM counts.
+
+        Return count can be one of four values:
+        1. Packed files exist, but the downstream job was never attempted. In
+           this case the return count is set to 0.
+        2. The downstream job was attempted and had no error, but some error
+           occurred in counting the packed files, in which case the count is
+           set to -1. This is a largely impossible edge case, but added for
+           completeness' sake.
+        3. Packed files exist, the downstream job was attempted but failed. In
+           this case the return count is set to -10. Typically this indicates
+           some issue with the remote swift service.
+        4. Packed files exist, the downstream job was attempted and succeeded.
+           In this case the return count is set to the packed count.
+
         """
         b_status            : bool  = False
+        d_content           : dict  = {}
         count               : int   = 0
         l_files             : list  = []
         str_seriesDir       : str   = os.path.join( self.args.str_logDir,
                                                     self.str_seriesData)
+        str_dbFile          : str   = '%s/%s-%s.json' % (
+                                                str_seriesDir,
+                                                str_SeriesInstanceUID,
+                                                str_type
+                                        )
         if os.path.isdir(str_seriesDir):
             l_files         : list  = [
                 f for f in os.listdir(str_seriesDir)
@@ -1061,16 +1080,30 @@ class SMDB():
             b_status        = bool(len(l_files))
             if b_status:
                 """
-                A true status simply indicates the entire series has been processed.
-                In order to remain consistent with the other count measures, we set
-                the 'count' to number of packed files.
+                A true status simply indicates the entire series has been pro-
+                cessed, since a single json file would have been created. This
+                file contains further information on the success (or not) of
+                the operation, hence this db file is examined to provide a
+                more meaningful return measure.
+
+                In the case of success, the final return file count that is set
+                to be the count of packed files.
                 """
-                d_packed    = self.series_packedFilesCount(str_SeriesInstanceUID)
-                if d_packed['status']:
-                    count       = d_packed['count']
-                else:
-                    b_status    = False
-                    count       = -1
+                count       = len(l_files)
+                if count == 1:
+                    with open(str_dbFile) as fj:
+                        self.json_read(fj, d_content)
+                    if 'status' in d_content:
+                        if not d_content['status']:
+                            count       = -10
+                    if count != -10:
+                        d_packed    = self.series_packedFilesCount(str_SeriesInstanceUID)
+                        count       = d_packed['count']
+                        if d_packed['status']:
+                            count       = d_packed['count']
+                        else:
+                            b_status    = False
+                            count       = -1
         return {
             'status'    : b_status,
             'count'     : count
