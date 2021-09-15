@@ -285,18 +285,21 @@ class Process():
         files to repack.
         """
         if self.args.str_filesubstr:
-            # First create a list of all the files...
-            self.l_files    = [
-                f                                                       \
-                    for f in listdir(self.args.str_xcrdir)              \
-                        if isfile(join(self.args.str_xcrdir, f))
-            ]
-            # Now filter them according to the passed filesubstr
-            self.l_files    = [
-                x                                                       \
-                    for y in self.args.str_filesubstr.split(',')        \
-                        for x in self.l_files if y in x
-            ]
+            try:
+                # First create a list of all the files...
+                self.l_files    = [
+                    f                                                       \
+                        for f in listdir(self.args.str_xcrdir)              \
+                            if isfile(join(self.args.str_xcrdir, f))
+                ]
+                # Now filter them according to the passed filesubstr
+                self.l_files    = [
+                    x                                                       \
+                        for y in self.args.str_filesubstr.split(',')        \
+                            for x in self.l_files if y in x
+                ]
+            except:
+                pass
         else:
             self.l_files.append(self.args.str_xcrfile)
 

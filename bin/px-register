@@ -27,7 +27,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-register"
-str_version = "3.2.2"
+str_version = "3.2.4"
 str_desc    = Colors.CYAN + """
 
 
