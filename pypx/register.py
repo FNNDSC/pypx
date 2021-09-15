@@ -451,7 +451,8 @@ class Register():
             'PatientID',    'PatientName',      'PatientBirthDate',
             'PatientAge',   'PatientSex',       'ProtocolName',
             'StudyDate',    'StudyDescription', 'StudyInstanceUID',
-            'Modality',     'SeriesDescription','SeriesInstanceUID'
+            'Modality',     'SeriesDescription','SeriesInstanceUID',
+            'AccessionNumber'
         ]
         if d_DICOMfile_read['status']:
             for k in l_DICOMtags:
