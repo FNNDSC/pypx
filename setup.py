@@ -11,7 +11,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.2.50',
+        version             =   '3.2.52',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
