@@ -1433,7 +1433,6 @@ class SMDB():
         directory locations that correspond to the search parameters of
         **kwargs.
         """
-        pudb.set_trace()
         d_ret                   : dict  = {}
         str_seriesInstanceUID   : str   = ""
         if len(self.args.SeriesInstanceUID):
