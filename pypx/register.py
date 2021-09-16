@@ -419,14 +419,33 @@ class Register():
             if 'date' in  field.lower():
                 try:
                     d_pacsData[field]  = datetime.strptime(
-                                            d_pacsData[field], 
+                                            d_pacsData[field],
                                             "%Y%m%d").strftime('%Y-%m-%d'
                                         )
                 except:
                     pass
             if 'patientage' in field.lower():
                 str_age     = d_pacsData['PatientAge']
-                if not str_age[-1].isnumeric():
+                age         = -1
+                if not len(str_age):
+                    # The PatientAge in the DICOM is empty -- a not
+                    # irregular occurence. In this case, we calculate
+                    # the age as the difference between
+                    #
+                    #           StudyDate - PatientBirthDate
+                    #
+                    # assuming these are also existant.
+                    if len(d_pacsData['StudyDate']) and len(d_pacsData['PatientBirthDate']):
+                        try:
+                            date_study = datetime.strptime(d_pacsData['StudyDate'], "%Y-%m-%d")
+                        except:
+                            date_study = datetime.strptime(d_pacsData['StudyDate'], "%Y%m%d")
+                        try:
+                            date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y-%m-%d")
+                        except:
+                            date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y%m%d")
+                        age = abs((date_study - date_birth).days)
+                elif not str_age[-1].isnumeric():
                     try:
                         age     = int(str_age[0:-1])
                     except:
@@ -436,7 +455,7 @@ class Register():
                     if AS == 'M':   age *= 30
                     if AS == 'W':   age *= 7
                     if AS == 'D':   age *= 1
-                    d_pacsData['PatientAge']    = '%s' % age
+                d_pacsData['PatientAge']    = '%s' % age
         return d_pacsData
 
     def DICOMfile_register(self, d_DICOMfile_read, str_file)    -> dict:
