@@ -493,7 +493,8 @@ class Find(Base):
                             {
                                 'f_commandGen':       self.findscu_command,
                                 'QueryRetrieveLevel': 'SERIES',
-                                'SeriesInstanceUID':   series_uid # study['SeriesInstanceUID']['value']
+                                'StudyInstanceUID':   study['StudyInstanceUID']['value'],
+                                'SeriesInstanceUID':   series_uid
                             }
                     )
                 for series in formattedSeriesResponse['data']:
