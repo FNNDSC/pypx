@@ -466,8 +466,8 @@ class Find(Base):
 
         # First we execute on a STUDY level to determine all the
         # STUDIES related to this query
-        series_uid = opt["SeriesInstanceUID"]
-        opt["SeriesInstanceUID"] = ""
+        series_uid                  = opt["SeriesInstanceUID"]
+        opt["SeriesInstanceUID"]    = ""
         
         formattedStudiesResponse    = \
             self.systemlevel_run(opt,
@@ -491,10 +491,10 @@ class Find(Base):
                 formattedSeriesResponse     = \
                     self.systemlevel_run(opt,
                             {
-                                'f_commandGen':       self.findscu_command,
-                                'QueryRetrieveLevel': 'SERIES',
-                                'StudyInstanceUID':   study['StudyInstanceUID']['value'],
-                                'SeriesInstanceUID':   series_uid
+                                'f_commandGen':         self.findscu_command,
+                                'QueryRetrieveLevel':   'SERIES',
+                                'StudyInstanceUID':     study['StudyInstanceUID']['value'],
+                                'SeriesInstanceUID':    series_uid
                             }
                     )
                 for series in formattedSeriesResponse['data']:
