@@ -387,6 +387,7 @@ class Register():
         current     : int   = 0
         total       : int   = len(self.l_files)
         for str_file in self.l_files:
+            current        += 1
             d_run           = self.DICOMfile_mapsUpdate(
                                 self.DICOMfile_register(
                                     self.packer.DICOMfile_read(
@@ -395,8 +396,8 @@ class Register():
                                                 str_file
                                             )
                                     ),
-                                str_file, current, total)
-                            )
+                                str_file),
+                            current, total)
             # Before returning, we need to "sanitize" some of the
             # DICOMfile_read fields, specifically the DICOM read
             # payload that can be very full/noisy. Here we just
@@ -519,7 +520,6 @@ class Register():
         """
         b_status        :   bool    = False
         d_register      :   dict    = {}
-
         if d_DICOMfile_register['status']:
             b_status    = True
             self.smdb.housingDirs_create()
