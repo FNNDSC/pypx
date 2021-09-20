@@ -384,6 +384,8 @@ class Register():
         """
         dl_run      : list  = []
         d_run       : dict  = {'status' : False}
+        current     : int   = 0
+        total       : int   = len(self.l_files)
         for str_file in self.l_files:
             d_run           = self.DICOMfile_mapsUpdate(
                                 self.DICOMfile_register(
@@ -393,7 +395,7 @@ class Register():
                                                 str_file
                                             )
                                     ),
-                                str_file)
+                                str_file, current, total)
                             )
             # Before returning, we need to "sanitize" some of the
             # DICOMfile_read fields, specifically the DICOM read
@@ -509,7 +511,8 @@ class Register():
             'd_CUBE_register_pacs_file' :   d_register
         }
 
-    def DICOMfile_mapsUpdate(self, d_DICOMfile_register)    -> dict:
+    def DICOMfile_mapsUpdate(self, d_DICOMfile_register,
+                             current = 0, total = 0)    -> dict:
         """
         Interact with the SMDB object to update JSON mapping information
         recording this registration operation.
@@ -527,6 +530,10 @@ class Register():
             self.smdb.d_DICOM   = d_DICOMfile_register['d_DICOMfile_read']['d_DICOM']['d_dicomSimple']
             now                 = datetime.now()
             self.smdb.seriesData('register', 'info',        d_register)
+            self.smdb.seriesData('register', 'objectCounter',     {
+                'current'   : current,
+                'total'     : total
+            })
             self.smdb.seriesData('register', 'timestamp',   now.strftime("%Y-%m-%d, %H:%M:%S"))
             if len(self.args.CUBE):
                 self.smdb.seriesData('register', 'CUBE',

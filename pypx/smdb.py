@@ -1043,7 +1043,12 @@ class SMDB():
         Return the number of actual str_type files by "counting" the
         object json files for a given series <str_type>.
 
-        In the case of success, the return count will be the set to the
+        In the case of success, the return count will reflect the number
+        of current data objects relevant to the <str_type>. This is deter-
+        mined by checking if the table has an 'objectCounter' element. If
+        this element exists, the return count will be set to the value of  
+        'objectCounter.current'. If the 'objectCounter' is not an element
+        in the <str_type> db, the return count will then be set simply to
         self.series_packedFilesCount() so to be consistent in a status
         line with the return count of the retrieve/pack/DCM counts.
 
@@ -1058,7 +1063,8 @@ class SMDB():
            this case the return count is set to -10. Typically this indicates
            some issue with the remote swift service.
         4. Packed files exist, the downstream job was attempted and succeeded.
-           In this case the return count is set to the packed count.
+           In this case the return count is set to the 'objectCounter.current'
+           value or the packed count.
 
         """
         b_status            : bool  = False
@@ -1080,14 +1086,16 @@ class SMDB():
             b_status        = bool(len(l_files))
             if b_status:
                 """
-                A true status simply indicates the entire series has been pro-
+                A 'true' status simply indicates the entire series has been pro-
                 cessed, since a single json file would have been created. This
                 file contains further information on the success (or not) of
                 the operation, hence this db file is examined to provide a
                 more meaningful return measure.
 
-                In the case of success, the final return file count that is set
-                to be the count of packed files.
+                In the case of success, the final return file count can be an
+                incremental-in-process count (say for a 'register' operation,
+                or simply the total number of packed files for the case of a
+                'push' operation).
                 """
                 count       = len(l_files)
                 if count == 1:
@@ -1097,13 +1105,17 @@ class SMDB():
                         if not d_content['status']:
                             count       = -10
                     if count != -10:
-                        d_packed    = self.series_packedFilesCount(str_SeriesInstanceUID)
-                        count       = d_packed['count']
-                        if d_packed['status']:
-                            count       = d_packed['count']
+                        if 'objectCounter' in fj:
+                            if 'current' in fj['objectCounter']:
+                                count   = fj['objectCounter']['current']
                         else:
-                            b_status    = False
-                            count       = -1
+                            d_packed    = self.series_packedFilesCount(str_SeriesInstanceUID)
+                            count       = d_packed['count']
+                            if d_packed['status']:
+                                count       = d_packed['count']
+                            else:
+                                b_status    = False
+                                count       = -1
         return {
             'status'    : b_status,
             'count'     : count
