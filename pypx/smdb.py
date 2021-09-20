@@ -1097,6 +1097,7 @@ class SMDB():
                 or simply the total number of packed files for the case of a
                 'push' operation).
                 """
+                pudb.set_trace()
                 count       = len(l_files)
                 if count == 1:
                     with open(str_dbFile) as fj:
@@ -1105,9 +1106,9 @@ class SMDB():
                         if not d_content['status']:
                             count       = -10
                     if count != -10:
-                        if 'objectCounter' in fj:
-                            if 'current' in fj['objectCounter']:
-                                count   = fj['objectCounter']['current']
+                        if 'objectCounter' in d_content:
+                            if 'current' in d_content['objectCounter']:
+                                count   = d_content['objectCounter']['current']
                         else:
                             d_packed    = self.series_packedFilesCount(str_SeriesInstanceUID)
                             count       = d_packed['count']
