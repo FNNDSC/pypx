@@ -1097,7 +1097,6 @@ class SMDB():
                 or simply the total number of packed files for the case of a
                 'push' operation).
                 """
-                pudb.set_trace()
                 count       = len(l_files)
                 if count == 1:
                     with open(str_dbFile) as fj:
