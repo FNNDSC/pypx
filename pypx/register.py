@@ -458,6 +458,13 @@ class Register():
                     if AS == 'M':   age *= 30
                     if AS == 'W':   age *= 7
                     if AS == 'D':   age *= 1
+                else:
+                    # Here the age is specified as a string with no suffix
+                    # qualifier. We assume age is then in years
+                    try:
+                        age = int(str_age) * 365
+                    except:
+                        pass
                 d_pacsData['PatientAge']    = '%s' % age
         return d_pacsData
 
