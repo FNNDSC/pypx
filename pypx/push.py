@@ -390,6 +390,7 @@ class Push(Base):
 
         # Record in the smdb an entry for each series
         for series in store.obj.keys():
+            self.log("Recording smdb entry for %s" % series, level = 3, syslog  = True)
             self.smdb.d_DICOM   = store.obj[series]['d_DICOM']['d_dicomSimple']
             now     = datetime.now()
             self.smdb.seriesData('push', 'status',      d_storeDo['status'])
