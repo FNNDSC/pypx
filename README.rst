@@ -41,16 +41,18 @@ As a brief note, if the opensource ``orthanc`` PACS server is being used, the ``
 
 .. code-block:: json
 
-  // The DICOM Application Entity Title (cannot be longer than 16
-  // characters)
-  "DicomAet" : "CHRISV3T",
+  { 
+      "DicomAet" : "CHRISV3T"
+  }
 
 and 
 
 .. code-block:: json
 
+  {
      "CHRIS" : [ "CHRIS", "10.72.76.39", 10402 ],
      "CHRISLOCAL" : ["CHRISLOCAL", "192.168.1.189", 11113 ]
+  }
 
 where ``CHRISLOCAL`` for example defines a DICOM ``storescp`` service on the host ``192.168.1.189`` and port ``11113`` while ``CHRIS`` defines another destination ``storescp`` service .
 
@@ -172,7 +174,6 @@ Please see the relevant wiki pages for usage instructions (some are still under 
 - px-do_
 - px-echo_
 - px-find_
-- px_listen_
 - px-move_
 - px-push_
 - px-register_
@@ -199,13 +200,13 @@ DCMTK_
 .. _px-move: https://github.com/FNNDSC/pypx/wiki/3.-px-move
 .. _px-push: https://github.com/FNNDSC/pypx/wiki/3.-px-push
 .. _px-register: https://github.com/FNNDSC/pypx/wiki/3.-px-register
+.. _px-do: https://github.com/FNNDSC/pypx/blob/master/bin/px-do
+.. _px-listen: https://github.com/FNNDSC/pypx/blob/master/bin/px-listen
+.. _px-status: https://github.com/FNNDSC/pypx/blob/master/bin/px-status
 .. _px-smdb: https://github.com/FNNDSC/pypx/wiki/3.-px-smdb
 .. _workflow.sh: https://github.com/FNNDSC/pypx/blob/master/workflow.sh
 .. _PyDicom: http://www.python.org/
 .. _darcymason: https://github.com/darcymason
 .. _DCMTK: http://dicom.offis.de/dcmtk.php.en
-.. _echoscu: http://support.dcmtk.org/docs/echoscu.html
-.. _findscu: http://support.dcmtk.org/docs/findscu.html
-.. _movescu: http://support.dcmtk.org/docs/movescu.html
-.. _storescp: http://support.dcmtk.org/docs/storescp.html
-.. _DICOM_Listener: https://github.com/FNNDSC/pypx/wiki/dicom_listener
+.. _pfstorage: https://github.com/FNNDSC/pypx/blob/master/bin/pfstorage
+
