@@ -17,7 +17,7 @@ from    pfmisc._colors      import Colors
 
 
 str_name    = "pfstorage"
-str_version = "3.2.4"
+str_version = "3.2.6"
 str_desc    = Colors.CYAN + """
 
                  __       _
@@ -85,7 +85,7 @@ def synopsis(ab_shortOnly = False):
                 --do '
                 { "action": "ls",
                   "args": {
-                            "swiftpath":    "",
+                            "path":         "",
                             "retSpec":      ["name", "bytes"]
                         }
                 }
@@ -196,7 +196,7 @@ def synopsis(ab_shortOnly = False):
         {
             "action":   "ls",
             "args": {
-                "swiftpath":        "",
+                "path":             "",
                 "retSpec":          ["name", "bytes"]
             }
         }
@@ -348,7 +348,6 @@ if len(args.upstreamFile):
 #     for line in sys.stdin:
 #         str_inputPipe += line
 #     args.upstream   = json.loads(str_inputPipe)
-
 
 d_store     : dict = {}
 if args.str_type == 'swift':
