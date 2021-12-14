@@ -61,6 +61,13 @@ parser.add_argument(
     help    = 'if specified, indicates running px-move.',
 )
 parser.add_argument(
+    '--px-push',
+    action  = 'store_true',
+    dest    = 'b_pxpush',
+    default = False,
+    help    = 'if specified, indicates running px-push.',
+)
+parser.add_argument(
     '--px-register',
     action  = 'store_true',
     dest    = 'b_pxregister',
@@ -95,6 +102,13 @@ parser.add_argument(
     default = False,
     help    = 'if specified, indicates running pfstorage.',
 )
+parser.add_argument(
+    '--px-smdb',
+    action  = 'store_true',
+    dest    = 'b_pxsmdb',
+    default = False,
+    help    = 'if specified, indicates running px-smdb.',
+)
 
 args, unknown   = parser.parse_known_args()
 
@@ -102,15 +116,17 @@ if __name__ == '__main__':
     fname   = 'pxdispatch_do("px-find",args, unknown)'
 
     os.system("/dock/storescp.sh -p 11113 &")
-    if args.b_pxdo:         fname   = 'pxdispatch_do("px-do", args, unknown)'
-    if args.b_pxecho:       fname   = 'pxdispatch_do("px-echo",args, unknown)'
-    if args.b_pxfind:       fname   = 'pxdispatch_do("px-find",args, unknown)'
-    if args.b_pxmove:       fname   = 'pxdispatch_do("px-move",args, unknown)'
-    if args.b_pxregister:   fname   = 'pxdispatch_do("px-register",args, unknown)'
-    if args.b_pxrepack:     fname   = 'pxdispatch_do("px-repack",args, unknown)'
-    if args.b_pxreport:     fname   = 'pxdispatch_do("px-report",args, unknown)'
-    if args.b_pxstatus:     fname   = 'pxdispatch_do("px-status",args, unknown)'
-    if args.b_pfstorage:    fname   = 'pxdispatch_do("pfstorage",args, unknown)'
+    if args.b_pxdo:         fname   = 'pxdispatch_do("px-do",       args, unknown)'
+    if args.b_pxecho:       fname   = 'pxdispatch_do("px-echo",     args, unknown)'
+    if args.b_pxfind:       fname   = 'pxdispatch_do("px-find",     args, unknown)'
+    if args.b_pxmove:       fname   = 'pxdispatch_do("px-move",     args, unknown)'
+    if args.b_pxpush:       fname   = 'pxdispatch_do("px-push",     args, unknown)'
+    if args.b_pxregister:   fname   = 'pxdispatch_do("px-register", args, unknown)'
+    if args.b_pxrepack:     fname   = 'pxdispatch_do("px-repack",   args, unknown)'
+    if args.b_pxreport:     fname   = 'pxdispatch_do("px-report",   args, unknown)'
+    if args.b_pxstatus:     fname   = 'pxdispatch_do("px-status",   args, unknown)'
+    if args.b_pfstorage:    fname   = 'pxdispatch_do("pfstorage",   args, unknown)'
+    if args.b_pxsmdb:       fname   = 'pxdispatch_do("px-smdb",     args, unknown)'
 
     try:
         str_cmd = eval(fname)
