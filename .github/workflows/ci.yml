@@ -1,0 +1,162 @@
+# Automatically build multi-architectural tagged container images and push them to DockerHub
+# https://github.com/FNNDSC/cookiecutter-chrisapp/wiki/Automatic-Builds
+#
+# - targeted platforms: x86_64, PowerPC64, ARM64
+# - master is built as fnndsc/pypx:latest
+# - tagged commits are built as fnndsc/pypx:<tag>
+# - tagged commits are also uploaded to chrisstore.co
+#
+# In order to use this workflow, see
+# https://github.com/FNNDSC/cookiecutter-chrisapp/wiki/Automatic-Builds#steps-to-enable
+
+name: ci
+
+on:
+  push:
+    # we have to guess what the name of the default branch is
+    branches: [ master, main, trunk ]
+    tags: [ '**' ]
+  pull_request:
+    branches: [ master, main, trunk ]
+
+jobs:
+  test:
+    # delete the line below to enable automatic testing
+    if: false
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: build
+        run: docker build -t "${GITHUB_REPOSITORY,,}" .
+      - name: nose tests
+        run: docker run "${GITHUB_REPOSITORY,,}" nosetests
+
+  publish:
+    if: github.event_name == 'push' || github.event_name == 'release'
+    runs-on: ubuntu-20.04
+
+    # we want to both push the build to DockerHub, but also
+    # keep a local copy so that we can run
+    #
+    #     docker run fnndsc/pl-app app --json > App.json
+    #
+    # buildx currently does not support multiple output locations,
+    # neither can multi-architectural builds be loaded into docker.
+    # Here we use a local registry to cache the build.
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    steps:
+      - name: Get git tag
+        id: git_info
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "::set-output name=tag::${GITHUB_REF##*/}"
+      - name: Decide image tag name
+        id: determine
+        env:
+          git_tag: ${{ steps.git_info.outputs.tag }}
+        run: |
+          repo="${GITHUB_REPOSITORY,,}"  # to lower case
+          # if build triggered by tag, use tag name
+          tag="${git_tag:-latest}"
+          dock_image=$repo:$tag
+          echo $dock_image
+          echo "::set-output name=dock_image::$dock_image"
+          echo "::set-output name=repo::$repo"
+      - uses: actions/checkout@v2
+
+      # QEMU is for emulating non-x86_64 platforms
+      - uses: docker/setup-qemu-action@v1
+      # buildx is the next-generation docker image builder
+      - uses: docker/setup-buildx-action@v1
+        with:
+          driver-opts: network=host
+      # save some time during rebuilds
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Login to DockerHub
+        id: dockerhub_login
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        id: docker_build
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: |
+            ${{ steps.determine.outputs.dock_image }}
+            localhost:5000/${{ steps.determine.outputs.dock_image }}
+            ghcr.io/${{ steps.determine.outputs.dock_image }}
+          platforms: linux/amd64
+          push: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Get plugin meta
+        id: pluginmeta
+        run: |
+          repo=${{ steps.determine.outputs.repo }}
+          dock_image=${{ steps.determine.outputs.dock_image }}
+          docker pull localhost:5000/$dock_image
+          docker tag localhost:5000/$dock_image $dock_image
+          script=$(docker inspect --format '{{ (index .Config.Cmd 0) }}' $dock_image)
+          json="$(docker run --rm $dock_image $script --json)"
+          jq <<< "$json"  # pretty print in log
+          echo "::set-output name=json::$json"
+          echo "::set-output name=title::$(jq -r '.title' <<< "$json")"
+      - name: Update DockerHub description
+        uses: peter-evans/dockerhub-description@v2
+        continue-on-error: true  # it is not crucial that this works
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          short-description: ${{ steps.pluginmeta.outputs.title }}
+          readme-filepath: ./README.rst
+          repository: ${{ steps.determine.outputs.repo }}
+
+      - name: Upload to ChRIS Store
+        if: "!endsWith(steps.determine.outputs.dock_image, ':latest')"
+        run: |
+          repo=${{ steps.determine.outputs.repo }}
+          dock_image=${{ steps.determine.outputs.dock_image }}
+          plname="$(sed 's/^.*\///' <<< $repo)" && echo "name=$plname"
+          descriptor_file=$(mktemp --suffix .json)
+          cat > $descriptor_file <<< '${{ steps.pluginmeta.outputs.json }}'
+          res=$(
+            curl -s -u "${{ secrets.CHRIS_STORE_USER }}" "https://chrisstore.co/api/v1/plugins/" \
+              -H 'Accept:application/vnd.collection+json' \
+              -F "name=$plname" \
+              -F "dock_image=$dock_image"  \
+              -F "descriptor_file=@$descriptor_file" \
+              -F "public_repo=https://github.com/${{ github.repository }}"
+          )
+          success=$?
+          echo "::debug::$res"
+          if [ "$success" = "0" ]; then
+            href="$(jq -r '.collection.items[0].href' <<< "$res")"
+            echo $href
+            echo "::set-output name=pluginurl::$href"
+          else
+            echo "::error ::Failed upload to ChRIS Store"
+            echo "$res"
+            exit $success
+          fi
