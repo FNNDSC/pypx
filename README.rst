@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.2.64
+pypx - 3.4.0
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -37,6 +37,23 @@ Communications with a PACS are for the most insecure and reflected a circa 1990s
 
 In order to be fully complete, a destination PACS with which ``pypx`` modules wish to communicate needs to be configured with appropriate ``AETitle``, ``CalledAETitle``, as well as the network address IP and port of the ``pypx`` hosting machine. Configuring a PACS is obviously outside of the scope of this documentation. Consult your PACS for information on this configuration.
 
+As a brief note, if the opensource ``orthanc`` PACS server is being used, the ``orthanc.json`` can be edited to include
+
+.. code-block:: json
+
+  // The DICOM Application Entity Title (cannot be longer than 16
+  // characters)
+  "DicomAet" : "CHRISV3T",
+
+and 
+
+.. code-block:: json
+
+     "CHRIS" : [ "CHRIS", "10.72.76.39", 10402 ],
+     "CHRISLOCAL" : ["CHRISLOCAL", "192.168.1.189", 11113 ]
+
+where ``CHRISLOCAL`` for example defines a DICOM ``storescp`` service on the host ``192.168.1.189`` and port ``11113`` while ``CHRIS`` defines another destination ``storescp`` service .
+
 1.1.3 Configuring ``pypx``
 ---------------------------
 
@@ -54,15 +71,27 @@ simply add another block reflecting the variables appropriate to your remote PAC
 1.2 Components
 ==============
 
+1.2.1 Environment
+-----------------
+
+``pypx`` can be thought of as a bridge connecting a PACS to a ChRIS instance. In between these services is a filesystem. A PACS retrieve will request files from a PACS which arrive over the network and a separately configured listening service repacks these files in a specially configured location called the ``BASEMOUNT``. Once these files are received, they can be ``PUSH``ed to special ChRIS friendly storage called swift, and once there they can be ``REGISTER``ed to ChRIS/CUBE. Each of these services (swift and CUBE) have network locations and login details which are stored in the ``BASEMOUNT`` in ``<BASEMOUNT>/services/[swift,cube].json``. Many different swift and CUBE configurations can in theory exist in these json files. Each configuration is identified by a key -- the ``SWIFTKEY`` for the swift service and the ``CUBEKEY`` for the CUBE service. Using these keys makes for a convenient way to push and register files without very verbose CLI.
+
+See ``PACS_QR.sh -x`` for some in-line help on setting these keys.
+
+1.2.2 Tools
+-----------
+
 Internally, the code wraps around DCMTK utilies as well as the PyDicom module. The following modules/scripts are provided:
 
-- px-repack_: Read and repack DICOM files, organizing the destination in a human-friendly tree based layout.
+- pfstorage_: Query / put files/objects into swift storage.
+
+- px-do_: Perform various downstream utility functions once a ``px-find`` has completed.
 
 - px-echo_: Ping the PACS to make sure it is online (``echoscu``).
 
-- px-find_: Find data on the PACS (``findscu``).
+- px-find_: Find (Query) a PACS in a variety of ways. The start point of almost all other workflows which are constructed as ``find`` _then_ ``do``.
 
-- px-report_: Consume the JSON outputs of many of the tools (esp the ``px-find`` and generate various console-based reports).
+- px-listen_: Deprecated listening service wrapper.
 
 - px-move_: Move data from the PACS (``movescu``).
 
@@ -70,15 +99,26 @@ Internally, the code wraps around DCMTK utilies as well as the PyDicom module. T
 
 - px-register_: A companion to ``px-push`` that registers files in ChRIS swift storage to the ChRIS CUBE backend.
 
+- px-repack_: Read and repack DICOM files, organizing the destination in a human-friendly tree based layout.
+
+- px-report_: Consume the JSON outputs of many of the tools (esp the ``px-find`` and generate various console-based reports).
+
+- px-status_: Report on the status of query results in the ``BASEMOUNT``.
+
 - px-smdb_: A simple file-system based database that provides tracking and query for processed DICOM files.
 
 2. Installation
 *****************
 
-2.1 Using docker
+2.1 Prerequisites
+=================
+
+For all installation solutions, make sure that the machine receiving images from a PACS has approporate listening and repacking services and that the PACS itself has been configured to recognize this machine. While out of scope of this document, the simplest way to set this up is to use the ``pfdcm`` service (provided separately).
+
+2.2 Using docker
 ================
 
-Using the dockerized container is the recommended installation vector as the image contains a configured listener service that can receive image data without any additional software on the host system.
+Using the dockerized container is the recommended installation vector as the image contains all tools (dcmtk) that can interact both with a PACS as well as swift storage and CUBE without any additional software on the host system.
 
 .. code-block:: bash
 
@@ -97,10 +137,10 @@ Alternatively, you can build a local image with
     export UID=$(id -u)
     DOCKER_BUILDKIT=1 docker build --build-arg UID=$UID -t local/pypx .
 
-2.2 pypi
+2.3 PyPI
 ========
 
-For convenience, a PyPI installation is also available. Note that to be useful for image reception, services on the host machine for listening on a given port and interacting with ``px-listen`` must be manually configured. This is recommended only for advanced users.
+For convenience, a PyPI installation is also available. This assumes additional non-python requirements such as ``dcmtk`` have been installed. This is recommended only for advanced users.
 
 .. code-block:: bash
 
@@ -113,30 +153,32 @@ For convenience, a PyPI installation is also available. Note that to be useful f
 3. Configuring the containerized version
 *******************************************
 
-The container is preconfigured to receive image data on port 10402. This port should be accessible to the remote PACS, and note that if the docker container is run directly with the ``docker`` command be sure to publish this port with
-
-.. code-block:: bash
-
-    docker run  --rm -ti                        \
-            -p 10402:10402                      \
-            ...
-
-If necessary, this port can be changed in the ``Dockerfile`` for a local build of the container.
+If using the container tool images directly, take care to assure that the machine receiving PACS transmissions is available and has a listener service accessible on an exposed port. This port should be accessible to the remote PACS. Our strong recommendation is to use the companion ``pfdcm`` container/repo to receive PACS data. Note that ``pfdcm`` itself contains ``pypx`` and will handle the reception and repacking of DICOM files using the correct ``pypx`` tools.
 
 4. Usage
-*****************
+*********
 
-For more complete examples, please consult the workflow.sh_ script in the source repository
+For the most complete example, please consult the workflow.sh_ script in the source repository. This provides a Jupyter-notebook-shell-eque overview of most if not all the possible methods to call and use these tools.
 
-Please see the relevant wiki pages for usage instructions:
+For the most convenient example, use the ``PACS_QR.sh`` script -- consult its internal help with 
 
-- px-repack_
+.. code-block:: bash 
+
+  PACS_QR.sh -x
+
+Please see the relevant wiki pages for usage instructions (some are still under construction):
+
+- pfstorage_
+- px-do_
 - px-echo_
 - px-find_
-- px-report_
+- px_listen_
 - px-move_
 - px-push_
 - px-register_
+- px-repack_
+- px-report_
+- px-status_
 - px-smdb_
 
 5. Credits
