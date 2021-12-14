@@ -1297,6 +1297,7 @@ class SMDB():
             Return False if no updates made, else True
             """
             b_updatesMade   : bool  = False
+            b_status        : bool  = False
             try:
                 if self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]['outputFile'] not in                                      \
                     self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]           \
@@ -1316,12 +1317,15 @@ class SMDB():
                     b_updatesMade   = True
                 else:
                     self.d_seriesModel     = self.d_seriesImage[self.d_DICOM['SeriesInstanceUID']]
+                b_status        = True
             except:
                 # pudb.set_trace()
                 b_updatesMade   = False
+                b_status        = False
             return {
-                'status'    : b_updatesMade,
-                'image'     : self.d_seriesImage
+                'status'        : b_status,
+                'updatesMade'   : b_updatesMade,
+                'image'         : self.d_seriesImage
             }
 
         def seriesData_singleImageFile_save(d_update)  -> dict:
@@ -1456,6 +1460,12 @@ class SMDB():
         """
         Return a structure that contains a list of all directories containing
         DICOM files for a given PatientID.
+
+        Technical debt warning!
+        This method makes some _implicit_ assumptions on the series name,
+        most notably that the series name in the studyDir ends in "-meta"
+        (or -<string>). This trailing "-meta" is removed during processing
+        in this method.
         """
         d_ret               : dict  = {}
         b_status            : bool  = False
@@ -1470,6 +1480,7 @@ class SMDB():
         str_imageLocation   : str   = ""
         str_imageDataDir    : str   = ""
         str_imageDir        : str   = ""
+        seriesCount         : int   = 0
 
         if os.path.isfile(str_patientDataFile):
             with open(str_patientDataFile) as fp:
@@ -1477,21 +1488,25 @@ class SMDB():
             fp.close()
             l_studies       = d_patientData[astr_PatientID]['StudyList']
             for study in l_studies:
-                d_series[study] = [os.path.splitext(f)[0] for f in os.listdir(
+                d_series[study] = [os.path.splitext(f)[0].rsplit('-', 1)[0] for f in os.listdir(
                                                 '%s/%s-series' % (self.str_studyDataDir, study)
                                                         )]
                 d_imageDirs[study]  = []
+                seriesCount         = 0
                 for series in d_series[study]:
+                    series              = series.rsplit('-', 1)[0]
                     str_imageDataDir    = '%s/%s-img' % (self.str_seriesDataDir, series)
                     str_imageFile       = os.listdir(str_imageDataDir)[0]
                     if os.path.isfile('%s/%s' % (str_imageDataDir, str_imageFile)):
                         with open('%s/%s' % (str_imageDataDir, str_imageFile)) as fp:
                             self.json_read(fp, d_imageInfo)
                         fp.close()
+                        d_series[study][seriesCount] = d_imageInfo
                         str_imageObj        = os.path.splitext(str_imageFile)[0]
                         str_imageLocation   = d_imageInfo[series]['imageObj'][str_imageObj]['FSlocation']
                         str_imageDir        = os.path.dirname(str_imageLocation)
                         d_imageDirs[study].append(str_imageDir)
+                        seriesCount         += 1
                 b_status    = True
 
         d_ret = {
