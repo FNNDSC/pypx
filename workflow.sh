@@ -1,27 +1,175 @@
-# NOTE:
-# this script assumes fish conventions
+PURPOSE="
+
+    This script describes by way of demonstration various explicit examples of
+    how to use the pypx family of tools to connect a PACS database to a ChRIS 
+    instance. By 'connect' is meant the set of actions to determine images of
+    interest in a PACS and to ultimately send those same images to a ChRIS 
+    instance for subsequent image analysis.
+
+    The set of operations, broadly, are:
+
+        * pack a bunch of DICOM files that are on the local filesystem into
+          the pypx database;
+
+        * explore the local pypx simple database for information on patients
+          series / studies;
+
+        * query a PACS for images of interest and report on results in a
+          variety of ways;
+
+        * retrieve a set of images of interest;
+
+        * push the retrieved images to CUBE swift storage;
+
+        * register the pushed-into-swift images with CUBE;
+        
+    Each set of operations is present with as CLI using 'on-the-metal' tools
+    installed with PyPI followed by the equivalent docker CLI. The CLI is
+    purposefully tailored to show strong overlap between the 'on-the-metal'
+    call and the docker call.
+
+    NOTE:
+
+        * This script should work across all shells of note: bash/zsh/fish
+          but has only fully tested on 'fish'.
+
+    Q/A LOG:
+
+        * 07-Dec-2021 -> 08-Dec-2021
+          Full test of each command/line against a ChRIS instance and orthanc
+          server running within a local network.
+"
+
+# Which pypx do you want to use? :)
+# export PYPX=fnndsc/pypx
+export PYPX=local/pypx
+
+#
+# Manually run a storescp:
+# Obviously change paths accordingly!
+# This is only necessary if you are running pypx without/outside of a
+# pfdcm service.
+#
+# MOST LIKELY YOU WILL NOT NEED TO DO THIS
+#
+storescp    -od /tmp/data                                                   \
+            -pm -sp                                                         \
+            -xcr "/home/rudolphpienaar/src/pypx/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data" \
+            -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \ 
+            11113
+
+# Edit any/all of the following as appropriate to your local env.
+
+#
+# swift storage environment
+#
+export SWIFTKEY=pannotia
+export SWIFTHOST=192.168.1.200
+export SWIFTPORT=8080
+export SWIFTLOGIN=chris:chris1234
+export SWIFTSERVICEPACS=orthanc
+
+#
+# CUBE login details
+#
+export CUBEKEY=pannotia
+export CUBEURL=http://localhost:84444/api/v1/
+export CUBEusername=chris
+export CUBEuserpasswd=chris1234
+
+#
+# PACS details
+#
+# For ex a FUJI PACS
+export AEC=CHRIS
+export AET=CHRISV3
+export PACSIP=134.174.12.21
+export PACSPORT=104
+export DB=/neuro/users/chris/PACS/log
+#
+# For ex an orthanc service
+#
+export AEC=ORTHANC
+export AET=CHRISLOCAL
+export PACSIP=192.168.1.200
+export PACSPORT=4242
+
+#
+# Local file paths -- if you don't have a /home/dicom
+# directory, I'd strongly suggest creating one...
+#
+export DB=/home/dicom/log
+export DATADIR=/home/dicom/data
+export BASEMOUNT=/home/dicom
+export LOCALDICOMDIR=/home/rudolphpienaar/data/4665436-305/all-full
+
+#
+# NB!
+# Make sure that the $DB directory is accessible as described from the
+# host running this script!
 #
 
-# Manually run a storescp:
-storescp        -od /tmp/data                                                  \
-                -pm -sp                                                        \
-                -xcr "/home/rudolphpienaar/src/pypx/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data"                                                \
-                -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \ 
-                11113
+# Patient / Study / Series detail
+# Obviously re-assign these for a given target!
+export MRN=4443508
+export STUDYUID=1.2.840.113845.11.1000000001785349915.20130312110508.6351586
+export SERIESUID=1.3.12.2.1107.5.2.19.45152.2013031212563759711672676.0.0.0
+export ACCESSIONNUMBER=22681485
 
-# Pack a single file
-px-repack       --logdir /home/dicom/log                                       \
-                --datadir /home/dicom/data                                     \
-                --xcrdir ~/data/4665436-305/all                                \
+###############################################################################
+#_____________________________________________________________________________#
+# R E P A C K                                                                 #
+#_____________________________________________________________________________#
+# Pack a single flat dir of many DICOM files that exist on the local file     #
+# system into the pypx database -- this will also organize the files into     #
+# nice directory trees / etc in the database directory.                       #
+#                                                                             #
+# Note that it is also possible to "pack" files by transmitting them to the   #
+# DICOM listener service, which will receive the files and then effectively   #
+# do this exact px-repack operation. By calling px-repack directly we can     #
+# streamline this process a bit. Also the DICOM listener handling process is  #
+# rather computationally intensive.                                           #                                                                   #
+###############################################################################
+
+# Pack a whole slew of files that are in a directory
+px-repack                                                                      \
+                --logdir $DB                                                   \
+                --datadir $DATADIR                                             \
+                --xcrdir $LOCALDICOMDIR                                        \
                 --parseAllFilesWithSubStr dcm
 
-set SWIFTHOST 192.168.1.200
-set SWIFTPORT 8080
-set SWIFTLOGIN chris:chris1234
-set SWIFTKEY swiftStorage
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT -v $LOCALDICOMDIR:$LOCALDICOMDIR  \
+                $PYPX                                                          \
+--px-repack                                                                    \
+                --logdir $DB                                                   \
+                --datadir $DATADIR                                             \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm
+
+###############################################################################
+#_____________________________________________________________________________#
+# S M D B                                                                     #
+#_____________________________________________________________________________#
+# Some smdb experiences.                                                      # 
+# The smdb is a "simple data base" with all table data represented as JSON    #
+# files in the FS. The FS itself provides some hierarchical database          #
+# organization
+###############################################################################
+
+#
+# NOTE!
+# o All CLI calls are shown as "on-the-metal" as well as docker equivalents.
+#   The docker equivalents are constructed to closely map/mirror the 
+#   corresponding on-the-metal call.
+# o For the most part, the docker call differs in:
+#       [] The "prefix" docker command
+#       [] All JSON passed to a command needs special quoting and importantly
+#          NO spaces (or at least escaped spaces)
+#
 
 # Set the swift login info in a key-ref'd service
-px-smdb         --logdir /home/dicom/log                                       \
+px-smdb                                                                        \
+                --logdir $DB                                                   \
                 --action swift                                                 \
                 --actionArgs '
 {
@@ -32,204 +180,534 @@ px-smdb         --logdir /home/dicom/log                                       \
         }
 }'
 
-px-smdb         --logdir /home/dicom/log                                       \
+# docker equivalent -- note the JSON string needs special quoting and needs to
+# be a single-line string WITH NO SPACES!
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --logdir $DB                                                   \
                 --action swift                                                 \
-                --actionArgs '
-{
-        "swiftStorage": {
-                        "ip": "localhost", 
-                        "port":"8080", 
-                        "login":"chris:chris1234"
-        }
-}'
+                --actionArgs                                                   \
+'{\"'$SWIFTKEY'\":{\"ip\":\"'$SWIFTHOST'\",\"port\":\"'$SWIFTPORT'\",\"login\":\"'$SWIFTLOGIN'\"}}'
 
 # Get the swift login details for all keys
-px-smdb         --logdir /home/dicom/log                                       \
+# This examines the service file, swift.json, located in
+# $DB/services/swift.json
+px-smdb                                                                        \
+                --logdir $DB                                                   \
+                --action swift
+
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --logdir $DB                                                   \
                 --action swift
 
 # Query smdb for all image dirs on a patient
-px-smdb         --action imageDirsPatientID                                    \
-                --actionArgs 5644810                                           \
-                --logdir /home/dicom/log
+px-smdb                                                                        \
+                --action imageDirsPatientID                                    \
+                --actionArgs $MRN                                              \
+                --logdir $DB
+
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --action imageDirsPatientID                                    \
+                --actionArgs $MRN                                              \
+                --logdir $DB
 
 # Query smdb for dir on a SeriesInstanceUID
-px-smdb         --action imageDirsSeriesInstanceUID                            \
-                --actionArgs 1.3.12.2.1107.5.2.19.45479.2021061717351923347817670.0.0.0 \
-                --logdir /home/dicom/log
+px-smdb                                                                        \
+                --action imageDirsSeriesInstanceUID                            \
+                --actionArgs $SERIESUID                                        \
+                --logdir $DB
+
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --action imageDirsSeriesInstanceUID                            \
+                --actionArgs $SERIESUID                                        \
+                --logdir $DB
+
 
 # Explicitly update all maps/catalogues for a Patient
-px-smdb         --action mapsUpdateForPatient                                  \
-                --actionArgs 5644810                                           \
-                --logdir /home/dicom/log 
+# This is typically only needed if for some (rare) case not all the
+# constituent DB json files have been created properly.
+px-smdb                                                                        \
+                --action mapsUpdateForPatient                                  \
+                --actionArgs $MRN                                              \
+                --logdir $DB 
 
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --action mapsUpdateForPatient                                  \
+                --actionArgs $MRN                                              \
+                --logdir $DB 
 
-# on the metal
-pfstorage                                                                      \
-                --swiftIP $SWIFTHOST                                           \
-                --swiftPort $SWIFTPORT                                         \
-                --swiftLogin $SWIFTLOGIN                                       \
-                --verbosity 1                                                  \
-                --debugToDir /tmp                                              \
-                --type swift                                                   \
+# Check the swift storage --  this will only return a valid payload if files
+# have been successfully pushed to swift!
+pfstorage                                                                   \
+                --swiftIP $SWIFTHOST                                        \
+                --swiftPort $SWIFTPORT                                      \
+                --swiftLogin $SWIFTLOGIN                                    \
+                --verbosity 1                                               \
+                --debugToDir /tmp                                           \
+                --type swift                                                \
                 --do '
            {
                "action":   "ls",
                "args": {
-                   "path":        "SERVICES/PACS/covidnet"
+                   "path":        "SERVICES/PACS/'$SWIFTSERVICEPACS'"
                    }
            }
            ' --json
 
-# docker equivalent
-docker run --rm -ti local/pypx  --pfstorage                                    \
+# docker equivalent -- note the JSON string needs special quoting and needs to
+# be a single-line string WITH NO SPACES!
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+ --pfstorage                                                                   \
                 --swiftIP $SWIFTHOST                                           \
                 --swiftPort $SWIFTPORT                                         \
                 --swiftLogin $SWIFTLOGIN                                       \
                 --verbosity 1                                                  \
                 --debugToDir /tmp                                              \
-                --do '{\"action\":\"ls\",\"args\":{\"path\":\"SERVICES/PACS/covidnet\"}}' --json
+                --do                                                           \
+    '{\"action\":\"ls\",\"args\":{\"path\":\"SERVICES/PACS/'$SWIFTSERVICEPACS'\"}}' --json
+
+###############################################################################
+#_____________________________________________________________________________#
+# S E A R C H                                                                 #
+#_____________________________________________________________________________#
+#                                                                             #
+# Some search experiences.                                                    # 
+# Note that if $SEARCHTAG and $SEARCHVAL are NOT set, then orthanc            #
+# will return data on all PATIENTS/STUDIES/SERIES                             #
+###############################################################################
+# Search targets
+# Edit the following as you see fit!
+export SEARCHTAG="--PatientID"
+export SEARCHTAG="--AccessionNumber"
+export SEARCHVAL=$ACCESSIONNUMBER
+
+export SEARCHTAG="--SeriesInstanceUID"
+export SEARCHVAL=$SERIESUID
 
 # Simple "search":
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID 5644810                                            \
-                --db /home/dicom/log                                           \
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
                 --json                                                         \
                 --then report                                                  \
                 --withFeedBack
 
-# Simple "search" with more detailed reporting
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID 5644810                                            \
-                --db /home/dicom/log                                           \
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
+                --json                                                         \
+                --then report                                                  \
+                --withFeedBack
+
+
+# Simple "search" with more detailed reporting
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --json                                                        |\
-px-report       --colorize dark \
-                --printReport csv \
-                --csvPrettify \
-                --csvPrintHeaders \
-                --reportHeaderStudyTags PatientName,PatientID,StudyDate \
+px-report                                                                      \
+                --colorize dark                                                \
+                --printReport csv                                              \
+                --csvPrettify                                                  \
+                --csvPrintHeaders                                              \
+                --reportHeaderStudyTags PatientName,PatientID,StudyDate        \
+                --reportBodySeriesTags SeriesDescription,SeriesInstanceUID
+
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --json                                                        |\
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-report                                                                    \
+                --colorize dark                                                \
+                --printReport csv                                              \
+                --csvPrettify                                                  \
+                --csvPrintHeaders                                              \
+                --reportHeaderStudyTags PatientName,PatientID,StudyDate        \
                 --reportBodySeriesTags SeriesDescription,SeriesInstanceUID
 
 
-# Retrieve:
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID 5644810                                            \
-                --db /home/dicom/log                                           \
-                --verbosity 1                                                  \
+# Let's reduce the header to only the PatientID, StudyDate and StudyInstanceUID
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --json                                                        |\
+px-report                                                                      \
+                --colorize dark                                                \
+                --printReport csv                                              \
+                --csvPrettify                                                  \
+                --csvPrintHeaders                                              \
+                --reportHeaderStudyTags PatientID,StudyDate,StudyInstanceUID   \
+                --reportBodySeriesTags SeriesDescription,SeriesInstanceUID
+
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --json                                                        |\
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-report                                                                    \
+                --colorize dark                                                \
+                --printReport csv                                              \
+                --csvPrettify                                                  \
+                --csvPrintHeaders                                              \
+                --reportHeaderStudyTags PatientID,StudyDate,StudyInstanceUID   \
+                --reportBodySeriesTags SeriesDescription,SeriesInstanceUID
+
+###############################################################################
+#_____________________________________________________________________________#
+# R E T R I E V E                                                             #
+#_____________________________________________________________________________#
+# Now for some search driven retrieves.                                       # 
+# The semantics are built around a <search>then<retrieve> construct           #
+###############################################################################
+# Retrieve
+# The --intraSeriesRetrieveDelay is a throttle that might be necessary if you
+# are running this infrastructure on a low spec machine.
+#
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --json                                                         \
                 --then retrieve                                                \
+                --withFeedBack                                                 \
                 --intraSeriesRetrieveDelay dynamic:10                          \
-                --withFeedBack
 
-# Check the status
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID 5644810                                            \
-                --db /home/dicom/log                                           \
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --json                                                         \
+                --then retrieve                                                \
+                --withFeedBack                                                 \
+                --intraSeriesRetrieveDelay dynamic:10                          \
+
+###############################################################################
+#_____________________________________________________________________________#
+# S T A T U S                                                                 #
+#_____________________________________________________________________________#
+# Check status in internal smdb       .                                       # 
+# The semantics are built around a <search>then<retrieve> construct           #
+###############################################################################
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
                 --json                                                         \
                 --then status                                                  \
                 --withFeedBack
 
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then status                                                  \
+                --withFeedBack
+
+
+# Retrieve only a single series in a study
+export STUDYINSTANCEUID=1.2.840.113845.11.1000000001785349915.20130312110508.6351586
+export SERIESINSTANCEUID=1.3.12.2.1107.5.2.19.45152.30000013022413214670400289776
+
+# Check that this is the study/series of interest
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                --StudyInstanceUID $STUDYINSTANCEUID                           \
+                --SeriesInstanceUID $SERIESINSTANCEUID                         \
+                --db $DB                                                       \
+                --json                                                         \
+                --then report                                                  \
+                --withFeedBack
+
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                --StudyInstanceUID $STUDYINSTANCEUID                           \
+                --SeriesInstanceUID $SERIESINSTANCEUID                         \
+                --db $DB                                                       \
+                --json                                                         \
+                --then report                                                  \
+                --withFeedBack
+
+# Now pull it... (and show the status after pulling)
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                --StudyInstanceUID $STUDYINSTANCEUID                           \
+                --SeriesInstanceUID $SERIESINSTANCEUID                         \
+                --db $DB                                                       \
+                --json                                                         \
+                --then retrieve,status                                         \
+                --withFeedBack
+
+docker run --rm -it -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                --StudyInstanceUID $STUDYINSTANCEUID                           \
+                --SeriesInstanceUID $SERIESINSTANCEUID                         \
+                --db $DB                                                       \
+                --json                                                         \
+                --then retrieve,status                                         \
+                --withFeedBack
+
 # Check the status using the report module:
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID LILLA-9729                                         \
-                --db /home/dicom/log                                           \
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
                 --json                                                         \
                 --then status                                                 |\
-px-report       --seriesSpecial seriesStatus                                   \
+px-report                                                                      \
+                --seriesSpecial seriesStatus                                   \
+                --printReport tabular                                          \
+                --colorize dark                                                \
+                --reportBodySeriesTags seriesStatus
+
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then status                                                 |\
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-report                                                                    \
+                --seriesSpecial seriesStatus                                   \
                 --printReport tabular                                          \
                 --colorize dark                                                \
                 --reportBodySeriesTags seriesStatus
 
 
 # Check the status using the report module and csv output:
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID LILLA-9729                                         \
-                --db /home/dicom/log                                           \
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
                 --json                                                         \
                 --then status                                                 |\
-px-report       --seriesSpecial seriesStatus                                   \
+px-report                                                                      \
+                --seriesSpecial seriesStatus                                   \
                 --printReport csv                                              \
                 --csvPrettify                                                  \
                 --csvPrintHeaders                                              \
-                --reportHeaderStudyTags PatientName,StudyDate		       \
+                --reportHeaderStudyTags PatientName,StudyDate		           \
+                --reportBodySeriesTags seriesStatus
+
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then status                                                 |\
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-report                                                                    \
+                --seriesSpecial seriesStatus                                   \
+                --printReport csv                                              \
+                --csvPrettify                                                  \
+                --csvPrintHeaders                                              \
+                --reportHeaderStudyTags PatientName,StudyDate		           \
                 --reportBodySeriesTags seriesStatus
 
 
+###############################################################################
+#_____________________________________________________________________________#
+# P U S H                                                                     #
+#_____________________________________________________________________________#
+# Once data is pulled locally, either from a retrieve or from some other      #
+# mechanism, we can now push images to CUBE swift storage.                    #
+#                                                                             #
+#                                                                             # 
+# As earlier with the retrieve, we can do a <search>then<push> construct.     #
+# The <source> to PUSH is a directory on the locally accessible filesystem    #
+# which can either be specified directly with the '--xcrdir' parameter, or    #
+# resolved by a call to find event off a connected PACS (this is ultimately   #
+# used simply to determine the location of files within the smdb tree).       #
+###############################################################################
+
+
+# Now, choose a single series by simply passing the SeriesInstanceUID and
+# StudyInstanceUID in the `px-find` appropriately
+
 # Push some data to swift storage:
+export SWIFTSERVICEPACS=covidnet
+export LOCALDICOMDIR=/home/rudolphpienaar/data/WithProtocolName/all
 px-push                                                                        \
-                   --swiftIP $SWIFTHOST                                        \
-                   --swiftPort $SWIFTPORT                                      \
-                   --swiftLogin $SWIFTLOGIN                                    \
-                   --swiftServicesPACS covidnet                                \
-                   --db /home/dicom/log                                        \
-                   --swiftPackEachDICOM                                        \
-                   --xcrdir /home/rudolphpienaar/data/WithProtocolName/all     \
-                   --parseAllFilesWithSubStr dcm                               \
-                   --verbosity 1                                               \
-                   --json > push.json
+                --swiftIP $SWIFTHOST                                           \
+                --swiftPort $SWIFTPORT                                         \
+                --swiftLogin $SWIFTLOGIN                                       \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --swiftPackEachDICOM                                           \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json > push.json
 
+docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX \
+--px-push                                                                      \
+                --swiftIP $SWIFTHOST                                           \
+                --swiftPort $SWIFTPORT                                         \
+                --swiftLogin $SWIFTLOGIN                                       \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --swiftPackEachDICOM                                           \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json
+
+
+# Or, using the $SWIFTKEY...
 px-push                                                                        \
-                   --swift $SWIFTKEY                                           \
-                   --swiftServicesPACS test                                    \
-                   --db /home/dicom/log                                        \
-                   --swiftPackEachDICOM                                        \
-                   --xcrdir /home/rudolphpienaar/data/WithProtocolName/all     \
-                   --parseAllFilesWithSubStr dcm                               \
-                   --verbosity 1                                               \
-                   --json > push.json
+                --swift $SWIFTKEY                                              \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --swiftPackEachDICOM                                           \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json
 
-
+docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX \
+--px-push                                                                      \
+                --swift $SWIFTKEY                                              \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --swiftPackEachDICOM                                           \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json
+                
 # Push from a find event:
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID 5644810                                            \
-                --db /home/dicom/log                                           \
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
                 --json                                                         \
                 --then push                                                    \
                 --thenArgs '
                 {
-                        "db":                   "/home/dicom/log", 
-                        "swift":                "swiftStorage", 
-                        "swiftServicesPACS":    "BCH", 
+                        "db":                   "'$DB'", 
+                        "swift":                "'$SWIFTKEY'", 
+                        "swiftServicesPACS":    "'$SWIFTSERVICEPACS'", 
                         "swiftPackEachDICOM":   true
                 }'                                                             \
                 --withFeedBack
 
+docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
+                --verbosity 1                                                  \
+                --json                                                         \
+                --then push                                                    \
+                --thenArgs                                                     \
+'{\"db\":\"'$DB'\",\"swift\":\"'$SWIFTKEY'\",\"swiftServicesPACS\":\"'$SWIFTSERVICEPACS'\",\"swiftPackEachDICOM\":true}' \
+                --withFeedBack
 
-set CUBEKEY megalodon
-set CUBEURL http://localhost:84444/api/v1/
-set CUBEusername chris
-set CUBEuserpasswd chris1234
+###############################################################################
+#_____________________________________________________________________________#
+# R E G I S T E R                                                             #
+#_____________________________________________________________________________#
+# Pushing data to swift storage does not make ChRIS aware of the data yet.    #
+# In order for the data to be visible to ChRIS, it needs to be registered to  #
+# ChRIS from swift.                                                           #
+#                                                                             #
+###############################################################################
 
-# Set lookup in smbdb
-px-smdb         --logdir /home/dicom/log                                       \
-                --action CUBE                                                 \
-                --actionArgs '
+# Set lookup in smdb
+px-smdb                                                                      \
+                --logdir /home/dicom/log                                       \
+                --action CUBE                                                  \
+                --actionArgs                                                   \
+                '
 {
         "'$CUBEKEY'": {
                         "url": "'$CUBEURL'", 
@@ -238,188 +716,88 @@ px-smdb         --logdir /home/dicom/log                                       \
         }
 }'
 
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --logdir /home/dicom/log                                       \
+                --action CUBE                                                  \
+                --actionArgs                                                   \
+'{\"'$CUBEKEY'\":{\"url\":\"'$CUBEURL'\",\"username\":\"'$CUBEusername'\",\"password\":\"'$CUBEuserpasswd'\"}}'
+
+
+# Get the CUBE login details for all keys
+# This examines the service file, swift.json, located in
+# $DB/services/swift.json
+# Get the swift login details for all keys
+# This examines the service file, swift.json, located in
+# $DB/services/swift.json
+px-smdb                                                                        \
+                --logdir $DB                                                   \
+                --action CUBE
+
+docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
+--px-smdb                                                                      \
+                --logdir $DB                                                   \
+                --action CUBE
+
+# Register from a set of local directories (assuming this directory has already
+# been pushed)
+px-register                                                                    \
+                --CUBE $CUBEKEY                                                \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json 
+
+docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX \
+--px-register                                                                    \
+                --CUBE $CUBEKEY                                                \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json 
+
 # Register from a find event
-px-find         --aec ORTHANC                                                  \
-                --aet CHRISLOCAL                                               \
-                --serverIP 192.168.1.189                                       \
-                --serverPort 4242                                              \
-                --PatientID 5644810                                            \
-                --db /home/dicom/log                                           \
+px-find                                                                        \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
                 --json                                                         \
                 --then register                                                \
                 --thenArgs '
                 {
-                        "db":                           "/home/dicom/log", 
+                        "db":                           "'$DB'", 
                         "CUBE":                         "'$CUBEKEY'", 
-                        "swiftServicesPACS":            "BCH", 
+                        "swiftServicesPACS":            "'$SWIFTSERVICEPACS'", 
                         "parseAllFilesWithSubStr":      "dcm"
                 }'                                                             \
                 --withFeedBack
 
-# Register 
-px-register                                                                    \
-                --CUBE $CUBEKEY                                                \
-                --swiftServicesPACS test3                                      \
-                --db /home/dicom/log                                           \
-                --xcrdir /home/rudolphpienaar/data/WithProtocolName/all        \
-                --parseAllFilesWithSubStr dcm                                  \
+docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX \
+--px-find                                                                      \
+                --aec $AEC                                                     \
+                --aet $AET                                                     \
+                --serverIP $PACSIP                                             \
+                --serverPort $PACSPORT                                         \
+                $SEARCHTAG $SEARCHVAL                                          \
+                --db $DB                                                       \
                 --verbosity 1                                                  \
-                --json 
+                --json                                                         \
+                --then register                                                \
+                --thenArgs '
+{\"db\":\"'$DB'\",\"CUBE\":\"'$CUBEKEY'\",\"swiftServicesPACS\":\"'$SWIFTSERVICEPACS'\",\"parseAllFilesWithSubStr\":\"dcm\"}' \
+                --withFeedBack
 
+# ends.
+#
+#_-30-_
 
-px-register                                                                    \
-                       --upstreamFile push.json                                \
-                       --CUBEURL $CUBEURL                                      \
-                       --CUBEusername $CUBEusername                            \
-                       --CUBEuserpasswd $CUBEuserpasswd                        \
-                       --swiftServicesPACS covidnet                            \
-                       --verbosity 1                                           \
-                       --json                                                  \
-                       --logdir /home/dicom/log                                \
-                       --debug
-
-px-register                                                                    \
-                       --upstreamFile push.json                                \
-                       --CUBE $CUBEKEY                                         \
-                       --verbosity 1                                           \
-                       --json                                                  \
-                       --logdir /home/dicom/log                                \
-                       --debug
-
-
-# Perform a find on a given PatientID
-# using docker and assuming container image is ``local/pypx``
-docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
-                   local/pypx                                                  \
-                   --px-find                                                   \
-                   --aet CHRISLOCAL                                            \
-                   --aec ORTHANC                                               \
-                   --serverIP  192.168.1.189                                   \
-                   --serverPort 4242                                           \
-                   --PatientID 4780041                                         \
-                   --db /home/dicom/log                                        \
-                   --verbosity 1                                               \
-                   --json
-
-# Perform a find on a given PatientID
-# on the metal and generate a report...
-px-find                                                                        \
-                   --aet CHRISV3                                               \
-                   --serverIP  134.174.12.21                                   \
-                   --serverPort 104                                            \
-                   --PatientID 4780041                                         \
-                   --db /neuro/users/chris/PACS/log                            \
-                   --verbosity 1                                               \
-                   --json                                                     |\
-px-report                                                                      \
-                   --colorize dark                                             \
-                   --printReport csv --csvPrettify --csvPrintHeaders           \
-                   --reportHeaderStudyTags PatientName,PatientID,AccessionNumber,StudyDate
-
-                   
-# Perform a find and generate a report
-docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
-                   local/pypx                                                  \
-                   --px-find                                                   \
-                   --aet CHRISLOCAL                                            \
-                   --aec ORTHANC                                               \
-                   --serverIP  192.168.1.189                                   \
-                   --serverPort 4242                                           \
-                   --PatientID 4780041                                         \
-                   --db /home/dicom/log                                        \
-                   --verbosity 1                                               \
-                   --json                                                     |\
-docker run --rm -i -v $PWD/dicom:/home/dicom                                   \
-                   local/pypx                                                  \
-                   --px-report                                                 \
-                   --colorize dark                                             \
-                   --printReport csv --csvPrettify --csvPrintHeaders           \
-                   --reportHeaderStudyTags PatientName,PatientID
-                   
-# Perform a find then retrieve on a given PatientID
-docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
-                   local/pypx                                                  \
-                   --px-find                                                   \
-                   --then retrieve                                             \
-                   --withFeedBack                                              \
-                   --intraSeriesRetrieveDelay dynamic:6                        \
-                   --aet CHRISLOCAL                                            \
-                   --aec ORTHANC                                               \
-                   --serverIP  192.168.1.189                                   \
-                   --serverPort 4242                                           \
-                   --PatientID 4780041                                         \
-                   --db /home/dicom/log                                        \
-                   --verbosity 1                                               \
-                   --json
-
-# Perform a find then retrieve on a given PatientID
-px-find                                                                        \
-                   --aet CHRISV3                                               \
-                   --serverIP  134.174.12.21                                   \
-                   --serverPort 104                                            \
-                   --PatientID 4780041                                         \
-                   --db /neuro/users/chris/PACS/log                            \
-                   --verbosity 1                                               \
-                   --json                                                     |\
-px-do                                                                          \
-                   --db /neuro/users/chris/PACS/log                            \
-                   --then retrieve,status,status                               \
-                   --intraSeriesRetrieveDelay dynamic:6                        \
-                   --withFeedBack                                              \
-                   --verbosity 1 
-
-# Read an upstream find.json                   
-docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
-                   local/pypx                                                  \
-                   --px-do                                                     \
-                   --db /home/dicom/log                                        \ 
-                   --reportDataFile /home/dicom/find.json                      \
-                   --then status                                               \
-                   --withFeedBack                                              \
-                   --verbosity 1               
-                   
-# Input from an upstream find.json
-docker run  --rm -i -v $PWD/dicom:/home/dicom                                  \
-                   local/pypx                                                  \
-                   --px-do                                                     \
-                   --db /home/dicom/log                                        \
-                   --then status                                               \
-                   --withFeedBack                                              \
-                   --verbosity 1  < find.json
-             
-# Retrieve from an upstream find.json
-docker run  --rm -i -v $PWD/dicom:/home/dicom                                  \
-                   -p 11113:11113                                              \
-                   local/pypx                                                  \
-                   --px-do                                                     \
-                   --db /home/dicom/log                                        \ 
-                   --then retrieve,status,status                               \
-                   --intraSeriesRetrieveDelay dynamic:6                        \
-                   --withFeedBack                                              \
-                   --verbosity 1  < find.json
-
-
-             
-# Perform a find then retrieve on a given PatientID
-docker run  --rm -ti -v $PWD/dicom:/home/dicom                                 \
-                   local/pypx                                                  \
-                   --px-find                                                   \
-                   --then retrieve                                             \
-                   --aet CHRISLOCAL                                            \
-                   --aec ORTHANC                                               \
-                   --serverIP  192.168.1.189                                   \
-                   --serverPort 4242                                           \
-                   --PatientID 4780041                                         \
-                   --db /home/dicom/log                                        \
-                   --verbosity 1                                               \
-                   --json                                                      |\
-docker run  --rm -i -v $PWD/dicom:/home/dicom                                  \
-                   local/pypx                                                  \
-                   --px-do                                                     \
-                   --then status                                               \
-                   --withFeedBack                                              \
-                   --verbosity 1
-                   
                    
              
