@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.4.0
+pypx - 3.4.2
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -16,7 +16,7 @@ pypx - 3.4.0
 1. Overview
 *****************
 
-``pypx`` is a *complete* client-side PACS (Picture Archive and Communications System) Query/Retrieve/Storage solution that operates in stand-alone script mode in addition to providing a set of python modules for use in other packages. The modules/API provide a simple mechanism for a python program to interact with an appropriately configured remote PACS, while the stand alone scripts offer a convenient ability to directly Query/Retrieve/Storge images from the command line.
+``pypx`` is a *complete* client-side PACS (Picture Archive and Communications System) Query/Retrieve/Storage solution that operates in stand-alone script mode in addition to providing a set of python modules for use in other packages. The modules/API provide a simple mechanism for a python program to interact with an appropriately configured remote PACS, while the stand alone scripts offer a convenient ability to directly Query/Retrieve/Store images from the command line.
 
 ``pypx`` was mostly developed for use in the ChRIS system as part of the ``pfdcm`` microservice; however the CLI scripts of ``pypx`` and the provided docker image offer a quick and powerful means of accessing a PACS without any additional overhead.
 
