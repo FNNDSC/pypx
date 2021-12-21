@@ -12,7 +12,7 @@ export PYPX=fnndsc/pypx
 #
 # swift storage environment defaults
 #
-export SWIFTKEY=pannotia
+export SWIFTKEY=local
 export SWIFTHOST=192.168.1.200
 export SWIFTPORT=8080
 export SWIFTLOGIN=chris:chris1234
@@ -22,7 +22,7 @@ declare -i Gb_swiftset=0
 #
 # CUBE login detail defaults
 #
-export CUBEKEY=pannotia
+export CUBEKEY=local
 export CUBEURL=http://localhost:8000/api/v1/
 export CUBEusername=chris
 export CUBEuserpasswd=chris1234
@@ -49,7 +49,7 @@ export PACSPORT=4242
 # directory, I'd strongly suggest creating one...
 #
 export BASEMOUNT=/neuro/users/chris/PACS
-export BASEMOUNT=/home/dicom
+# export BASEMOUNT=/home/dicom
 export DB=${BASEMOUNT}/log
 export DATADIR=${BASEMOUNT}/data
 
@@ -69,7 +69,7 @@ G_REPORTARGSCSV="--printReport csv                                              
                 --reportBodySeriesTags SeriesDescription,SeriesInstanceUID"
 
 G_DICOMDIR=/home/dicom
-G_INSTITUTION=""
+G_INSTITUTION="BCH-chris"
 G_SYNOPSIS="
 
   NAME
