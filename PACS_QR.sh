@@ -407,8 +407,8 @@ function institution_set
             AEC=ORTHANC
         ;;
         BCH-chris)
-            SWIFTKEY=PACSDCM
-            CUBEKEY=PACSDCM
+            SWIFTKEY=local
+            CUBEKEY=local
             SWIFTPACS=PACSDCM
             AET=CHRISV3
             PACSIP=134.174.12.21
@@ -416,8 +416,8 @@ function institution_set
             AEC=CHRIS
         ;;
         BCH-chrisdev)
-            SWIFTKEY=PACSDCM
-            CUBEKEY=PACSDCM
+            SWIFTKEY=local
+            CUBEKEY=local
             SWIFTPACS=PACSDCM
             AET=CHRISV3
             PACSIP=134.174.12.21
@@ -425,8 +425,8 @@ function institution_set
             AEC=CHRIS
         ;;
         BCH-christest)
-            SWIFTKEY=PACSDCM
-            CUBEKEY=PACSDCM
+            SWIFTKEY=local
+            CUBEKEY=local
             SWIFTPACS=PACSDCM
             AET=CHRISV3
             PACSIP=134.174.12.21
@@ -434,8 +434,8 @@ function institution_set
             AEC=CHRIS
         ;;
         MGH)
-            SWIFTKEY=PACSDCM
-            CUBEKEY=PACSDCM
+            SWIFTKEY=local
+            CUBEKEY=local
             SWIFTPACS=PACSDCM
             AET=ELLENGRANT
             PACSIP=172.16.128.91
@@ -443,8 +443,8 @@ function institution_set
             AEC=SDM1
         ;;
         MGH2)
-            SWIFTKEY=PACSDCM
-            CUBEKEY=PACSDCM
+            SWIFTKEY=local
+            CUBEKEY=local
             SWIFTPACS=PACSDCM
             AET=ELLENGRANT-CH
             PACSIP=172.16.128.91
