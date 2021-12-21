@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.4.2
+pypx - 3.4.4
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -157,8 +157,11 @@ For convenience, a PyPI installation is also available. This assumes additional 
 
 If using the container tool images directly, take care to assure that the machine receiving PACS transmissions is available and has a listener service accessible on an exposed port. This port should be accessible to the remote PACS. Our strong recommendation is to use the companion ``pfdcm`` container/repo to receive PACS data. Note that ``pfdcm`` itself contains ``pypx`` and will handle the reception and repacking of DICOM files using the correct ``pypx`` tools.
 
-4. Usage
+4 Usage
 *********
+
+4.1 ``PACS_QR.sh`` and ``workflow.sh``
+======================================
 
 For the most complete example, please consult the workflow.sh_ script in the source repository. This provides a Jupyter-notebook-shell-eque overview of most if not all the possible methods to call and use these tools.
 
@@ -167,6 +170,32 @@ For the most convenient example, use the ``PACS_QR.sh`` script -- consult its in
 .. code-block:: bash 
 
   PACS_QR.sh -x
+
+4.2 ``PACS_QR.sh`` quick-n-dirty
+================================
+
+The ``PACS_QR.sh`` has several implicit assumptions and values that can/should be set approprate CLI. The entire scope is beyond this simple README, however, *assuming* these values are set (either by using the defaults or an appropriate/custom ``institution_set`` function), the workflow is rather simple. Assuming an MRN of say ``7654321``,
+
+.. code-block:: bash
+
+  # Query
+  PACS_QR.sh -- "--PatientID 7654321"
+
+  # Retrieve
+  PACS_QR.sh --do retrieve -- "--PatientID 7654321"
+
+  # Status
+  PACS_QR.sh --do status -- "--PatientID 7654321"
+
+  # Push to CUBE swift storage
+  PACS_QR.sh --do push -- "--PatientID 7654321"
+
+  # Register to CUBE internal DB
+  PACS_QR.sh --do register -- "--PatientID 7654321"
+
+
+5 Additional support (incomplete)
+*********************************
 
 Please see the relevant wiki pages for usage instructions (some are still under construction):
 
