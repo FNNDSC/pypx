@@ -128,7 +128,7 @@ export ACCESSIONNUMBER=22681485
 # DICOM listener service, which will receive the files and then effectively   #
 # do this exact px-repack operation. By calling px-repack directly we can     #
 # streamline this process a bit. Also the DICOM listener handling process is  #
-# rather computationally intensive.                                           #                                                                   #
+# rather computationally intensive.                                           #
 ###############################################################################
 
 # Pack a whole slew of files that are in a directory
@@ -242,13 +242,13 @@ docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 
 # Check the swift storage --  this will only return a valid payload if files
 # have been successfully pushed to swift!
-pfstorage                                                                   \
-                --swiftIP $SWIFTHOST                                        \
-                --swiftPort $SWIFTPORT                                      \
-                --swiftLogin $SWIFTLOGIN                                    \
-                --verbosity 1                                               \
-                --debugToDir /tmp                                           \
-                --type swift                                                \
+pfstorage                                                                      \
+                --swiftIP $SWIFTHOST                                           \
+                --swiftPort $SWIFTPORT                                         \
+                --swiftLogin $SWIFTLOGIN                                       \
+                --verbosity 1                                                  \
+                --debugToDir /tmp                                              \
+                --type swift                                                   \
                 --do '
            {
                "action":   "ls",
@@ -703,7 +703,7 @@ docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 ###############################################################################
 
 # Set lookup in smdb
-px-smdb                                                                      \
+px-smdb                                                                        \
                 --logdir /home/dicom/log                                       \
                 --action CUBE                                                  \
                 --actionArgs                                                   \
@@ -751,7 +751,7 @@ px-register                                                                    \
                 --json 
 
 docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX \
---px-register                                                                    \
+--px-register                                                                  \
                 --CUBE $CUBEKEY                                                \
                 --swiftServicesPACS $SWIFTSERVICEPACS                          \
                 --db $DB                                                       \
