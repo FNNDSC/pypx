@@ -174,7 +174,7 @@ For the most convenient example, use the ``PACS_QR.sh`` script -- consult its in
 4.2 ``PACS_QR.sh`` quick-n-dirty
 ================================
 
-The ``PACS_QR.sh`` has several implicit assumptions and values that can/should be set approprate CLI. The entire scope is beyond this simple README, however, *assuming* these values are set (either by using the defaults or an appropriate/custom ``institution_set`` function), the workflow is rather simple. Assuming an MRN of say ``7654321``,
+The ``PACS_QR.sh`` has several implicit assumptions and values that can/should be set by approprate CLI. The entire scope is beyond this simple README, however, *assuming* these values are set (either by using the defaults or an appropriate/custom ``institution_set`` function), the workflow is rather simple. Assuming an MRN of say ``7654321``,
 
 .. code-block:: bash
 
@@ -192,6 +192,14 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
 
   # Register to CUBE internal DB
   PACS_QR.sh --do register -- "--PatientID 7654321"
+
+Note carefully the syntax of the above commands! A ``--`` string separates script ``<key>/<value>`` pairs from a string defining the search parameters. Note that most valid DICOM tags can be used for this string. More tags can also make a search more specific, for instance
+
+.. code-block:: bash
+
+  "--PatientID 7654321 --StudyDate 19990909"
+
+will limit returns only to hits performed on given ``StudyDate``.
 
 
 5 Additional support (incomplete)
