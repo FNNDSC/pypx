@@ -48,8 +48,14 @@ export PACSPORT=4242
 # Local file paths -- if you don't have a /home/dicom
 # directory, I'd strongly suggest creating one...
 #
+# NB!!
+# * Take care if the BASEMOUNT is across an NFS boundary!
+#   This might result in docker root access squash issues.
+#
+# A workable solution is to mount the actual PACS location
+# to this host's /home/dicom
 export BASEMOUNT=/neuro/users/chris/PACS
-# export BASEMOUNT=/home/dicom
+export BASEMOUNT=/home/dicom
 export DB=${BASEMOUNT}/log
 export DATADIR=${BASEMOUNT}/data
 
@@ -561,7 +567,7 @@ fi
 # The --tty --interactive is necessary to allow for realtime
 # logging of activity
 # G_REPORTARGS="--printReport tabular"
-QUERY="docker run                                                              \
+QUERY="docker run $DEBUG                                                       \
             --tty --interactive                                                \
             --rm                                                               \
             --volume $BASEMOUNT:$BASEMOUNT                                     \
