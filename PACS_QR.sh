@@ -13,7 +13,7 @@ export PYPX=fnndsc/pypx
 # swift storage environment defaults
 #
 export SWIFTKEY=local
-export SWIFTHOST=192.168.1.200
+export SWIFTHOST=10.0.0.230
 export SWIFTPORT=8080
 export SWIFTLOGIN=chris:chris1234
 export SWIFTSERVICEPACS=orthanc
@@ -23,7 +23,7 @@ declare -i Gb_swiftset=0
 # CUBE login detail defaults
 #
 export CUBEKEY=local
-export CUBEURL=http://localhost:8000/api/v1/
+export CUBEURL=http://10.0.0.230:8000/api/v1/
 export CUBEusername=chris
 export CUBEuserpasswd=chris1234
 declare -i Gb_CUBEset=0
@@ -41,7 +41,7 @@ export PACSPORT=104
 #
 export AEC=ORTHANC
 export AET=CHRISLOCAL
-export PACSIP=192.168.1.200
+export PACSIP=10.0.0.230
 export PACSPORT=4242
 
 #
@@ -150,7 +150,7 @@ G_SYNOPSIS="
         * make sure you are running this on host 'titan'
         * make note that any pulled DICOMs are saved to
 
-        		/neuro/users/chris/PACS
+                /neuro/users/chris/PACS
 
         (**) typical cmd for setting up a tunnel (on host 'pretoria'):
 
