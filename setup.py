@@ -11,7 +11,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.4.12',
+        version             =   '3.4.14',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
@@ -20,6 +20,7 @@ setup(
         license             =   'MIT',
         packages            =   ['pypx'],
         install_requires=[
+            'pudb',
             'terminaltables',
             'py-dateutil',
             'pydicom',
