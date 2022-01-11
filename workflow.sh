@@ -1,9 +1,9 @@
 PURPOSE="
 
     This script describes by way of demonstration various explicit examples of
-    how to use the pypx family of tools to connect a PACS database to a ChRIS 
+    how to use the pypx family of tools to connect a PACS database to a ChRIS
     instance. By 'connect' is meant the set of actions to determine images of
-    interest in a PACS and to ultimately send those same images to a ChRIS 
+    interest in a PACS and to ultimately send those same images to a ChRIS
     instance for subsequent image analysis.
 
     The set of operations, broadly, are:
@@ -22,7 +22,7 @@ PURPOSE="
         * push the retrieved images to CUBE swift storage;
 
         * register the pushed-into-swift images with CUBE;
-        
+
     Each set of operations is present with as CLI using 'on-the-metal' tools
     installed with PyPI followed by the equivalent docker CLI. The CLI is
     purposefully tailored to show strong overlap between the 'on-the-metal'
@@ -42,7 +42,7 @@ PURPOSE="
 
 # Which pypx do you want to use? :)
 # export PYPX=fnndsc/pypx
-export PYPX=local/pypx
+export PYPX=fnndsc/pypx
 
 #
 # Manually run a storescp:
@@ -55,7 +55,7 @@ export PYPX=local/pypx
 storescp    -od /tmp/data                                                   \
             -pm -sp                                                         \
             -xcr "/home/rudolphpienaar/src/pypx/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data" \
-            -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \ 
+            -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \
             11113
 
 # Edit any/all of the following as appropriate to your local env.
@@ -63,8 +63,8 @@ storescp    -od /tmp/data                                                   \
 #
 # swift storage environment
 #
-export SWIFTKEY=pannotia
-export SWIFTHOST=192.168.1.200
+export SWIFTKEY=local
+export SWIFTHOST=10.0.0.230
 export SWIFTPORT=8080
 export SWIFTLOGIN=chris:chris1234
 export SWIFTSERVICEPACS=orthanc
@@ -72,8 +72,8 @@ export SWIFTSERVICEPACS=orthanc
 #
 # CUBE login details
 #
-export CUBEKEY=pannotia
-export CUBEURL=http://localhost:84444/api/v1/
+export CUBEKEY=local
+export CUBEURL=http://localhost:8000/api/v1/
 export CUBEusername=chris
 export CUBEuserpasswd=chris1234
 
@@ -150,7 +150,7 @@ docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT -v $LOCALDICOMDIR:$LOCALDICOMDIR  \
 #_____________________________________________________________________________#
 # S M D B                                                                     #
 #_____________________________________________________________________________#
-# Some smdb experiences.                                                      # 
+# Some smdb experiences.                                                      #
 # The smdb is a "simple data base" with all table data represented as JSON    #
 # files in the FS. The FS itself provides some hierarchical database          #
 # organization
@@ -159,7 +159,7 @@ docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT -v $LOCALDICOMDIR:$LOCALDICOMDIR  \
 #
 # NOTE!
 # o All CLI calls are shown as "on-the-metal" as well as docker equivalents.
-#   The docker equivalents are constructed to closely map/mirror the 
+#   The docker equivalents are constructed to closely map/mirror the
 #   corresponding on-the-metal call.
 # o For the most part, the docker call differs in:
 #       [] The "prefix" docker command
@@ -174,8 +174,8 @@ px-smdb                                                                        \
                 --actionArgs '
 {
         "'$SWIFTKEY'": {
-                        "ip": "'$SWIFTHOST'", 
-                        "port":"'$SWIFTPORT'", 
+                        "ip": "'$SWIFTHOST'",
+                        "port":"'$SWIFTPORT'",
                         "login":"'$SWIFTLOGIN'"
         }
 }'
@@ -232,13 +232,13 @@ docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 px-smdb                                                                        \
                 --action mapsUpdateForPatient                                  \
                 --actionArgs $MRN                                              \
-                --logdir $DB 
+                --logdir $DB
 
 docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 --px-smdb                                                                      \
                 --action mapsUpdateForPatient                                  \
                 --actionArgs $MRN                                              \
-                --logdir $DB 
+                --logdir $DB
 
 # Check the swift storage --  this will only return a valid payload if files
 # have been successfully pushed to swift!
@@ -275,7 +275,7 @@ docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 # S E A R C H                                                                 #
 #_____________________________________________________________________________#
 #                                                                             #
-# Some search experiences.                                                    # 
+# Some search experiences.                                                    #
 # Note that if $SEARCHTAG and $SEARCHVAL are NOT set, then orthanc            #
 # will return data on all PATIENTS/STUDIES/SERIES                             #
 ###############################################################################
@@ -390,7 +390,7 @@ docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 #_____________________________________________________________________________#
 # R E T R I E V E                                                             #
 #_____________________________________________________________________________#
-# Now for some search driven retrieves.                                       # 
+# Now for some search driven retrieves.                                       #
 # The semantics are built around a <search>then<retrieve> construct           #
 ###############################################################################
 # Retrieve
@@ -426,7 +426,7 @@ docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 #_____________________________________________________________________________#
 # S T A T U S                                                                 #
 #_____________________________________________________________________________#
-# Check status in internal smdb       .                                       # 
+# Check status in internal smdb       .                                       #
 # The semantics are built around a <search>then<retrieve> construct           #
 ###############################################################################
 px-find                                                                        \
@@ -563,7 +563,7 @@ px-report                                                                      \
                 --printReport csv                                              \
                 --csvPrettify                                                  \
                 --csvPrintHeaders                                              \
-                --reportHeaderStudyTags PatientName,StudyDate		           \
+                --reportHeaderStudyTags PatientName,StudyDate                  \
                 --reportBodySeriesTags seriesStatus
 
 docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
@@ -583,7 +583,7 @@ docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
                 --printReport csv                                              \
                 --csvPrettify                                                  \
                 --csvPrintHeaders                                              \
-                --reportHeaderStudyTags PatientName,StudyDate		           \
+                --reportHeaderStudyTags PatientName,StudyDate                  \
                 --reportBodySeriesTags seriesStatus
 
 
@@ -594,7 +594,7 @@ docker run --rm -i  -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 # Once data is pulled locally, either from a retrieve or from some other      #
 # mechanism, we can now push images to CUBE swift storage.                    #
 #                                                                             #
-#                                                                             # 
+#                                                                             #
 # As earlier with the retrieve, we can do a <search>then<push> construct.     #
 # The <source> to PUSH is a directory on the locally accessible filesystem    #
 # which can either be specified directly with the '--xcrdir' parameter, or    #
@@ -656,7 +656,7 @@ docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PY
                 --parseAllFilesWithSubStr dcm                                  \
                 --verbosity 1                                                  \
                 --json
-                
+
 # Push from a find event:
 px-find                                                                        \
                 --aec $AEC                                                     \
@@ -670,9 +670,9 @@ px-find                                                                        \
                 --then push                                                    \
                 --thenArgs '
                 {
-                        "db":                   "'$DB'", 
-                        "swift":                "'$SWIFTKEY'", 
-                        "swiftServicesPACS":    "'$SWIFTSERVICEPACS'", 
+                        "db":                   "'$DB'",
+                        "swift":                "'$SWIFTKEY'",
+                        "swiftServicesPACS":    "'$SWIFTSERVICEPACS'",
                         "swiftPackEachDICOM":   true
                 }'                                                             \
                 --withFeedBack
@@ -710,8 +710,8 @@ px-smdb                                                                        \
                 '
 {
         "'$CUBEKEY'": {
-                        "url": "'$CUBEURL'", 
-                        "username":"'$CUBEusername'", 
+                        "url": "'$CUBEURL'",
+                        "username":"'$CUBEusername'",
                         "password":"'$CUBEuserpasswd'"
         }
 }'
@@ -748,7 +748,7 @@ px-register                                                                    \
                 --xcrdir $LOCALDICOMDIR                                        \
                 --parseAllFilesWithSubStr dcm                                  \
                 --verbosity 1                                                  \
-                --json 
+                --json
 
 docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX \
 --px-register                                                                  \
@@ -758,7 +758,7 @@ docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PY
                 --xcrdir $LOCALDICOMDIR                                        \
                 --parseAllFilesWithSubStr dcm                                  \
                 --verbosity 1                                                  \
-                --json 
+                --json
 
 # Register from a find event
 px-find                                                                        \
@@ -773,9 +773,9 @@ px-find                                                                        \
                 --then register                                                \
                 --thenArgs '
                 {
-                        "db":                           "'$DB'", 
-                        "CUBE":                         "'$CUBEKEY'", 
-                        "swiftServicesPACS":            "'$SWIFTSERVICEPACS'", 
+                        "db":                           "'$DB'",
+                        "CUBE":                         "'$CUBEKEY'",
+                        "swiftServicesPACS":            "'$SWIFTSERVICEPACS'",
                         "parseAllFilesWithSubStr":      "dcm"
                 }'                                                             \
                 --withFeedBack
@@ -799,5 +799,5 @@ docker run --rm -i -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PY
 #
 #_-30-_
 
-                   
-             
+
+
