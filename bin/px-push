@@ -60,7 +60,7 @@ def synopsis(ab_shortOnly = False):
     shortSynopsis =  Colors.YELLOW + '''
     NAME
 
-	    %s
+        %s
 
         - (image) push
 
