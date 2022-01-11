@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.4.12
+pypx - 3.4.14
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -41,11 +41,11 @@ As a brief note, if the opensource ``orthanc`` PACS server is being used, the ``
 
 .. code-block:: json
 
-  { 
+  {
       "DicomAet" : "CHRISV3T"
   }
 
-and 
+and
 
 .. code-block:: json
 
@@ -165,9 +165,9 @@ If using the container tool images directly, take care to assure that the machin
 
 For the most complete example, please consult the workflow.sh_ script in the source repository. This provides a Jupyter-notebook-shell-eque overview of most if not all the possible methods to call and use these tools.
 
-For the most convenient example, use the ``PACS_QR.sh`` script -- consult its internal help with 
+For the most convenient example, use the ``PACS_QR.sh`` script -- consult its internal help with
 
-.. code-block:: bash 
+.. code-block:: bash
 
   PACS_QR.sh -x
 
@@ -201,9 +201,33 @@ Note carefully the syntax of the above commands! A ``--`` string separates scrip
 
 will limit returns only to hits performed on given ``StudyDate``.
 
+5. Development and debugging
+****************************
 
-5 Additional support (incomplete)
-*********************************
+The recommended development/debug approach is to mount source directories into
+the container and thus debug the containerized code from the host. Assuming you
+are in the source code repo root, and assuming you want to debug `px-push`:
+
+.. code-block:: bash
+
+  # Make sure that all env variables below are set appropriately!
+  docker run --rm -ti -v $PWD/pypx:/usr/local/lib/python3.8/dist-packages/pypx \
+      -v $PWD/bin/px-push:/usr/local/bin/px-push                               \
+      -v $LOCALDICOMDIR:$LOCALDICOMDIR -v $BASEMOUNT:$BASEMOUNT $PYPX          \
+      --px-push                                                                \
+                --swiftIP $SWIFTHOST                                           \
+                --swiftPort $SWIFTPORT                                         \
+                --swiftLogin $SWIFTLOGIN                                       \
+                --swiftServicesPACS $SWIFTSERVICEPACS                          \
+                --db $DB                                                       \
+                --swiftPackEachDICOM                                           \
+                --xcrdir $LOCALDICOMDIR                                        \
+                --parseAllFilesWithSubStr dcm                                  \
+                --verbosity 1                                                  \
+                --json
+
+6. Additional support (incomplete)
+**********************************
 
 Please see the relevant wiki pages for usage instructions (some are still under construction):
 
@@ -219,7 +243,7 @@ Please see the relevant wiki pages for usage instructions (some are still under 
 - px-status_
 - px-smdb_
 
-5. Credits
+7. Credits
 *****************
 
 PyDicom_
