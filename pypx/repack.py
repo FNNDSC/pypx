@@ -21,6 +21,7 @@ from    pathlib             import  Path
 import  uuid
 import  pathlib
 import  datetime
+from    datetime            import  date, datetime
 import  inspect
 import  hashlib
 import  re
@@ -223,8 +224,6 @@ def args_impedanceMatch(ns_arg):
     # Get the parser structure for this module
     parser          = parser_setup("impedanceMatching")
     args, unknown   = parser_interpret(parser)
-
-    str_rootDirTemplate     = args.str_rootDirTemplate
 
     l_key = [k for (k,v) in vars(ns_arg).items()]
     if 'str_xcrdir'     not in l_key:   setattr(ns_arg, 'str_xcrdir', '/tmp')
@@ -886,6 +885,46 @@ class Process():
             astr            = astr.replace('_%s_' % func, '')
             return astr, str_replace
 
+        def age_daysToDMY(ageInDays):
+            """
+            Given an age in days, return a string of D[ay], M[onth], [Y]ear
+            of the age closest to either epoch.
+            """
+            str_age :   str     = "999Y"
+            if ageInDays >= 365:
+                str_age = '%03dY' % round(ageInDays/365)
+            if ageInDays >= 30 and ageInDays < 365:
+                str_age = '%03dM' % round(ageInDays/30)
+            if ageInDays >=7 and ageInDays < 30:
+                str_age = '%03dW' % round(ageInDays/7)
+            if ageInDays < 7:
+                str_age = '%03dD' % ageInDays
+            return str_age
+
+        def age_calculate(d_DICOM):
+            """
+            Explicitly calculate the PatientAge using the StudyDate and PatientBirthDate
+            tag values.
+
+            If unable to calculate return an age string of '999Y' otherwise, return the
+            age.
+            """
+            d_pacsData  : dict  = d_DICOM['d_dicomSimple']
+            ageInDays   : int   = 0
+            str_age     : str   = '999Y'
+            if len(d_pacsData['StudyDate']) and len(d_pacsData['PatientBirthDate']):
+                try:
+                    date_study = datetime.strptime(d_pacsData['StudyDate'], "%Y-%m-%d")
+                except:
+                    date_study = datetime.strptime(d_pacsData['StudyDate'], "%Y%m%d")
+                try:
+                    date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y-%m-%d")
+                except:
+                    date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y%m%d")
+                ageInDays   = abs((date_study - date_birth).days)
+                str_age     = age_daysToDMY(ageInDays)
+            return str_age
+
         b_tagsFound         = False
         str_replace         = ''        # The lookup/processed tag value
         l_tags              = []        # The input string split by '%'
@@ -897,6 +936,10 @@ class Process():
             l_tags          = astr.split('%')[1:]
             # Find which tags (mangled) in string match actual tags
             l_tagsToSub     = [i for i in d_DICOM['l_tagRaw'] if any(i in b for b in l_tags)]
+            if any('PatientAge' in string for string in l_tags) and not \
+               any('PatientAge' in string for string in l_tagsToSub):
+                d_DICOM['d_dicomSimple']['PatientAge'] = age_calculate(d_DICOM)
+                l_tagsToSub.append('PatientAge')
             # Need to arrange l_tagsToSub in same order as l_tags
             l_tagsToSubSort =  sorted(
                 l_tagsToSub,
