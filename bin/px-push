@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-push"
-str_version = "3.2.4"
+str_version = "3.2.6"
 str_desc    = Colors.CYAN + """
 
                                                      _
@@ -75,21 +75,16 @@ def synopsis(ab_shortOnly = False):
                 [--xcrdirfile <xcrdirfile>]                         \\
                 [--parseAllFilesWithSubStr <substr>]                \\
                 [--swift <swiftKeyServiceID>]                       \\
-                [--aet <AETitle>]                                   \\
-                [--aec <CalledAETitle>]                             \\
-                [--serverIP <PACSserverIP>]                         \\
-                [--serverPort <PACSserverPort>]                     \\
-                [--StudyInstanceUID <studyInstanceUID>]             \\
-                [--SeriesInstanceUID <seriesInstanceUID>]           \\
                 [--swift <swiftKeyServiceID>]                       \\
                 [--swiftIP <swiftStorage>]                          \\
                 [--swiftPort <swiftPort>]                           \\
                 [--swiftLogin <user>:<password>]                    \\
                 [--swiftServicesPACS <PACSname>]                    \\
                 [--swiftPackEachDICOM]                              \\
-                [--CUBEURL <cubeURL>]                               \\
-                [--CUBEusername <cubeusername>]                     \\
-                [--CUBEuserpasswd <cubeuserpassword>]               \\
+                [--rootDirTemplate <rootTemplate>]                  \\
+                [--studyDirTemplate <studyTemplate>]                \\
+                [--seriesDirTemplate <seriesTemplate>]              \\
+                [--imageFileTemplate <imageTemplate>]               \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--json]                                            \\
@@ -152,18 +147,6 @@ def synopsis(ab_shortOnly = False):
         If passed, process all the files in the <xcrdir> that contain the
         <substr> in their filename in one sweep.
 
-        [--aet <AETitle>]
-        The AETitle of *this* entity.
-
-        [--aec <CalledAETitle>]
-        The called AETitle of *this* entity. Needed for some PACS systems.
-
-        [--serverIP <PACSserverIP>]
-        The IP of the PACS server to which a push will be made.
-
-        [--serverPort <PACSserverPort>]
-        The port associated with the PACS server.
-
         [--swift <swiftKeyServiceID>]
         A key lookup into an smdb data element that defines all the fields
         required for swift access. This is pre-instantiated by calling the
@@ -189,20 +172,27 @@ def synopsis(ab_shortOnly = False):
         [--swiftServicesPACS <PACSname>]
         The name of the PACS within the swift ``SERVICES/PACS`` location.
 
-        [--CUBEURL <cubeURL>]
-        The URL of the CUBE instance.
+        [--rootDirTemplate <rootTemplate>]
+        A string template for the root directory name in which to push a
+        given DICOM.
 
-        [--CUBEusername <cubeusername>]
-        The name of a CUBE user.
+        Default: "%PatientID-%PatientName-%PatientBirthData-%PatientAge"
 
-        [--CUBEuserpasswd <cubeuserpassword>]
-        The password for a CUBE user. Note the flag spelling is 'passwd'!
+        [--studyDirTemplate <studyTemplate>]
+        A string template for the study directory name in which to push a
+        given DICOM.
 
-        [--StudyInstanceUID <studyInstanceUID>]
-        The <studyInstanceUID> to request.
+        Default: "%StudyDescription-%AccessionNumber-%StudyDate"
 
-        [--SeriesDescription <seriesInstanceUID>]
-        The <seriesInstanceUID> to request.
+        [--seriesDirTemplate <seriesTemplate>]
+        A string template for the series directory name in which to push a
+        given DICOM.
+
+        Default: "%_pad|5,0_SeriesNumber-%SeriesDescription"
+
+        [--imageFileTemplate <imageTemplate>]
+        A string template for the image file name in which to push a
+        given DICOM.
 
         [-x|--desc]
         Provide an overview help page.
