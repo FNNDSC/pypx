@@ -143,13 +143,13 @@ def synopsis(ab_shortOnly = False):
         A string template for the root directory name in which to pack a
         given DICOM.
 
-        Default: "%PatientID-%PatientName-%PatientAge"
+        Default: "%PatientID-%PatientName-%PatientBirthDate"
 
         [--studyDirTemplate <studyTemplate>]
         A string template for the study directory name in which to pack a
         given DICOM.
 
-        Default: "%StudyDescription-%StudyDate"
+        Default: "%StudyDescription-%AssessionNumber-%StudyDate"
 
         [--seriesDirTemplate <seriesTemplate>]
         A string template for the series directory name in which to pack a
