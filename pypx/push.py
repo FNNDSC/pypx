@@ -77,43 +77,6 @@ def parser_setup(str_desc):
         help    = 'Parse all files in <xcrdir> that contain <substr>'
         )
 
-    # PACS settings
-    parser.add_argument(
-        '--aet',
-        action  = 'store',
-        dest    = 'aet',
-        type    = str,
-        default = 'CHRIS-ULTRON-AET',
-        help    = 'aet')
-    parser.add_argument(
-        '--aec',
-        action  = 'store',
-        dest    = 'aec',
-        type    = str,
-        default = 'CHRIS-ULTRON-AEC',
-        help    = 'aec')
-    parser.add_argument(
-        '--PACSserverIP',
-        action  = 'store',
-        dest    = 'str_PACSserverIP',
-        type    = str,
-        default = '192.168.1.110',
-        help    = 'PACS server IP')
-    parser.add_argument(
-        '--PACSserverPort',
-        action  = 'store',
-        dest    = 'str_PACSserverPort',
-        type    = str,
-        default = '4242',
-        help    = 'PACS server port')
-    parser.add_argument(
-        '--movescu',
-        action  = 'store',
-        dest    = 'movescu',
-        type    = str,
-        default = '/usr/bin/movescu',
-        help    = '"movescu"" executable absolute location')
-
     # Swift settings
     parser.add_argument(
         '--swift',
@@ -122,7 +85,6 @@ def parser_setup(str_desc):
         type    = str,
         default = '',
         help    = 'swift lookup service identifier')
-
     parser.add_argument(
         '--swiftIP',
         action  = 'store',
@@ -144,14 +106,6 @@ def parser_setup(str_desc):
         type    = str,
         default = '',
         help    = 'swift login')
-
-    parser.add_argument(
-        '--PACS',
-        action  = 'store',
-        dest    = 'PACS',
-        type    = str,
-        default = '',
-        help    = 'PACS lookup service identifier')
     parser.add_argument(
         '--swiftServicesPACS',
         action  = 'store',
@@ -164,8 +118,7 @@ def parser_setup(str_desc):
         help    = "If specified, determine the pack location of _each_ DICOM file",
         dest    = 'b_swiftPackEachDICOM',
         action  = 'store_true',
-        default = False
-    )
+        default = False)
     parser.add_argument(
         '--swiftBaseLocation',
         action  = 'store',
@@ -173,49 +126,6 @@ def parser_setup(str_desc):
         type    = str,
         default = '',
         help    = 'swift base location to push files')
-
-    # CUBE settings
-    parser.add_argument(
-        '--CUBEURL',
-        action  = 'store',
-        dest    = 'str_CUBEURL',
-        type    = str,
-        default = 'http://localhost:8000/api/v1/',
-        help    = 'CUBE URL'
-        )
-    parser.add_argument(
-        '--CUBEusername',
-        action  = 'store',
-        dest    = 'str_CUBEusername',
-        type    = str,
-        default = 'chris',
-        help    = 'Username with which to log into CUBE'
-        )
-    parser.add_argument(
-        '--CUBEuserpasswd',
-        action  = 'store',
-        dest    = 'str_CUBEuserpasswd',
-        type    = str,
-        default = 'chris1234',
-        help    = 'CUBE user password'
-        )
-
-
-    # Data settings
-    parser.add_argument(
-        '--SeriesInstanceUID',
-        action  = 'store',
-        dest    = 'SeriesInstanceUID',
-        type    = str,
-        default = '',
-        help    = 'Series Instance UID')
-    parser.add_argument(
-        '--StudyInstanceUID',
-        action  = 'store',
-        dest    = 'StudyInstanceUID',
-        type    = str,
-        default = '',
-        help    = 'Study Instance UID')
 
     parser.add_argument(
         "-v", "--verbosity",
@@ -251,6 +161,40 @@ def parser_setup(str_desc):
         action  = 'store_true',
         default = False
     )
+
+    parser.add_argument(
+        '--rootDirTemplate',
+        action  = 'store',
+        dest    = 'str_rootDirTemplate',
+        type    = str,
+        default = '%PatientID-%PatientName-%PatientAge-%PatientBirthDate',
+        help    = 'Template pattern for root unpack directory'
+        )
+    parser.add_argument(
+        '--studyDirTemplate',
+        action  = 'store',
+        dest    = 'str_studyDirTemplate',
+        type    = str,
+        default = '%StudyDescription-%AccessionNumber-%StudyDate',
+        help    = 'Template pattern for study unpack directory'
+        )
+    parser.add_argument(
+        '--seriesDirTemplate',
+        action  = 'store',
+        dest    = 'str_seriesDirTemplate',
+        type    = str,
+        default = '%_pad|5,0_SeriesNumber-%SeriesDescription',
+        help    = 'Template pattern for series unpack directory'
+        )
+    parser.add_argument(
+        '--imageTemplate',
+        action  = 'store',
+        dest    = 'str_imageTemplate',
+        type    = str,
+        default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
+        help    = 'Template pattern for image file'
+        )
+
 
     return parser
 
@@ -385,6 +329,7 @@ class Push(Base):
                 'mapLocationOver'   :   self.arg['str_xcrdir']
             }
         }
+
         store               = swiftStorage(self.arg)
         d_storeDo           = store.run(d_do)
 
