@@ -499,7 +499,7 @@ class Report(Base):
                     'Study contains %d series' % len(ld_seriesDesc)
                 ]
                 l_instanceSummary       = [
-                    'All series contain %d images' %                        \
+                    'All series contain %d images\n' %                      \
                          sumColElements([ld_seriesUID[i][str_colToSum]      \
                              for i in range(0, len(ld_seriesUID))])
                 ]
