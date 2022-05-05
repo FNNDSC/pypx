@@ -124,7 +124,7 @@ G_SYNOPSIS="
   PRE-REQUISITES
 
         Requirements: general
-        
+
         * This script requires some configuration files to exist in special
           directory (<basrDBmountDir>):
 
@@ -136,12 +136,12 @@ G_SYNOPSIS="
            to swift and cube and are not needed for PACS Query or Retrieve.
 
 
-        Requirements: PACS retrieve 
+        Requirements: PACS retrieve
 
         * The BCH Linux host 'titan' must have the necessary listening services
           up and running
 
-        Requirements: retrieve / push / register 
+        Requirements: retrieve / push / register
 
         In the BCH network, if you are running this script stand-alone, you
         MUST:
@@ -159,7 +159,7 @@ G_SYNOPSIS="
   ARGS
 
         [--container    <containerName>]
-        The name of the container image to execute. By default this is 
+        The name of the container image to execute. By default this is
         'fnndsc/pypx' but can be overriden if local image is to be used.
 
         [--baseMount>   <baseDBmountDir>]
@@ -177,9 +177,9 @@ G_SYNOPSIS="
         A key lookup in the baseMount services cube.json file that describes
         detail regarding the CUBE service that should register any DICOM files.
 
-        [--CUBEURL      <cubeURL>]                      
-        [--CUBEuser     <cubeUserName>]                 
-        [--CUBEpassword <cubeUserPassword>]             
+        [--CUBEURL      <cubeURL>]
+        [--CUBEuser     <cubeUserName>]
+        [--CUBEpassword <cubeUserPassword>]
         Explicitly set, for <cubeKey>, values in the cube.json config file.
         Typical values:
 
@@ -191,13 +191,13 @@ G_SYNOPSIS="
                 }
             }
 
-        [--SWIFTKEY     <swiftKey>]                     
+        [--SWIFTKEY     <swiftKey>]
         A key lookup in the baseMount services swift.json file that describes
         detail regarding the swift service that should receive any PUSHed
         DICOM files.
 
-        [--SWIFTHOST    <swiftHost>] 
-        [--SWIFTPORT    <swiftPort>] 
+        [--SWIFTHOST    <swiftHost>]
+        [--SWIFTPORT    <swiftPort>]
         [--SWIFTLOGIN   <swiftLogin>]
         Explicitly set, for <swiftKey>, values in the swift.json config file.
         Typical values:
@@ -213,7 +213,7 @@ G_SYNOPSIS="
 
         [--SWIFTPACS    <SERVICESPACSName>]
         The name of the housing 'directory' in the swift storage as well as
-        CUBE internal database for 'this' PACS. Multiple different 'PACS' 
+        CUBE internal database for 'this' PACS. Multiple different 'PACS'
         services can be differentiated by using this field.
 
         [--PACSIP       <PACSserverIP>]
@@ -225,7 +225,7 @@ G_SYNOPSIS="
         [--AET          <AETitle>]
         The AETitle of 'this' client/service.
 
-        [--AEC          <CalledAETitle>]                
+        [--AEC          <CalledAETitle>]
         The CalledAETitle of 'this' client service.
 
         [--env          <envLookup>]
@@ -363,7 +363,7 @@ function substrInStr
 
     if [[ "$STR" == *"$SUBSTR"* ]] ; then
         echo 1
-    else 
+    else
         echo 0
     fi
 }
@@ -404,8 +404,8 @@ function institution_set
     case "$INSTITUTION"
     in
         orthanc)
-            SWIFTKEY=orthanc
-            CUBEKEY=orthanc
+            SWIFTKEY=local
+            CUBEKEY=local
             SWIFTPACS=orthanc
             AET=CHRISLOCAL
             PACSIP=127.0.0.1
@@ -465,24 +465,24 @@ while :; do
     case $1 in
         -h|-\?|-x|--help)
                         printf "%s" "$G_SYNOPSIS"
-                        exit 1                  ;;    
+                        exit 1                  ;;
         --container)    PYPX=$2                 ;;
         --baseMount)    BASEMOUNT=$2            ;;
         --debug)        let Gb_DEBUG=1          ;;
         -v)             let G_VERBOSE=1         ;;
         --CUBEKEY)      CUBEKEY=$2              ;;
-        --CUBEURL)      CUBEURL=$2                   
+        --CUBEURL)      CUBEURL=$2
                         let Gb_CUBEset=1        ;;
-        --CUBEuser)     CUBEusername=$2         
+        --CUBEuser)     CUBEusername=$2
                         let Gb_CUBEset=1        ;;
-        --CUBEpassword) CUBEuserpasswd=$2       
+        --CUBEpassword) CUBEuserpasswd=$2
                         let Gb_CUBEset=1        ;;
         --SWIFTKEY)     SWIFTKEY=$2             ;;
-        --SWIFTHOST)    SWIFTHOST=$2      
+        --SWIFTHOST)    SWIFTHOST=$2
                         let Gb_swiftset=1       ;;
-        --SWIFTPORT)    SWIFTPORT=$2             
+        --SWIFTPORT)    SWIFTPORT=$2
                         let Gb_swiftset=1       ;;
-        --SWIFTLOGIN)   SWIFTLOGIN=$2           
+        --SWIFTLOGIN)   SWIFTLOGIN=$2
                         let Gb_swiftset=1       ;;
         --SWIFTPACS)    SWIFTSERVICEPACS=$2     ;;
         --PACSIP)       QUERYHOST=$2
