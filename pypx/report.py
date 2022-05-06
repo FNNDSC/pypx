@@ -413,19 +413,21 @@ class Report(Base):
             """
             return sum([int(i) for i in l_lv])
 
-        def padListToMax(l_lv) -> tuple:
+        def padListToMax(l_lv : list, str_header : str = "") -> tuple:
             """
             Pad the string elements in a list to a fixed width
             """
             width       : int   = maxWidthinList(l_lv)+2
+            if len(str_header)+2 > width: width = len(str_header)+2
             l_padded    : list  = [ f.center(width) for f in l_lv ]
             return l_padded, width
 
-        def padListToLeft(l_lv) -> tuple:
+        def padListToLeft(l_lv : list, str_header : str = "") -> tuple:
             """
             Pad the string elements in a list to a fixed width
             """
             width       : int   = maxWidthinList(l_lv)+2
+            if len(str_header)+2 > width: width = len(str_header)+2
             l_padded    : list  = [ f.ljust(width) for f in l_lv ]
             return l_padded, width
 
@@ -448,19 +450,19 @@ class Report(Base):
                 if len(self.arg['reportBodySeriesTags']):
                     l_tag = self.arg['reportBodySeriesTags'].split(',')
                     for tag in l_tag:
-                        l_padded, width     = padListToLeft([k[tag]  \
-                                                    for k in ld_seriesDesc])
+                        l_padded, width     = padListToMax([k[tag]  \
+                                                    for k in ld_seriesDesc], tag)
                         for i in range(0, len(ld_seriesDesc)):
                             ld_seriesDesc[i][tag]   = l_padded[i]
                 else:
                     # Pad the SeriesDescription/UID
                     l_padded, width     = padListToMax([k['SeriesDescription']  \
-                                                for k in ld_seriesDesc])
+                                                for k in ld_seriesDesc], 'SeriesDescription')
                     for i in range(0, len(ld_seriesDesc)):
                         ld_seriesDesc[i]['SeriesDescription']   = l_padded[i]
 
                     # Pad the NumberOfSeriesRelatedInstances
-                    # The following is a cesspoll of ugliness, marginally saved
+                    # The following is a cesspool of ugliness, marginally saved
                     # by the check at least for the existence of this long column
                     str_colToJustify    = 'NumberOfSeriesRelatedInstances'
                     if str_colToJustify in ld_seriesUID[0]:
@@ -592,8 +594,8 @@ class Report(Base):
                 str_csvReport   +=  str_headerVals                          +\
                                     self.arg['csvSeparator']                +\
                                     str_seriesVals                          +'\n'
-            str_csvReport       =  str_csvReport[:-1]
-            if b_prettifyDo: str_csvReport += '\n' + str_tableBottom
+            str_csvReport       =  str_csvReport[:-1] + '\n'
+            if b_prettifyDo: str_csvReport += str_tableBottom
         return str_csvReport
 
     def studyHeader_print(self, **kwargs):
