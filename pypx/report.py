@@ -433,7 +433,7 @@ class Report(Base):
 
         def checkAndPrettify() -> bool:
             """
-            If self.arg['csvPrettity'] is true, then edit some dictionaries
+            If self.arg['csvPrettify'] is true, then edit some dictionaries
             keys and values in place -- mostly this means pre-checking for
             column width and replacing the separation character, and also
             creating table top, middle, and bottom ASCII box elements.
@@ -481,7 +481,10 @@ class Report(Base):
                 # Pad Study key and values pairs to optional column header
                 # as part of the prettification
                 for k,v in d_header.items():
-                    ml = max(len(k), len(v))+2
+                    lk = len(k)
+                    if k == "PatientName": lk = 30
+                    lv = len(v)
+                    ml = max(lk, lv)+2
                     l_paddedK.append(k.center(ml))
                     l_paddedV.append(v.center(ml))
                 d_header = dict(zip(l_paddedK, l_paddedV))
