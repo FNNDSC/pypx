@@ -167,7 +167,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_rootDirTemplate',
         type    = str,
-        default = '%PatientID-%PatientName-%PatientAge-%PatientBirthDate',
+        default = '%PatientID-%PatientName-%PatientBirthDate',
         help    = 'Template pattern for root unpack directory'
         )
     parser.add_argument(
@@ -175,7 +175,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_studyDirTemplate',
         type    = str,
-        default = '%StudyDescription-%AccessionNumber-%StudyDate',
+        default = '%StudyDescription-%AccessionNumber-%StudyDate-%PatientAge-%AgeInDays',
         help    = 'Template pattern for study unpack directory'
         )
     parser.add_argument(
