@@ -885,7 +885,7 @@ class Process():
             astr            = astr.replace('_%s_' % func, '')
             return astr, str_replace
 
-        def age_daysToDMY(ageInDays):
+        def age_daysToDMY(ageInDays : int) -> str :
             """
             Given an age in days, return a string of D[ay], M[onth], [Y]ear
             of the age closest to either epoch.
@@ -901,13 +901,13 @@ class Process():
                 str_age = '%03dD' % ageInDays
             return str_age
 
-        def age_calculate(d_DICOM):
+        def ageInDays_calculateExplicitly(d_DICOM : dict) -> int:
             """
             Explicitly calculate the PatientAge using the StudyDate and PatientBirthDate
             tag values.
 
             If unable to calculate return an age string of '999Y' otherwise, return the
-            age.
+            age in DICOM-y format i.e. '005Y' or '012M' etc.
             """
             d_pacsData  : dict  = d_DICOM['d_dicomSimple']
             ageInDays   : int   = 0
@@ -922,25 +922,70 @@ class Process():
                 except:
                     date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y%m%d")
                 ageInDays   = abs((date_study - date_birth).days)
-                str_age     = age_daysToDMY(ageInDays)
-            return str_age
+                # str_age     = age_daysToDMY(ageInDays)
+            return ageInDays
 
-        b_tagsFound         = False
-        str_replace         = ''        # The lookup/processed tag value
-        l_tags              = []        # The input string split by '%'
-        l_tagsToSub         = []        # Remove any noise etc from each tag
-        func                = ''        # the function to apply
-        tag                 = ''        # the tag in the funcTag combo
+        def AgeInDays_set(d_DICOM : dict, ageInDays : int):
+            """Add a trailing string of age in days (explicitly calculated)
+            to the DICOM PatientAge field.
+
+            Args:
+                d_DICOM (dict): Existing DICOM tag structure
+                ageInDays (int): The explicit age in days calculation
+
+            Returns:
+                Modifies the d_DICOM structure in place
+            """
+            if 'PatientAge' not in d_DICOM['d_dicomSimple']:
+                d_DICOM['d_dicomSimple']['PatientAge']  = age_daysToDMY(ageInDays)
+            str_DICOMage    : str   = d_DICOM['d_dicomSimple']['PatientAge']
+            d_DICOM['d_dicomSimple']['PatientAge'] = '%s-%06dd' % (str_DICOMage, ageInDays)
+
+        def ageTag_processAndUpdate(    str_tag     : str,
+                                        d_DICOM     : dict,
+                                        l_tags      : list,
+                                        l_tagsToSub : list):
+            """ Process age related tags in the DICOM structure --
+                either the PatientAge and AgeInDays tags. If not currently
+                present in the d_DICOM structure, then explicitly add to
+                dictionary and tag lists.
+
+            Args:
+                str_tag (str):  tag to process
+                d_DICOM (dict): DICOM header structure
+                l_tags (list): original tag list
+                l_tagsToSub (list): tag list found in DICOM header
+
+            Returns:
+                Modifies the d_DICOM and l_tagsToSub in place if necessary
+            """
+            if any(str_tag in string for string in l_tags) and not \
+               any(str_tag in string for string in l_tagsToSub):
+                ageInDays   : int   = ageInDays_calculateExplicitly(d_DICOM)
+                if str_tag == 'PatientAge':
+                    d_DICOM['d_dicomSimple'][str_tag] = age_daysToDMY(ageInDays)
+                if str_tag == 'AgeInDays':
+                    d_DICOM['d_dicomSimple'][str_tag] = '%06dd' % ageInDays
+                l_tagsToSub.append(str_tag)
+
+        b_tagsFound     : bool  = False
+        str_replace     : str   = ''        # The lookup/processed tag value
+        l_tags          : list  = []        # The input string split by '%'
+        l_tagsToSub     : list  = []        # Remove any noise etc from each tag
+        func            : str   = ''        # the function to apply
+        tag             : str   = ''        # the tag in the funcTag combo
 
         if '%' in astr:
             l_tags          = astr.split('%')[1:]
             # Find which tags (mangled) in string match actual tags
-            l_tagsToSub     = [i for i in d_DICOM['l_tagRaw'] if any(i in b for b in l_tags)]
-            if any('PatientAge' in string for string in l_tags) and not \
-               any('PatientAge' in string for string in l_tagsToSub):
-                d_DICOM['d_dicomSimple']['PatientAge'] = age_calculate(d_DICOM)
-                l_tagsToSub.append('PatientAge')
-            # Need to arrange l_tagsToSub in same order as l_tags
+            l_tagsToSub     = [i for i in d_DICOM['l_tagRaw'] \
+                                if any(i in b for b in l_tags)]
+
+            # Explicitly check the PatientAge and the AgeInDays tags
+            for tag in ['PatientAge', 'AgeInDays']:
+                ageTag_processAndUpdate(tag,  d_DICOM, l_tags, l_tagsToSub)
+
+            # Make sure lists are in same sort order
             l_tagsToSubSort =  sorted(
                 l_tagsToSub,
                 key = lambda x: [i for i, s in enumerate(l_tags) if x in s][0]
