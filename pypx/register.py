@@ -228,6 +228,39 @@ def parser_setup(str_desc):
         default = False
     )
 
+    parser.add_argument(
+        '--rootDirTemplate',
+        action  = 'store',
+        dest    = 'str_rootDirTemplate',
+        type    = str,
+        default = '%PatientID-%PatientName-%PatientBirthDate',
+        help    = 'Template pattern for root unpack directory'
+        )
+    parser.add_argument(
+        '--studyDirTemplate',
+        action  = 'store',
+        dest    = 'str_studyDirTemplate',
+        type    = str,
+        default = '%StudyDescription-%AccessionNumber-%StudyDate-%PatientAge-%AgeInDays',
+        help    = 'Template pattern for study unpack directory'
+        )
+    parser.add_argument(
+        '--seriesDirTemplate',
+        action  = 'store',
+        dest    = 'str_seriesDirTemplate',
+        type    = str,
+        default = '%_pad|5,0_SeriesNumber-%SeriesDescription',
+        help    = 'Template pattern for series unpack directory'
+        )
+    parser.add_argument(
+        '--imageTemplate',
+        action  = 'store',
+        dest    = 'str_imageTemplate',
+        type    = str,
+        default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
+        help    = 'Template pattern for image file'
+        )
+
     return parser
 
 def parser_interpret(parser, *args):

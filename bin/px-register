@@ -27,7 +27,7 @@ import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-register"
-str_version = "3.2.12"
+str_version = "3.4.0"
 str_desc    = Colors.CYAN + """
 
 
@@ -50,6 +50,17 @@ str_desc    = Colors.CYAN + """
     ``px-register`` is used to register files that have been pushed to a
     CUBE service, i.e. files that are in the ``SERVICES/`` swift storage
     location.
+
+    DEV NOTES!
+    NB: Registration is the act of informing CUBE of a file that has been
+    uploaded to (and exists in) swift storage. The path location in swift
+    storage is determined by the "repack" module used by the swift "push".
+    module. Since it is possible that the "push" module might have some
+    idiomatic push location, it is critical that the "register" matches
+    the push template. This means that any pack template flags used by
+    "push" need to be specified explicitly to the "register" module. In
+    practice this mostly means checking that the default template flags
+    here in the "register" module match those of the "push" module.
 
 """ + Colors.NO_COLOUR
 
@@ -80,6 +91,10 @@ def synopsis(ab_shortOnly = False):
                 [--CUBEuserpasswd <CUBEuserpasswd>]                 \\
                 [--swiftServicesPACS <PACSname>]                    \\
                 [--cleanup]                                         \\
+                [--rootDirTemplate <rootTemplate>]                  \\
+                [--studyDirTemplate <studyTemplate>]                \\
+                [--seriesDirTemplate <seriesTemplate>]              \\
+                [--imageFileTemplate <imageTemplate>]               \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
@@ -159,6 +174,28 @@ def synopsis(ab_shortOnly = False):
         [--swiftServicesPACS <PACSname>]
         The name of the specific PACS within SERVICE/PACS to which files will be
         registered.
+
+        [--rootDirTemplate <rootTemplate>]
+        A string template for the root directory name in which to push a
+        given DICOM.
+
+        Default: "%PatientID-%PatientName-%PatientBirthData-%PatientAge"
+
+        [--studyDirTemplate <studyTemplate>]
+        A string template for the study directory name in which to push a
+        given DICOM.
+
+        Default: "%StudyDescription-%AccessionNumber-%StudyDate"
+
+        [--seriesDirTemplate <seriesTemplate>]
+        A string template for the series directory name in which to push a
+        given DICOM.
+
+        Default: "%_pad|5,0_SeriesNumber-%SeriesDescription"
+
+        [--imageFileTemplate <imageTemplate>]
+        A string template for the image file name in which to push a
+        given DICOM.
 
         [--json]
         If specified, print the JSON structure related to the process event. This is
