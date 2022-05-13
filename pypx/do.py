@@ -420,7 +420,6 @@ class Do(Base):
             )
 
             if self.arg['withFeedBack']: self.log(str_line)
-
             d_then                  : dict  = {}
             d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
             registerParser                  = registerParser_setup("Register Parser")
@@ -434,7 +433,11 @@ class Do(Base):
             except:
                 str_msg     = ""
             if len(str_msg):
-                self.log(json.dumps(json.loads(str_msg), indent = 4), comms = 'error')
+                try:
+                    self.log(json.dumps(json.loads(str_msg), indent = 4), comms = 'error')
+                except:
+                    self.log(json.dumps(d_seriesDir, indent = 4), comms = 'error')
+                    self.log(str_msg, comms = 'error')
             return d_then
 
         def gen_dict_extract(key, var):
