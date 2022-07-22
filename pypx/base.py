@@ -1,4 +1,5 @@
 import  subprocess, re, collections, codecs
+import  asyncio
 import  pfmisc
 import  pudb
 from    pfmisc._colors      import  Colors
@@ -114,6 +115,43 @@ class Base():
 
         return d_ret
 
+    async def systemlevel_runasync(self, opt, d_params):
+        """
+        Run the system command asynchronously, based on the passed parameter
+        dictionary. Avoid using if large amounts of stdout data is generated!
+        Output is assumed to be UTF-8 text.
+        """
+        b_commandGen    = False
+        str_cmd         = ''
+        d_ret           = {}
+
+        # A function to execute to generate commands
+        f_commandGen    = None
+        for k,v in d_params.items():
+            if k == 'f_commandGen':
+                f_commandGen    = v
+                b_commandGen    = True
+            else:
+                opt[k]  = v
+
+        if b_commandGen:
+            str_cmd         = f_commandGen(opt)
+            self.dp.qprint("\n%s" % str_cmd, level = 5, type = 'status')
+            raw_response    = await asyncio.create_subprocess_shell(
+                                str_cmd,
+                                stdout=asyncio.subprocess.PIPE,
+                                stderr=asyncio.subprocess.STDOUT
+                            )
+            await raw_response.wait()
+
+            stdout, stderr = await raw_response.communicate()
+
+            d_ret   = self.__formatResponseHelper(
+                stdout, str_cmd, raw_response.returncode
+            )
+
+        return d_ret
+
     def commandSuffix(self):
         # required parameters
         command_suffix =    ' -aec '    + self.aec
@@ -194,12 +232,19 @@ class Base():
         return data
 
     def formatResponse(self, raw_response):
-        std = raw_response.stdout.decode('utf-8', 'slashescape')
+        return self.__formatResponseHelper(
+            raw_response.stdout,
+            raw_response.args,
+            raw_response.returncode
+        )
+
+    def __formatResponseHelper(self, stdout, args, returncode):
+        std = stdout.decode('utf-8', 'slashescape')
         response = {
             'status':       'success',
             'data':         '',
-            'command':      raw_response.args,
-            'returncode':   raw_response.returncode
+            'command':      args,
+            'returncode':   returncode
         }
 
         status = self.checkResponse(std)
