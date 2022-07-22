@@ -22,6 +22,7 @@ import  pypx
 import  socket
 import  pudb
 import  pprint
+import  asyncio
 
 from    pypx.find           import parser_setup, parser_interpret, parser_JSONinterpret
 
@@ -32,7 +33,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "3.2.2"
+str_version = "3.4.2"
 str_desc    = Colors.CYAN + """
 
                                    __  _             _ 
@@ -471,7 +472,7 @@ if args.b_version:
 d_args  : dict  = vars(args)
 
 # Return the JSON result as a serialized string:
-d_output = pypx.find(d_args)
+d_output = asyncio.run(pypx.find(d_args))
 
 if args.verbosity:
     if args.json:
