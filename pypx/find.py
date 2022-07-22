@@ -1,5 +1,6 @@
 # Global modules
 import  subprocess, re, collections
+import  asyncio
 import  pudb
 import  json
 import  sys
@@ -447,7 +448,7 @@ class Find(Base):
         )
         return str_cmd
 
-    def run(self, opt={}):
+    async def run(self, opt={}):
         """
         Main entry method.
 
@@ -468,9 +469,8 @@ class Find(Base):
         # STUDIES related to this query
         series_uid                  = opt["SeriesInstanceUID"]
         opt["SeriesInstanceUID"]    = ""
-        
         formattedStudiesResponse    = \
-            self.systemlevel_run(opt,
+            await self.systemlevel_runasync(opt,
                     {
                         'f_commandGen':         self.findscu_command,
                         'QueryRetrieveLevel':   'STUDY'
@@ -489,7 +489,7 @@ class Find(Base):
                 # For each study, we now execute a query on a SERIES
                 # level to complete the picture.
                 formattedSeriesResponse     = \
-                    self.systemlevel_run(opt,
+                    await self.systemlevel_runasync(opt,
                             {
                                 'f_commandGen':         self.findscu_command,
                                 'QueryRetrieveLevel':   'SERIES',
