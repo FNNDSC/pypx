@@ -12,8 +12,8 @@ from .pfstorage import PfStorage, swiftStorage
 def echo(opt={}):
     return Echo(opt).run()
 
-def find(opt={}):
-    return Find(opt).run(opt)
+async def find(opt={}):
+    return await Find(opt).run(opt)
 
 def listen(opt={}):
     return Listen(opt).run()
