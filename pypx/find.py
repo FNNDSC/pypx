@@ -525,7 +525,7 @@ class Find(Base):
                 studyIndex+=1
             if len(self.arg['then']):
                 self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
-                d_then                          = self.then.run()
+                d_then                          = await self.then.run()
                 filteredStudiesResponse['then'] = copy.deepcopy(d_then)
             return filteredStudiesResponse
         else:

@@ -5,6 +5,8 @@ from    pfmisc.other import list_removeDuplicates
 import  pudb
 import  json
 
+import  asyncio
+
 from    datetime            import  datetime
 from    argparse            import  Namespace, ArgumentParser
 from    argparse            import  RawTextHelpFormatter
@@ -228,7 +230,7 @@ class Do(Base):
                                         )
         self.log            = self.dp.qprint
 
-    def run(self, opt={}) -> dict:
+    async def run(self, opt={}) -> dict:
         """
         If a '--next' request has been specified in the class / module,
         perform additional actions on the space of find hits.
