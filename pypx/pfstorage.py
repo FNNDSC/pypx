@@ -57,11 +57,12 @@ class D(S):
         Constructor
         """
 
+        proto = 'https' if arg['str_swiftPort'] == '443' else 'http'
         self.state_create(
         {
             "swift": {
-                "auth_url":                 "http://%s:%s/auth/v1.0" % \
-                                            (arg['str_swiftIP'], arg['str_swiftPort']),
+                "auth_url":                 "%s://%s:%s/auth/v1.0" % \
+                                            (proto, arg['str_swiftIP'], arg['str_swiftPort']),
                 "username":                 arg['str_swiftLogin'],
                 "key":                      "testing",
                 "container_name":           "users",
