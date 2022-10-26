@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.10.4
+pypx - 3.10.6
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -181,7 +181,10 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
   # Query
   PACS_QR.sh -- "--PatientID 7654321"
 
-  # More "low level"
+  # More "low level" -- in fact `PACS_QR.sh` is mostly a convenience wrapper
+  # around these low level functions. For completeness sake the low level
+  # `Query` is shown here. Note that passing `PACS_QR.sh -v 1 ...` will
+  # instruct `PACS_QR.sh` to show the actual commands it uses.
   px-find
        --aec CHRIS \
        --aet CHRISV3 \
