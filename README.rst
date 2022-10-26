@@ -1,5 +1,5 @@
 ####################################
-pypx - 3.10.3
+pypx - 3.10.4
 ####################################
 
 .. image:: https://badge.fury.io/py/pypx.svg
@@ -181,6 +181,44 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
   # Query
   PACS_QR.sh -- "--PatientID 7654321"
 
+  # More "low level"
+  px-find
+       --aec CHRIS \
+       --aet CHRISV3 \
+       --serverIP 134.174.12.21 \
+       --serverPort 104 \
+       --db /home/dicom/log \
+       --verbosity 1 \
+       --PatientID 7654321
+
+  # A similar call using the
+  #    --then report --withFeedBack
+  # (note if --then <something> is specified, then a --withFeedBack needs to be added
+  # for console ouput)
+  # Also, this report shows the SeriesInstanceUIDs in the report body
+  px-find
+       --aec CHRIS \
+       --aet CHRISV3 \
+       --serverIP 134.174.12.21 \
+       --serverPort 104 \
+       --db /home/dicom/log \
+       --verbosity 1 \
+       --PatientID 7654321 --then report --withFeedBack
+
+  # For the most flexibility in reporting, set find results to be JSON
+  # and pipe the json into the `px-report` app.
+  px-find
+       --aec CHRIS \
+       --aet CHRISV3 \
+       --serverIP 134.174.12.21 \
+       --serverPort 104 \
+       --db /home/dicom/log \
+       --verbosity 1 --json \
+       --PatientID 7654321 |\
+  px-report \
+       --colorize dark \
+       --printReport tabular
+
   # Retrieve
   PACS_QR.sh --do retrieve -- "--PatientID 7654321"
 
@@ -193,7 +231,7 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
   # Register to CUBE internal DB
   PACS_QR.sh --do register -- "--PatientID 7654321"
 
-Note carefully the syntax of the above commands! A ``--`` string separates script ``<key>/<value>`` pairs from a string defining the search parameters. Note that most valid DICOM tags can be used for this string. More tags can also make a search more specific, for instance
+Note carefully the syntax of the above ``PACS_QR.sh`` commands! A ``--`` string separates script ``<key>/<value>`` pairs from a string defining the search parameters. Note that most valid DICOM tags can be used for this string. More tags can also make a search more specific, for instance
 
 .. code-block:: bash
 
@@ -201,7 +239,7 @@ Note carefully the syntax of the above commands! A ``--`` string separates scrip
 
 will limit returns only to hits performed on given ``StudyDate``.
 
-5. Development and debugging
+1. Development and debugging
 ****************************
 
 The recommended development/debug approach is to mount source directories into

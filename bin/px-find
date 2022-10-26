@@ -24,6 +24,7 @@ import  pudb
 import  pprint
 import  asyncio
 
+from    pypx.report         import Report
 from    pypx.find           import parser_setup, parser_interpret, parser_JSONinterpret
 
 str_defIP   = [l for l in (
@@ -33,7 +34,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "3.4.2"
+str_version = "3.4.4"
 str_desc    = Colors.CYAN + """
 
                                    __  _             _ 
@@ -65,7 +66,7 @@ def synopsis(ab_shortOnly = False):
     shortSynopsis =  Colors.YELLOW + '''
     NAME
 
-	    %s
+        %s
 
         - PACS find (query)
 
@@ -361,7 +362,7 @@ def synopsis(ab_shortOnly = False):
             --json                                                      \\
             --PatientID LILLA-9731                                     |\\
         px-report                                                       \\
-            --colorize dark					                            \\
+            --colorize dark                                             \\
             --printReport tabular                                       \\
             --reportHeaderStudyTags 'PatientName,PatientID'
 
@@ -483,6 +484,13 @@ if args.verbosity:
                 'status'    : False,
                 'error'     : '%s' % e
             }))
+    else:
+        if not args.then:
+            Report({
+                'colorize' :    'dark',
+                'reportData':   d_output,
+                'printReport':  'tabular'
+            }).run()
 
 if args.b_waitForUserTerminate:
     l_infoWindow =[
