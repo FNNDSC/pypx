@@ -185,7 +185,7 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
   # around these low level functions. For completeness sake the low level
   # `Query` is shown here. Note that passing `PACS_QR.sh -v 1 ...` will
   # instruct `PACS_QR.sh` to show the actual commands it uses.
-  px-find
+  px-find \
        --aec CHRIS \
        --aet CHRISV3 \
        --serverIP 134.174.12.21 \
@@ -199,7 +199,7 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
   # (note if --then <something> is specified, then a --withFeedBack needs to be added
   # for console ouput)
   # Also, this report shows the SeriesInstanceUIDs in the report body
-  px-find
+  px-find \
        --aec CHRIS \
        --aet CHRISV3 \
        --serverIP 134.174.12.21 \
@@ -210,7 +210,7 @@ The ``PACS_QR.sh`` has several implicit assumptions and values that can/should b
 
   # For the most flexibility in reporting, set find results to be JSON
   # and pipe the json into the `px-report` app.
-  px-find
+  px-find \
        --aec CHRIS \
        --aet CHRISV3 \
        --serverIP 134.174.12.21 \
