@@ -59,6 +59,8 @@ export BASEMOUNT=/home/dicom
 export DB=${BASEMOUNT}/log
 export DATADIR=${BASEMOUNT}/data
 
+INTERACTIVE="--tty --interactive"
+
 # The HOST/USER here are FNNDSC specific and can be ignored using
 # a '-F' to the script
 G_HOST="titan"
@@ -85,6 +87,7 @@ G_SYNOPSIS="
   SYNOPSIS
 
         PACS_QR.sh                                                      \\
+                        [--non-interactive]                             \\
                         [--container    <containerName>]                \\
                         [--baseMount>   <baseDBmountDir>]               \\
                         [-F]                                            \\
@@ -157,6 +160,11 @@ G_SYNOPSIS="
         ssh -g -f -N -X -L 10402:localhost:10402 rudolphpienaar@titan
 
   ARGS
+
+        [--non-interactive]
+        If selected, remove the '--tty --interactive' flags from the docker
+        exec command, effectively making the execution 'non-interactive'. This
+        is useful in some cases (esp when coming from Windows based putty).
 
         [--container    <containerName>]
         The name of the container image to execute. By default this is
@@ -406,7 +414,7 @@ function institution_set
         orthanc)
             SWIFTKEY=local
             CUBEKEY=local
-            SWIFTPACS=orthanc
+            SWIFTSERVICEPACS=orthanc
             AET=CHRISLOCAL
             PACSIP=127.0.0.1
             PACSPORT=4242
@@ -415,7 +423,7 @@ function institution_set
         BCH-chris)
             SWIFTKEY=local
             CUBEKEY=local
-            SWIFTPACS=PACSDCM
+            SWIFTSERVICEPACS=PACSDCM
             AET=CHRISV3
             PACSIP=134.174.12.21
             PACSPORT=104
@@ -424,7 +432,7 @@ function institution_set
         BCH-chrisdev)
             SWIFTKEY=local
             CUBEKEY=local
-            SWIFTPACS=PACSDCM
+            SWIFTSERVICEPACS=PACSDCM
             AET=CHRISV3
             PACSIP=134.174.12.21
             PACSPORT=104
@@ -433,7 +441,7 @@ function institution_set
         BCH-christest)
             SWIFTKEY=local
             CUBEKEY=local
-            SWIFTPACS=PACSDCM
+            SWIFTSERVICEPACS=PACSDCM
             AET=CHRISV3
             PACSIP=134.174.12.21
             PACSPORT=104
@@ -442,7 +450,7 @@ function institution_set
         MGH)
             SWIFTKEY=local
             CUBEKEY=local
-            SWIFTPACS=PACSDCM
+            SWIFTSERVICEPACS=PACSDCM
             AET=ELLENGRANT
             PACSIP=172.16.128.91
             PACSPORT=104
@@ -451,11 +459,20 @@ function institution_set
         MGH2)
             SWIFTKEY=local
             CUBEKEY=local
-            SWIFTPACS=PACSDCM
+            SWIFTSERVICEPACS=PACSDCM
             AET=ELLENGRANT-CH
             PACSIP=172.16.128.91
             PACSPORT=104
             AEC=SDM1
+    ;;
+    TeleRIS)
+        SWIFTKEY=local
+            CUBEKEY=local
+            SWIFTSERVICEPACS=TeleRIS
+            AET=CHRISV3
+            PACSIP=134.174.12.81
+            PACSPORT=104
+            AEC=CHRIS
         ;;
         *) ;;
     esac
@@ -466,6 +483,7 @@ while :; do
         -h|-\?|-x|--help)
                         printf "%s" "$G_SYNOPSIS"
                         exit 1                  ;;
+        --non-interactive) INTERACTIVE=""       ;;
         --container)    PYPX=$2                 ;;
         --baseMount)    BASEMOUNT=$2            ;;
         --debug)        let Gb_DEBUG=1          ;;
@@ -567,8 +585,7 @@ fi
 # The --tty --interactive is necessary to allow for realtime
 # logging of activity
 # G_REPORTARGS="--printReport tabular"
-QUERY="docker run $DEBUG                                                       \
-            --tty --interactive                                                \
+QUERY="docker run $DEBUG $INTERACTIVE                                          \
             --rm                                                               \
             --volume $BASEMOUNT:$BASEMOUNT                                     \
             $PYPX                                                              \
