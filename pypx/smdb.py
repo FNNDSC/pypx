@@ -435,6 +435,7 @@ class SMDB():
         self.str_swiftService   : str   = "swift.json"
         self.str_CUBEservice    : str   = "cube.json"
         self.str_PACSservice    : str   = "pacs.json"
+        self.str_TELEservice    : str   = "telemetry.json"
         self.str_dataBaseDir    : str   = os.path.join(
                                             self.args.str_logDir,
                                             '../'
@@ -1046,7 +1047,7 @@ class SMDB():
         In the case of success, the return count will reflect the number
         of current data objects relevant to the <str_type>. This is deter-
         mined by checking if the table has an 'objectCounter' element. If
-        this element exists, the return count will be set to the value of  
+        this element exists, the return count will be set to the value of
         'objectCounter.current'. If the 'objectCounter' is not an element
         in the <str_type> db, the return count will then be set simply to
         self.series_packedFilesCount() so to be consistent in a status
@@ -1601,11 +1602,12 @@ class SMDB():
     def service_keyAccess(self, astr_service) -> dict:
         """
         This method saves the details of accessing a given service
-        instance as a named key. Three services are supported:
+        instance as a named key. Four services are supported:
 
             * 'PACS'
             * 'swift'
             * 'CUBE'
+            * 'telemetry'
 
         The point/idea of these services is to store a short hand for
         parameters useful to some upstream services, for example:
@@ -1645,6 +1647,16 @@ class SMDB():
                     }
             }
 
+        For 'telemetry':
+
+            {
+                "<keyname>":  {
+                        "url":      "<URLofCUBEAPI>",
+                        "username": "<telemetryUsername>",
+                        "password": "<telemetryUserpasswd>"
+                    }
+            }
+
         NOTE:
 
             * Currently no models or error checking on the passed CLI
@@ -1670,6 +1682,11 @@ class SMDB():
             str_service: str   = os.path.join(
                                     self.str_servicesDir,
                                     self.str_PACSservice
+                                )
+        if astr_service.lower().strip() == 'telemetry':
+            str_service: str   = os.path.join(
+                                    self.str_servicesDir,
+                                    self.str_TELEservice
                                 )
         if os.path.isfile(str_service):
             with open(str_service) as fj:
