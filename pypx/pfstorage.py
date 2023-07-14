@@ -65,7 +65,7 @@ class D(S):
                                             (proto, arg['str_swiftIP'], arg['str_swiftPort']),
                 "username":                 arg['str_swiftLogin'],
                 "key":                      "testing",
-                "container_name":           "users",
+                "container_name":           "/var/chris",
                 "auto_create_container":    True,
                 "file_storage":             "swift.storage.SwiftStorage"
             }
@@ -216,6 +216,15 @@ class PfStorage(metaclass = abc.ABCMeta):
         Pull a list of (file) objects from storage.
         """
 
+
+class NotSwiftSentinel:
+    """
+    A useless class which stands in place of a Swift connection object.
+    I should never be called. If you see me in an exception stack trace anywhere, fix that!
+    """
+    pass
+
+
 class swiftStorage(PfStorage):
 
     def __init__(self, arg, *args, **kwargs):
@@ -259,11 +268,7 @@ class swiftStorage(PfStorage):
         # initiate a swift service connection, based on internal
         # settings already available in the django variable space.
         try:
-            d_ret['conn'] = swiftclient.Connection(
-                user    = d_ret['user'],
-                key     = d_ret['key'],
-                authurl = d_ret['authurl']
-            )
+            d_ret['conn'] = NotSwiftSentinel()
         except:
             d_ret['status'] = False
 
@@ -307,10 +312,7 @@ class swiftStorage(PfStorage):
             d_ret['status']     = True
             d_ret['dellist']    = d_ls['list_ls']
             for obj in d_ls['list_ls']:
-                d_conn['conn'].delete_object(
-                    d_conn['container_name'],
-                    obj
-                )
+                (Path(d_conn['container_name']) / obj).unlink()
 
         return d_ret
 
@@ -392,10 +394,10 @@ class swiftStorage(PfStorage):
             conn        = d_conn['conn']
 
             # get the full list of objects in Swift storage with given prefix
-            ld_obj = conn.get_container(
-                        d_conn['container_name'],
-                        prefix          = str_path,
-                        full_listing    = True)[1]
+            base = Path(d_conn['container_name'])
+            glob = (base / str_path).rglob('*')
+
+            ld_obj = [{'name': str(p.relative_to(base))} for p in glob if p.is_file()]
 
             if len(str_subString):
                 ld_obj      = [x for x in ld_obj if str_subString in x['name']]
@@ -629,12 +631,9 @@ class swiftStorage(PfStorage):
             for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
                 try:
                     d_ret['status'] = True and d_ret['status']
-                    with open(str_localfilename, 'rb') as fp:
-                        d_conn['conn'].put_object(
-                            d_conn['container_name'],
-                            str_storagefilename,
-                            contents=fp.read()
-                        )
+                    dst = Path(d_conn['container_name']) / str_storagefilename
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(str_localfilename, str(dst))
                 except Exception as e:
                     d_ret['error']  = '%s' % e
                     d_ret['status'] = False
@@ -727,22 +726,10 @@ class swiftStorage(PfStorage):
         d_ret['localpath']          = str_mapLocationOver
         d_ret['currentWorkingDir']  = os.getcwd()
 
+        shutil.copytree(os.path.join(d_conn['container_name'], str_swiftLocation), str_mapLocationOver)
+
         if d_conn['status']:
             for str_localfilename, str_storagefilename in zip(l_localfile, l_objectfile):
-                try:
-                    d_ret['status'] = True and d_ret['status']
-                    obj_tuple       = d_conn['conn'].get_object(
-                                                    d_conn['container_name'],
-                                                    str_storagefilename
-                                                )
-                    str_parentDir   = os.path.dirname(str_localfilename)
-                    os.makedirs(str_parentDir, exist_ok = True)
-                    with open(str_localfilename, 'wb') as fp:
-                        # fp.write(str(obj_tuple[1], 'utf-8'))
-                        fp.write(obj_tuple[1])
-                except Exception as e:
-                    d_ret['error']  = str(e)
-                    d_ret['status'] = False
                 d_ret['localFileList'].append(str_localfilename)
                 d_ret['objectFileList'].append(str_storagefilename)
         return d_ret
