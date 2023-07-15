@@ -18,6 +18,14 @@ and --xcrfile is the last of its series. The number of files of a
 series received so far are counted by px-repack and saved to a Redis
 database.
 
+The algorithm:
+
+0. On input of a DICOM file
+1. Read DICOM tags to get SeriesInstanceUID
+2. Get NumberOfSeriesRelatedInstances and fileCounter from Redis
+3. If this file is the last of its series, run px-repack.
+   Else, write fileCounter+1 to Redis.
+
 
 ENVIRONMENT VARIABLES
 
@@ -146,7 +154,7 @@ fn increment_counter(dcm: &Path) -> anyhow::Result<bool> {
 /// Get the redis key name for a DICOM file.
 ///
 /// Equivalent implementation of:
-/// https://github.com/FNNDSC/pypx/blob/f98282d1e7cdaa1e56ff4e05cb560e8d1c5aefef/pypx/find.py#L574-L575
+/// https://github.com/FNNDSC/pypx/blob/6ddda86cf5fdecc29a437ad5e60cf77676719af5/pypx/re.py#L10-L12
 fn series_key_of(dicom_file: &Path) -> anyhow::Result<String> {
     let dcm = dicom::object::open_file(dicom_file)?;
     let series = dcm
@@ -177,19 +185,29 @@ fn now_iso8901() -> String {
         .unwrap()
 }
 
-
+/// Redis hset schema for series pull progress information.
+/// Matching Python implementation:
+/// https://github.com/FNNDSC/pypx/blob/6ddda86cf5fdecc29a437ad5e60cf77676719af5/pypx/re.py#L15-L24
 #[allow(non_snake_case)]
 #[derive(Debug, FromRedisValue, ToRedisArgs, PartialEq)]
 struct ReData {
+    /// Number of files received by storescp, incremented by px-recount.
     fileCounter: u32,
+    /// Number of DICOM files in the series, reported by px-find (findscu)
     NumberOfSeriesRelatedInstances: u32,
+    /// Timestamp in ISO8901 format.
     lastUpdate: String,
 }
 
+/// The order of a received file.
 #[derive(Debug, PartialEq)]
 enum FileStatus {
+    /// The file is the last of its series.
     Last,
+    /// The file is not the last of its series and more files are yet to be recieved.
     NotLast,
+    /// Unable to know whether the file is the last of its series,
+    /// i.e. due to database corruption.
     Exception(String),
 }
 
