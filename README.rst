@@ -5,9 +5,6 @@ pypx - 3.10.16
 .. image:: https://badge.fury.io/py/pypx.svg
     :target: https://badge.fury.io/py/pypx
 
-.. image:: https://travis-ci.org/FNNDSC/pypx.svg?branch=master
-    :target: https://travis-ci.org/FNNDSC/pypx
-
 .. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
     :target: https://badge.fury.io/py/pypx
 
@@ -242,7 +239,7 @@ Note carefully the syntax of the above ``PACS_QR.sh`` commands! A ``--`` string 
 
 will limit returns only to hits performed on given ``StudyDate``.
 
-1. Development and debugging
+5. Development and debugging
 ****************************
 
 The recommended development/debug approach is to mount source directories into
@@ -267,7 +264,25 @@ are in the source code repo root, and assuming you want to debug `px-push`:
                 --verbosity 1                                                  \
                 --json
 
-6. Additional support (incomplete)
+6. "Really Efficient" Mode
+**************************
+
+Typically, a `px-repack` process is called per received DICOM file.
+
+``px-find --reallyEfficient --then receive`` does one `px-repack`
+per series (i.e. one directory of DICOM files). This dramatically
+improves performance See benchmarks_.
+
+"Really efficient" (RE) mode requires a redis server.
+In RE mode, ``px-find`` records the number of DICOM files per series (``NumberOfSeriesRelatedInstances``) to redis.
+``storescp`` is configured to run ``px-recount`` on each instance instead of ``px-repack``.
+``px-recount`` does nothing until the entire series is received.
+Finally, ``px-recount`` calls ``px-repack`` once on the entire series.
+
+``px-recount`` is implemented in Rust to reduce its footprint when being
+called once per instance.
+
+7. Additional support (incomplete)
 **********************************
 
 Please see the relevant wiki pages for usage instructions (some are still under construction):
@@ -311,4 +326,4 @@ DCMTK_
 .. _darcymason: https://github.com/darcymason
 .. _DCMTK: http://dicom.offis.de/dcmtk.php.en
 .. _pfstorage: https://github.com/FNNDSC/pypx/blob/master/bin/pfstorage
-
+.. _benchmarks: https://github.com/FNNDSC/pypx/wiki/Benchmarks

@@ -11,7 +11,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.10.16',
+        version             =   '3.11.0',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         url                 =   'http://github.com/fnndsc/pypx',
@@ -31,7 +31,8 @@ setup(
             'python-swiftclient',
             'pfstate',
             'webob',
-            'python-chrisclient'
+            'python-chrisclient',
+            'redis[hiredis]~=4.6'
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],

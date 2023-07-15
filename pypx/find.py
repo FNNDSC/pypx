@@ -1,8 +1,11 @@
 # Global modules
 import  subprocess, re, collections
 import  asyncio
+from typing import Dict, TypedDict
+
 import  pudb
 import  json
+import  os
 import  sys
 from    datetime            import  datetime
 from    dateutil            import  relativedelta
@@ -25,6 +28,7 @@ from    pypx                import report
 from    pypx                import do
 import  copy
 
+import redis.asyncio as redis
 
 def parser_setup(str_desc):
     parser = ArgumentParser(
@@ -300,7 +304,13 @@ def parser_setup(str_desc):
         action  = 'store_true',
         default = False
     )
-
+    parser.add_argument(
+        '--reallyEfficient',
+        help    = 'record NumberOfSeriesRelatedInstances to redis',
+        dest    = 'b_reallyEfficient',
+        action  = 'store_true',
+        default = False
+    )
 
     return parser
 
@@ -356,7 +366,7 @@ class Find(Base):
     by the pypx/move operation.
     """
 
-    def __init__(self, arg):
+    def __init__(self, arg: Dict):
         """
         Constructor.
 
@@ -382,6 +392,7 @@ class Find(Base):
                                         )
         self.log            = self.dp.qprint
         self.then           = do.Do(self.arg)
+        self.reallyEfficient = arg.get('b_reallyEfficient', False)
 
     def query(self, opt={}):
         parameters = {
@@ -464,7 +475,6 @@ class Find(Base):
         given used to instantiate this class.
 
         """
-
         # First we execute on a STUDY level to determine all the
         # STUDIES related to this query
         series_uid                  = opt["SeriesInstanceUID"]
@@ -527,6 +537,69 @@ class Find(Base):
                 self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
                 d_then                          = await self.then.run()
                 filteredStudiesResponse['then'] = copy.deepcopy(d_then)
+
+            await self.recordInRedis(filteredStudiesResponse['data'])
+
             return filteredStudiesResponse
         else:
             return formattedStudiesResponse
+
+    async def recordInRedis(self, data):
+        """
+        Record the value of ``NumberOfSeriesRelatedInstances`` for each series to redis.
+        """
+        seriesInfo = self._extractSeriesRelatedInstances(data)
+        connection = await self.getRedisClient()
+        async with connection.pipeline(transaction=True) as pipe:
+            for k, v in seriesInfo.items():
+                pipe.hset(k, mapping=v)
+            await pipe.execute()
+
+    async def getRedisClient(self):
+        if (url := os.getenv('PYPX_REDIS_URL', None)) is None:
+            return redis.Redis(decode_responses=True)
+        return await redis.from_url(url)
+
+    @classmethod
+    def _extractSeriesRelatedInstances(cls, data) -> Dict[str, 'ReData']:
+        timestamp = datetime.now().isoformat()
+        all_series = (s for a in data for s in a['series'])
+        return {
+            cls._redisKeyOf(series): cls._createReData(series, timestamp)
+            for series in all_series
+            if cls._seriesHasNumberofSeriesRelatedInstances(series)
+        }
+
+    @staticmethod
+    def _redisKeyOf(s: dict) -> str:
+        return f'series:{s["StudyInstanceUID"]["value"]}/{s["SeriesInstanceUID"]["value"]}'
+
+    @staticmethod
+    def _seriesHasNumberofSeriesRelatedInstances(s: dict) -> bool:
+        try:
+            num = int(s['NumberOfSeriesRelatedInstances']['value'])
+            return num >= 1
+        except (KeyError, ValueError):
+            return False
+
+    @staticmethod
+    def _createReData(s: dict, date: str) -> 'ReData':
+        """``ReData`` constructor"""
+        return {
+            'NumberOfSeriesRelatedInstances': s['NumberOfSeriesRelatedInstances']['value'],
+            'fileCounter': 0,
+            'lastUpdate': date
+        }
+
+
+class ReData(TypedDict):
+    """
+
+    """
+    NumberOfSeriesRelatedInstances: int
+    """Number of DICOM files in the series, reported by px-find (findscu)"""
+    fileCounter: int
+    """Number of files received by storescp, incremented by px-recount"""
+    lastUpdate: str
+    """Timestamp in ISO8901 format."""
+
