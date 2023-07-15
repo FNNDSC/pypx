@@ -267,6 +267,8 @@ are in the source code repo root, and assuming you want to debug `px-push`:
 6. "Really Efficient" Mode
 **************************
 
+    Really Efficient using px-REcount to call px-REpack with the help of REdis.
+
 Typically, a `px-repack` process is called per received DICOM file.
 
 ``px-find --reallyEfficient --then receive`` does one `px-repack`
