@@ -31,7 +31,6 @@ NOTES
   px-find --reallyEfficient --then receive ...
 - Generally, px-recount is fail-safe. It will call px-repack in the event
   of any redis-related exceptions.
-
 ";
 
 fn main() -> anyhow::Result<()> {
@@ -150,13 +149,10 @@ fn increment_counter(dcm: &Path) -> anyhow::Result<bool> {
 /// https://github.com/FNNDSC/pypx/blob/f98282d1e7cdaa1e56ff4e05cb560e8d1c5aefef/pypx/find.py#L574-L575
 fn series_key_of(dicom_file: &Path) -> anyhow::Result<String> {
     let dcm = dicom::object::open_file(dicom_file)?;
-    let study = dcm
-        .element(dicom::dictionary_std::tags::STUDY_INSTANCE_UID)?
-        .to_str()?;
     let series = dcm
         .element(dicom::dictionary_std::tags::SERIES_INSTANCE_UID)?
         .to_str()?;
-    let key = format!("series:{study}/{series}");
+    let key = format!("series:{series}");
     Ok(key)
 }
 
@@ -180,6 +176,7 @@ fn now_iso8901() -> String {
         .format(&time::format_description::well_known::Iso8601::DEFAULT)
         .unwrap()
 }
+
 
 #[allow(non_snake_case)]
 #[derive(Debug, FromRedisValue, ToRedisArgs, PartialEq)]

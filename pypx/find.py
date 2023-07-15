@@ -23,12 +23,12 @@ from    dask                import  delayed, compute
 from    .base               import Base
 from    .move               import Move
 import  pypx
+import  pypx.re
 from    pypx                import smdb
 from    pypx                import report
 from    pypx                import do
 import  copy
 
-import redis.asyncio as redis
 
 def parser_setup(str_desc):
     parser = ArgumentParser(
@@ -533,12 +533,13 @@ class Find(Base):
                 formattedStudiesResponse['data'][studyIndex]['series']      \
                     = l_seriesResults
                 studyIndex+=1
+
+            await self.recordInRedis(filteredStudiesResponse['data'])
+
             if len(self.arg['then']):
                 self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
                 d_then                          = await self.then.run()
                 filteredStudiesResponse['then'] = copy.deepcopy(d_then)
-
-            await self.recordInRedis(filteredStudiesResponse['data'])
 
             return filteredStudiesResponse
         else:
@@ -549,19 +550,15 @@ class Find(Base):
         Record the value of ``NumberOfSeriesRelatedInstances`` for each series to redis.
         """
         seriesInfo = self._extractSeriesRelatedInstances(data)
-        connection = await self.getRedisClient()
+        connection = await pypx.re.getRedisClient()
         async with connection.pipeline(transaction=True) as pipe:
             for k, v in seriesInfo.items():
                 pipe.hset(k, mapping=v)
             await pipe.execute()
-
-    async def getRedisClient(self):
-        if (url := os.getenv('PYPX_REDIS_URL', None)) is None:
-            return redis.Redis(decode_responses=True)
-        return await redis.from_url(url)
+        await connection.close()
 
     @classmethod
-    def _extractSeriesRelatedInstances(cls, data) -> Dict[str, 'ReData']:
+    def _extractSeriesRelatedInstances(cls, data) -> Dict[str, pypx.re.ReData]:
         timestamp = datetime.now().isoformat()
         all_series = (s for a in data for s in a['series'])
         return {
@@ -572,7 +569,7 @@ class Find(Base):
 
     @staticmethod
     def _redisKeyOf(s: dict) -> str:
-        return f'series:{s["StudyInstanceUID"]["value"]}/{s["SeriesInstanceUID"]["value"]}'
+        return pypx.re.redisKeyOf(s['SeriesInstanceUID']['value'])
 
     @staticmethod
     def _seriesHasNumberofSeriesRelatedInstances(s: dict) -> bool:
@@ -583,23 +580,10 @@ class Find(Base):
             return False
 
     @staticmethod
-    def _createReData(s: dict, date: str) -> 'ReData':
+    def _createReData(s: dict, date: str) -> pypx.re.ReData:
         """``ReData`` constructor"""
         return {
             'NumberOfSeriesRelatedInstances': s['NumberOfSeriesRelatedInstances']['value'],
             'fileCounter': 0,
             'lastUpdate': date
         }
-
-
-class ReData(TypedDict):
-    """
-
-    """
-    NumberOfSeriesRelatedInstances: int
-    """Number of DICOM files in the series, reported by px-find (findscu)"""
-    fileCounter: int
-    """Number of files received by storescp, incremented by px-recount"""
-    lastUpdate: str
-    """Timestamp in ISO8901 format."""
-
