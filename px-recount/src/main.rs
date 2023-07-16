@@ -147,7 +147,8 @@ fn increment_counter(dcm: &Path) -> anyhow::Result<bool> {
             }
         };
         pipe.query(con).map(|_: Option<()>| Some(status))
-    })?;
+    })
+    .with_context(|| format!("Redis transaction failed on key: {}", &series_key))?;
     is_last.into_result()
 }
 
