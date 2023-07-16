@@ -554,6 +554,7 @@ class Find(Base):
         async with connection.pipeline(transaction=True) as pipe:
             for k, v in seriesInfo.items():
                 if (await connection.hget(k, 'fileCounter')) is None:
+                    # TODO we also want to avoid writing to redis when series is already packed
                     pipe.hset(k, mapping=v)
             await pipe.execute()
         await connection.close()

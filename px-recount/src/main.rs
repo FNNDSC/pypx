@@ -115,8 +115,8 @@ fn get_xcr_args(args: &[String]) -> Option<(&String, &String)> {
 }
 
 /// Check Redis to see how many files of this series we've previously pulled.
-/// If the given file is the last of its series, delete its hset from Redis
-/// then return true. Otherwise, increment the counter in Redis and return false.
+/// If the given file is the last of its series, return true.
+/// Otherwise, increment the counter in Redis and return false.
 fn increment_counter(dcm: &Path) -> anyhow::Result<bool> {
     let series_key =
         series_key_of(dcm).with_context(|| format!("Could not read DICOM tags of {:?}", &dcm))?;
@@ -127,7 +127,7 @@ fn increment_counter(dcm: &Path) -> anyhow::Result<bool> {
         let data: ReData = con.hgetall(&series_key)?;
         let new_count = data.fileCounter + 1;
         let status = if new_count == data.NumberOfSeriesRelatedInstances {
-            pipe.del(&series_key).ignore();
+            // pipe.del(&series_key).ignore();
             FileStatus::Last
         } else {
             pipe.hset(&series_key, "fileCounter", new_count)
