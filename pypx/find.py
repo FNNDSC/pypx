@@ -553,7 +553,8 @@ class Find(Base):
         connection = await pypx.re.getRedisClient()
         async with connection.pipeline(transaction=True) as pipe:
             for k, v in seriesInfo.items():
-                pipe.hset(k, mapping=v)
+                if (await connection.hget(k, 'fileCounter')) is None:
+                    pipe.hset(k, mapping=v)
             await pipe.execute()
         await connection.close()
 
