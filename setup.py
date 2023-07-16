@@ -7,7 +7,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.11.0rc1',
+        version             =   '3.11.0rc2',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         python_requires     =   ">= 3.8",
@@ -52,7 +52,7 @@ setup(
             "none": [],
             "re": [
                 'redis[hiredis]~=4.6',
-                'px-recount==3.11.0-rc1'
+                'px-recount==3.11.0-rc2'
             ],
         },
         )
