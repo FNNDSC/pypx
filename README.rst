@@ -5,9 +5,6 @@ pypx - 3.10.16
 .. image:: https://badge.fury.io/py/pypx.svg
     :target: https://badge.fury.io/py/pypx
 
-.. image:: https://img.shields.io/badge/python-3.5%2B-blue.svg
-    :target: https://badge.fury.io/py/pypx
-
 .. contents:: Table of Contents
 
 1. Overview
