@@ -708,7 +708,7 @@ dependencies = [
 
 [[package]]
 name = "px-recount"
-version = "0.1.0"
+version = "3.11.0-rc1"
 dependencies = [
  "anyhow",
  "dicom",

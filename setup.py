@@ -52,7 +52,7 @@ setup(
             "none": [],
             "re": [
                 'redis[hiredis]~=4.6',
-                'px-recount==0.1.0'
+                'px-recount==3.11.0-rc1'
             ],
         },
         )
