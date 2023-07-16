@@ -1,6 +1,6 @@
 [package]
 name = "px-recount"
-version = "3.11.0-rc1"
+version = "3.11.0-rc2"
 description = "storescp series file counter for pypx \"RE\" mode."
 license = "MIT"
 edition = "2021"
