@@ -1,9 +1,11 @@
 [package]
 name = "px-recount"
 version = "0.1.0"
+description = "storescp series file counter for pypx \"RE\" mode."
+license = "MIT"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+repository = "https://github.com/FNNDSC/pypx/"
+publish = false
 
 [dependencies]
 anyhow = "1.0.71"
