@@ -3,8 +3,24 @@ Redis database schema definition and helpers for "Really Efficient" mode.
 """
 import os
 from typing import TypedDict
+import functools
 
-import redis.asyncio as redis
+try:
+    import redis.asyncio as redis
+    has_redis = True
+except ImportError:
+    has_redis = False
+
+
+def needs_redis(fn):
+    """A decorator for functions which require Redis."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not has_redis:
+            raise RuntimeError('redis must be installed to call this function. Please run `pip install redis`')
+        return fn(*args, **kwargs)
+    return wrapper
+
 
 
 def redisKeyOf(str_SeriesInstanceUID: str) -> str:
@@ -24,7 +40,8 @@ class ReData(TypedDict):
     """Timestamp in ISO8901 format."""
 
 
-async def getRedisClient() -> redis.Redis:
+@needs_redis
+async def getRedisClient() -> 'redis.Redis':
     """
     Create the redis client.
     """

@@ -534,7 +534,8 @@ class Find(Base):
                     = l_seriesResults
                 studyIndex+=1
 
-            await self.recordInRedis(filteredStudiesResponse['data'])
+            if self.reallyEfficient:
+                await self.recordInRedis(filteredStudiesResponse['data'])
 
             if len(self.arg['then']):
                 self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)

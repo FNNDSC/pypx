@@ -284,6 +284,21 @@ Finally, ``px-recount`` calls ``px-repack`` once on the entire series.
 ``px-recount`` is implemented in Rust to reduce its footprint when being
 called once per instance.
 
+RE Mode Usage
+=============
+
+To use RE mode, install ``pypx`` in RE mode (``pip install 'pypx[re]'``)
+and run ``storescp`` as
+
+.. code-block:: bash
+
+    storescp --fork -od /tmp/data -pm -sp -xcr 'px-recount --xcrdir \"#p\" --xcrfile \"#f\" --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data --cleanup' 11113
+
+RE Mode Recovery
+================
+
+In case of database corruption, wipe the Redis database and ``storescp``'s ``/tmp/data`` directory.
+
 7. Additional support (incomplete)
 **********************************
 
