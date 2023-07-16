@@ -1,8 +1,11 @@
 # Global modules
 import  subprocess, re, collections
 import  asyncio
+from typing import Dict, TypedDict
+
 import  pudb
 import  json
+import  os
 import  sys
 from    datetime            import  datetime
 from    dateutil            import  relativedelta
@@ -20,6 +23,7 @@ from    dask                import  delayed, compute
 from    .base               import Base
 from    .move               import Move
 import  pypx
+import  pypx.re
 from    pypx                import smdb
 from    pypx                import report
 from    pypx                import do
@@ -300,7 +304,13 @@ def parser_setup(str_desc):
         action  = 'store_true',
         default = False
     )
-
+    parser.add_argument(
+        '--reallyEfficient',
+        help    = 'record NumberOfSeriesRelatedInstances to redis',
+        dest    = 'b_reallyEfficient',
+        action  = 'store_true',
+        default = False
+    )
 
     return parser
 
@@ -356,7 +366,7 @@ class Find(Base):
     by the pypx/move operation.
     """
 
-    def __init__(self, arg):
+    def __init__(self, arg: Dict):
         """
         Constructor.
 
@@ -382,6 +392,7 @@ class Find(Base):
                                         )
         self.log            = self.dp.qprint
         self.then           = do.Do(self.arg)
+        self.reallyEfficient = arg.get('b_reallyEfficient', False)
 
     def query(self, opt={}):
         parameters = {
@@ -464,7 +475,6 @@ class Find(Base):
         given used to instantiate this class.
 
         """
-
         # First we execute on a STUDY level to determine all the
         # STUDIES related to this query
         series_uid                  = opt["SeriesInstanceUID"]
@@ -523,10 +533,60 @@ class Find(Base):
                 formattedStudiesResponse['data'][studyIndex]['series']      \
                     = l_seriesResults
                 studyIndex+=1
+
+            if self.reallyEfficient:
+                await self.recordInRedis(filteredStudiesResponse['data'])
+
             if len(self.arg['then']):
                 self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
                 d_then                          = await self.then.run()
                 filteredStudiesResponse['then'] = copy.deepcopy(d_then)
+
             return filteredStudiesResponse
         else:
             return formattedStudiesResponse
+
+    async def recordInRedis(self, data):
+        """
+        Record the value of ``NumberOfSeriesRelatedInstances`` for each series to redis.
+        """
+        seriesInfo = self._extractSeriesRelatedInstances(data)
+        connection = await pypx.re.getRedisClient()
+        async with connection.pipeline(transaction=True) as pipe:
+            for k, v in seriesInfo.items():
+                if (await connection.hget(k, 'fileCounter')) is None:
+                    # TODO we also want to avoid writing to redis when series is already packed
+                    pipe.hset(k, mapping=v)
+            await pipe.execute()
+        await connection.close()
+
+    @classmethod
+    def _extractSeriesRelatedInstances(cls, data) -> Dict[str, pypx.re.ReData]:
+        timestamp = datetime.now().isoformat()
+        all_series = (s for a in data for s in a['series'])
+        return {
+            cls._redisKeyOf(series): cls._createReData(series, timestamp)
+            for series in all_series
+            if cls._seriesHasNumberofSeriesRelatedInstances(series)
+        }
+
+    @staticmethod
+    def _redisKeyOf(s: dict) -> str:
+        return pypx.re.redisKeyOf(s['SeriesInstanceUID']['value'])
+
+    @staticmethod
+    def _seriesHasNumberofSeriesRelatedInstances(s: dict) -> bool:
+        try:
+            num = int(s['NumberOfSeriesRelatedInstances']['value'])
+            return num >= 1
+        except (KeyError, ValueError):
+            return False
+
+    @staticmethod
+    def _createReData(s: dict, date: str) -> pypx.re.ReData:
+        """``ReData`` constructor"""
+        return {
+            'NumberOfSeriesRelatedInstances': s['NumberOfSeriesRelatedInstances']['value'],
+            'fileCounter': 0,
+            'lastUpdate': date
+        }

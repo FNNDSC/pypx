@@ -1,9 +1,5 @@
-import sys
-# Make sure we are running python3.5+
-if 10 * sys.version_info[0]  + sys.version_info[1] < 35:
-    sys.exit("Sorry, only Python 3.5+ is supported.")
-
 from setuptools import setup
+
 
 def readme():
     with open('README.rst') as f:
@@ -11,12 +7,13 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.10.16',
+        version             =   '3.11.0rc1',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
-        url                 =   'http://github.com/fnndsc/pypx',
+        python_requires     =   ">= 3.8",
+        url                 =   'http://github.com/FNNDSC/pypx',
         author              =   'FNNDSC Developers',
-        author_email        =   'dev@babymri.com',
+        author_email        =   'dev@babyMRI.org',
         license             =   'MIT',
         packages            =   ['pypx'],
         install_requires=[
@@ -31,7 +28,7 @@ setup(
             'python-swiftclient',
             'pfstate',
             'webob',
-            'python-chrisclient'
+            'python-chrisclient',
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],
@@ -50,5 +47,12 @@ setup(
             'bin/px-smdb',
             'bin/px-status'
         ],
-        zip_safe            =   False
+        zip_safe            =   False,
+        extras_require={
+            "none": [],
+            "re": [
+                'redis[hiredis]~=4.6',
+                'px-recount==0.1.0'
+            ],
+        },
         )
