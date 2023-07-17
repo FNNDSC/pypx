@@ -126,25 +126,23 @@ fn increment_counter(dcm: &Path) -> anyhow::Result<bool> {
     let is_last = redis::transaction(&mut client, &[&series_key], |con, pipe| {
         let data: ReData = con.hgetall(&series_key)?;
         let new_count = data.fileCounter + 1;
+        pipe.hset(&series_key, "fileCounter", new_count)
+            .ignore()
+            .hset(&series_key, "lastUpdate", now_iso8901())
+            .ignore();
         let status = if new_count == data.NumberOfSeriesRelatedInstances {
             // pipe.del(&series_key).ignore();
             FileStatus::Last
-        } else {
-            pipe.hset(&series_key, "fileCounter", new_count)
-                .ignore()
-                .hset(&series_key, "lastUpdate", now_iso8901())
-                .ignore();
-            if new_count > data.NumberOfSeriesRelatedInstances {
-                let error = format!(
-                    "Received too many files for series. \
+        } else if new_count > data.NumberOfSeriesRelatedInstances {
+            let error = format!(
+                "Received too many files for series. \
                     !!!SOMETHING IS VERY WRONG!!! \
                     key={} {:?}",
-                    &series_key, &data
-                );
-                FileStatus::Exception(error)
-            } else {
-                FileStatus::NotLast
-            }
+                &series_key, &data
+            );
+            FileStatus::Exception(error)
+        } else {
+            FileStatus::NotLast
         };
         pipe.query(con).map(|_: Option<()>| Some(status))
     })
