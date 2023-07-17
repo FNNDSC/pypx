@@ -307,7 +307,7 @@ def parser_setup(str_desc):
     parser.add_argument(
         '--reallyEfficient',
         help    = 'record NumberOfSeriesRelatedInstances to redis',
-        dest    = 'b_reallyEfficient',
+        dest    = 'reallyEfficient',
         action  = 'store_true',
         default = False
     )
@@ -392,7 +392,7 @@ class Find(Base):
                                         )
         self.log            = self.dp.qprint
         self.then           = do.Do(self.arg)
-        self.reallyEfficient = arg.get('b_reallyEfficient', False)
+        self.reallyEfficient = arg.get('reallyEfficient', False)
 
     def query(self, opt={}):
         parameters = {
