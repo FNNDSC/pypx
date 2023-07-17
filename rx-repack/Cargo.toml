@@ -1,0 +1,18 @@
+[package]
+name = "rx-repack"
+description = "Rust re-write of px-repack"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.72"
+clap = { version = "4.3.12", features = ["derive"] }
+dicom = "0.5.4"
+
+# https://github.com/johnthagen/min-sized-rust
+[profile.release]
+strip = "symbols"
+lto = "fat"
+codegen-units = 1
