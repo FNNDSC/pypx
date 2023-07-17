@@ -42,7 +42,7 @@ PURPOSE="
 
 # Which pypx do you want to use? :)
 # export PYPX=fnndsc/pypx
-export PYPX=fnndsc/pypx
+export PYPX=local/pypx
 
 #
 # Manually run a storescp:
@@ -52,11 +52,11 @@ export PYPX=fnndsc/pypx
 #
 # MOST LIKELY YOU WILL NOT NEED TO DO THIS
 #
-storescp    -od /tmp/data                                                   \
-            -pm -sp                                                         \
-            -xcr "/home/rudolphpienaar/src/pypx/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data" \
-            -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \
-            11113
+#storescp    -od /tmp/data                                                   \
+#           -pm -sp                                                         \
+#           -xcr "/home/rudolphpienaar/src/pypx/bin/px-repack --xcrdir #p --xcrfile #f --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data" \
+#          -xcs "/home/rudolphpienaar/src/pypx/bin/px-smdb --xcrdir #p --action endOfStudy" \
+#            11113
 
 # Edit any/all of the following as appropriate to your local env.
 
@@ -64,7 +64,7 @@ storescp    -od /tmp/data                                                   \
 # swift storage environment
 #
 export SWIFTKEY=local
-export SWIFTHOST=10.0.0.230
+export SWIFTHOST=192.168.0.9
 export SWIFTPORT=8080
 export SWIFTLOGIN=chris:chris1234
 export SWIFTSERVICEPACS=orthanc
@@ -73,7 +73,7 @@ export SWIFTSERVICEPACS=orthanc
 # CUBE login details
 #
 export CUBEKEY=local
-export CUBEURL=http://localhost:8000/api/v1/
+export CUBEURL=http://192.168.0.9:8000/api/v1/
 export CUBEusername=chris
 export CUBEuserpasswd=chris1234
 
@@ -91,7 +91,7 @@ export DB=/neuro/users/chris/PACS/log
 #
 export AEC=ORTHANC
 export AET=CHRISLOCAL
-export PACSIP=192.168.1.200
+export PACSIP=192.168.0.9
 export PACSPORT=4242
 
 #

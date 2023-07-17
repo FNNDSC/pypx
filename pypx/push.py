@@ -120,9 +120,9 @@ def parser_setup(str_desc):
         action  = 'store_true',
         default = False)
     parser.add_argument(
-        '--swiftBaseLocation',
+        '--storeBaseLocation',
         action  = 'store',
-        dest    = 'str_swiftBaseLocation',
+        dest    = 'str_storeBaseLocation',
         type    = str,
         default = '',
         help    = 'swift base location to push files')
@@ -244,15 +244,15 @@ class Push(Base):
         d_swiftInfo :   dict    = {}
         d_swiftInfo['status']   = False
         if len(self.arg['swift']):
-            d_swiftInfo = self.smdb.service_keyAccess('swift')
+            d_swiftInfo = self.smdb.service_keyAccess('storage')
             if d_swiftInfo['status']:
-                storageType = d_swiftInfo['swift'][self.arg['swift']]['storagetype']
+                storageType = d_swiftInfo['storage'][self.arg['swift']]['storagetype']
                 if storageType == "swift":
-                    self.arg['str_swiftIP']     = d_swiftInfo['swift'][self.arg['swift']]['ip']
-                    self.arg['str_swiftPort']   = d_swiftInfo['swift'][self.arg['swift']]['port']
-                    self.arg['str_swiftLogin']  = d_swiftInfo['swift'][self.arg['swift']]['login']
+                    self.arg['str_swiftIP']     = d_swiftInfo['storage'][self.arg['swift']]['ip']
+                    self.arg['str_swiftPort']   = d_swiftInfo['storage'][self.arg['swift']]['port']
+                    self.arg['str_swiftLogin']  = d_swiftInfo['storage'][self.arg['swift']]['login']
                 elif storageType == "fs":
-                    self.arg['str_swiftBaseLocation'] = d_swiftInfo['swift'][self.arg['swift']]['storepath']
+                    self.arg['str_storeBaseLocation'] = d_swiftInfo['storage'][self.arg['swift']]['storepath']
         return d_swiftInfo
 
     def __init__(self, arg):
@@ -332,7 +332,7 @@ class Push(Base):
                 'mapLocationOver'   :   self.arg['str_xcrdir']
             }
         }
-        if self.arg['str_swiftBaseLocation']:
+        if self.arg['str_storeBaseLocation']:
             store = fileStorage(self.arg)
         else:
             store               = swiftStorage(self.arg)
@@ -349,7 +349,7 @@ class Push(Base):
             self.smdb.seriesData('push', 'timestamp',   now.strftime("%Y-%m-%d, %H:%M:%S"))
             if len(self.arg['swift']):
                 self.smdb.seriesData('push', 'swift',
-                    self.smdb.service_keyAccess('swift')['swift'][self.arg['swift']])
+                    self.smdb.service_keyAccess('storage')['storage'][self.arg['swift']])
         return d_storeDo
 
     def run(self, opt={}) -> dict:

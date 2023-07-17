@@ -432,7 +432,7 @@ class SMDB():
                                             '../'
                                         )
         self.str_services       : str   = "services"
-        self.str_swiftService   : str   = "swift.json"
+        self.str_swiftService   : str   = "storage.json"
         self.str_CUBEservice    : str   = "cube.json"
         self.str_PACSservice    : str   = "pacs.json"
         self.str_TELEservice    : str   = "telemetry.json"
@@ -1669,7 +1669,7 @@ class SMDB():
         d_update        : dict  = {}
         d_ret['status']         = False
 
-        if astr_service.lower().strip() == 'swift':
+        if astr_service.lower().strip() == 'storage':
             str_service : str   = os.path.join(
                                     self.str_servicesDir,
                                     self.str_swiftService
@@ -1800,8 +1800,8 @@ class SMDB():
             d_run = seriesDirLocation_doget()
         if 'DBtablesGet'                in self.args.str_action:
             d_run = DBtablesGet_do()
-        if 'swift'                      in self.args.str_action:
-            d_run = self.service_keyAccess('swift')
+        if 'storage'                    in self.args.str_action:
+            d_run = self.service_keyAccess('storage')
         if 'CUBE'                       in self.args.str_action:
             d_run = self.service_keyAccess('CUBE')
         if 'PACS'                       in self.args.str_action:

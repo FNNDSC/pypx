@@ -58,8 +58,8 @@ class D(S):
         """
 
         proto = 'https' if arg['str_swiftPort'] == '443' else 'http'
-        if arg['str_swiftBaseLocation']:
-            cont_name = arg['str_swiftBaseLocation']
+        if arg['str_storeBaseLocation']:
+            cont_name = arg['str_storeBaseLocation']
         else:
             cont_name = "users"
         self.state_create(
