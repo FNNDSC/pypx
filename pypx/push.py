@@ -11,7 +11,7 @@ from    os.path             import  isfile, join
 import  sys
 from    datetime            import  date, datetime
 
-from    .pfstorage          import  swiftStorage
+from    .pfstorage          import  swiftStorage, fileStorage
 
 # PYPX modules
 import  pypx.smdb
@@ -246,10 +246,13 @@ class Push(Base):
         if len(self.arg['swift']):
             d_swiftInfo = self.smdb.service_keyAccess('swift')
             if d_swiftInfo['status']:
-                self.arg['str_swiftIP']     = d_swiftInfo['swift'][self.arg['swift']]['ip']
-                self.arg['str_swiftPort']   = d_swiftInfo['swift'][self.arg['swift']]['port']
-                self.arg['str_swiftLogin']  = d_swiftInfo['swift'][self.arg['swift']]['login']
-
+                storageType = d_swiftInfo['swift'][self.arg['swift']]['storagetype']
+                if storageType == "swift":
+                    self.arg['str_swiftIP']     = d_swiftInfo['swift'][self.arg['swift']]['ip']
+                    self.arg['str_swiftPort']   = d_swiftInfo['swift'][self.arg['swift']]['port']
+                    self.arg['str_swiftLogin']  = d_swiftInfo['swift'][self.arg['swift']]['login']
+                elif storageType == "fs":
+                    self.arg['str_swiftBaseLocation'] = d_swiftInfo['swift'][self.arg['swift']]['storepath']
         return d_swiftInfo
 
     def __init__(self, arg):
@@ -329,8 +332,10 @@ class Push(Base):
                 'mapLocationOver'   :   self.arg['str_xcrdir']
             }
         }
-
-        store               = swiftStorage(self.arg)
+        if self.arg['str_swiftBaseLocation']:
+            store = fileStorage(self.arg)
+        else:
+            store               = swiftStorage(self.arg)
         d_storeDo           = store.run(d_do)
 
         # Record in the smdb an entry for each series
@@ -348,7 +353,6 @@ class Push(Base):
         return d_storeDo
 
     def run(self, opt={}) -> dict:
-
         d_push              : dict  = {}
 
         if self.pushToSwift_true():
