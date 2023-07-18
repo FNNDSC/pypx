@@ -432,7 +432,7 @@ class SMDB():
                                             '../'
                                         )
         self.str_services       : str   = "services"
-        self.str_swiftService   : str   = "swift.json"
+        self.str_storageService : str   = "storage.json"
         self.str_CUBEservice    : str   = "cube.json"
         self.str_PACSservice    : str   = "pacs.json"
         self.str_TELEservice    : str   = "telemetry.json"
@@ -1063,7 +1063,7 @@ class SMDB():
            completeness' sake.
         3. Packed files exist, the downstream job was attempted but failed. In
            this case the return count is set to -10. Typically this indicates
-           some issue with the remote swift service.
+           some issue with the remote storage service.
         4. Packed files exist, the downstream job was attempted and succeeded.
            In this case the return count is set to the 'objectCounter.current'
            value or the packed count.
@@ -1606,7 +1606,7 @@ class SMDB():
         instance as a named key. Four services are supported:
 
             * 'PACS'
-            * 'swift'
+            * 'storage'
             * 'CUBE'
             * 'telemetry'
 
@@ -1628,13 +1628,22 @@ class SMDB():
                     }
             }
 
-        For 'swift':
+        For 'storage':
 
             {
                 "<keyname>":  {
-                        "ip":       "<IPofSwiftServer>",
-                        "port":     "<PortOfSwiftServer>",
-                        "login":    "<username>:<passwd>"
+                        "storagetype": "swift"
+                        "ip":          "<IPofSwiftServer>",
+                        "port":        "<PortOfSwiftServer>",
+                        "login":       "<username>:<passwd>"
+                    }
+            }
+
+            --or--
+            {
+                "<keyname>":  {
+                        "storagetype": "fs"
+                        "storepath":   "<VolumeMountPath>",
                     }
             }
 
@@ -1669,10 +1678,10 @@ class SMDB():
         d_update        : dict  = {}
         d_ret['status']         = False
 
-        if astr_service.lower().strip() == 'swift':
+        if astr_service.lower().strip() == 'storage':
             str_service : str   = os.path.join(
                                     self.str_servicesDir,
-                                    self.str_swiftService
+                                    self.str_storageService
                                 )
         if astr_service.lower().strip() == 'cube':
             str_service : str   = os.path.join(
@@ -1787,7 +1796,7 @@ class SMDB():
             'status'    : False
         }
 
-        # pudb.set_trace()
+        #pudb.set_trace()
         if 'mapsUpdateForFile'          in self.args.str_action:
             d_run = self.mapsUpdateForFile_do()
         if 'imageDirsPatientID'         in self.args.str_action:
@@ -1800,8 +1809,8 @@ class SMDB():
             d_run = seriesDirLocation_doget()
         if 'DBtablesGet'                in self.args.str_action:
             d_run = DBtablesGet_do()
-        if 'swift'                      in self.args.str_action:
-            d_run = self.service_keyAccess('swift')
+        if 'storage'                    in self.args.str_action:
+            d_run = self.service_keyAccess('storage')
         if 'CUBE'                       in self.args.str_action:
             d_run = self.service_keyAccess('CUBE')
         if 'PACS'                       in self.args.str_action:

@@ -11,7 +11,7 @@ from    os.path             import  isfile, join
 import  sys
 from    datetime            import  date, datetime
 
-from    .pfstorage          import  swiftStorage
+from    .pfstorage          import  swiftStorage, fileStorage
 
 # PYPX modules
 import  pypx.smdb
@@ -120,9 +120,9 @@ def parser_setup(str_desc):
         action  = 'store_true',
         default = False)
     parser.add_argument(
-        '--swiftBaseLocation',
+        '--storeBaseLocation',
         action  = 'store',
-        dest    = 'str_swiftBaseLocation',
+        dest    = 'str_storeBaseLocation',
         type    = str,
         default = '',
         help    = 'swift base location to push files')
@@ -228,8 +228,9 @@ class Push(Base):
     """
         ``px-push`` is the primary vehicle for transmitting a DICOM file
         to a remote location. The remote location can be either another
-        PACS node (in which case the PACS related args are used), or
-        swift storage (in which the swift related args are used). In the
+        PACS node (in which case the PACS related args are used), a
+        swift storage (in which the swift related args are used), or a
+        file system (in which store base related args are used). In the
         case of swift storage, and if CUBE related args are used, then
         this module will also register the files that have been pushed
         to the CUBE instance.
@@ -244,12 +245,15 @@ class Push(Base):
         d_swiftInfo :   dict    = {}
         d_swiftInfo['status']   = False
         if len(self.arg['swift']):
-            d_swiftInfo = self.smdb.service_keyAccess('swift')
+            d_swiftInfo = self.smdb.service_keyAccess('storage')
             if d_swiftInfo['status']:
-                self.arg['str_swiftIP']     = d_swiftInfo['swift'][self.arg['swift']]['ip']
-                self.arg['str_swiftPort']   = d_swiftInfo['swift'][self.arg['swift']]['port']
-                self.arg['str_swiftLogin']  = d_swiftInfo['swift'][self.arg['swift']]['login']
-
+                storageType = d_swiftInfo['storage'][self.arg['swift']]['storagetype']
+                if storageType == "swift":
+                    self.arg['str_swiftIP']     = d_swiftInfo['storage'][self.arg['swift']]['ip']
+                    self.arg['str_swiftPort']   = d_swiftInfo['storage'][self.arg['swift']]['port']
+                    self.arg['str_swiftLogin']  = d_swiftInfo['storage'][self.arg['swift']]['login']
+                elif storageType == "fs":
+                    self.arg['str_storeBaseLocation'] = d_swiftInfo['storage'][self.arg['swift']]['storepath']
         return d_swiftInfo
 
     def __init__(self, arg):
@@ -329,8 +333,10 @@ class Push(Base):
                 'mapLocationOver'   :   self.arg['str_xcrdir']
             }
         }
-
-        store               = swiftStorage(self.arg)
+        if self.arg['str_storeBaseLocation']:
+            store = fileStorage(self.arg)
+        else:
+            store               = swiftStorage(self.arg)
         d_storeDo           = store.run(d_do)
 
         # Record in the smdb an entry for each series
@@ -344,11 +350,10 @@ class Push(Base):
             self.smdb.seriesData('push', 'timestamp',   now.strftime("%Y-%m-%d, %H:%M:%S"))
             if len(self.arg['swift']):
                 self.smdb.seriesData('push', 'swift',
-                    self.smdb.service_keyAccess('swift')['swift'][self.arg['swift']])
+                    self.smdb.service_keyAccess('storage')['storage'][self.arg['swift']])
         return d_storeDo
 
     def run(self, opt={}) -> dict:
-
         d_push              : dict  = {}
 
         if self.pushToSwift_true():
