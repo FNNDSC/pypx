@@ -228,8 +228,9 @@ class Push(Base):
     """
         ``px-push`` is the primary vehicle for transmitting a DICOM file
         to a remote location. The remote location can be either another
-        PACS node (in which case the PACS related args are used), or
-        swift storage (in which the swift related args are used). In the
+        PACS node (in which case the PACS related args are used), a
+        swift storage (in which the swift related args are used), or a
+        file system (in which store base related args are used). In the
         case of swift storage, and if CUBE related args are used, then
         this module will also register the files that have been pushed
         to the CUBE instance.
