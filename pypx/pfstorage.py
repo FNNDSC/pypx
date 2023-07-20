@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.5
 
 import  abc
+import glob
 
 import  sys
 from    io              import  BytesIO as IO
@@ -1019,7 +1020,7 @@ class fileStorage(PfStorage):
     def ls(self, *args, **kwargs):
         pass
 
-    def ls_process(self, *args, **kwargs):
+    def ls_process(self, *args, **kwargs) -> dict:
         pass
 
     def objExists(self, *args, **kwargs):

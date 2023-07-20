@@ -60,6 +60,8 @@ export PYPX=local/pypx
 
 # Edit any/all of the following as appropriate to your local env.
 
+# storage type 
+export STORAGETYPE=swift
 #
 # swift storage environment
 #
@@ -170,10 +172,11 @@ docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT -v $LOCALDICOMDIR:$LOCALDICOMDIR  \
 # Set the swift login info in a key-ref'd service
 px-smdb                                                                        \
                 --logdir $DB                                                   \
-                --action swift                                                 \
+                --action storage                                                 \
                 --actionArgs '
 {
         "'$SWIFTKEY'": {
+                        "storagetype": "'$STORAGETYPE'",
                         "ip": "'$SWIFTHOST'",
                         "port":"'$SWIFTPORT'",
                         "login":"'$SWIFTLOGIN'"
@@ -185,9 +188,9 @@ px-smdb                                                                        \
 docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 --px-smdb                                                                      \
                 --logdir $DB                                                   \
-                --action swift                                                 \
+                --action storage                                                 \
                 --actionArgs                                                   \
-'{\"'$SWIFTKEY'\":{\"ip\":\"'$SWIFTHOST'\",\"port\":\"'$SWIFTPORT'\",\"login\":\"'$SWIFTLOGIN'\"}}'
+'{\"'$SWIFTKEY'\":{\"storagetype\":\"'$STORAGETYPE'\",\"ip\":\"'$SWIFTHOST'\",\"port\":\"'$SWIFTPORT'\",\"login\":\"'$SWIFTLOGIN'\"}}'
 
 # Get the swift login details for all keys
 # This examines the service file, swift.json, located in
@@ -199,7 +202,7 @@ px-smdb                                                                        \
 docker run --rm -ti -v $BASEMOUNT:$BASEMOUNT $PYPX                             \
 --px-smdb                                                                      \
                 --logdir $DB                                                   \
-                --action swift
+                --action storage
 
 # Query smdb for all image dirs on a patient
 px-smdb                                                                        \

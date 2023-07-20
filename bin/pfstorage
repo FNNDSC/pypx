@@ -10,14 +10,14 @@
 import sys, os, pudb, socket, json
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '..'))
 
-from    pypx                import PfStorage, swiftStorage, swiftStore
+from    pypx                import swiftStore
 from    argparse            import RawTextHelpFormatter
 from    argparse            import ArgumentParser
 from    pfmisc._colors      import Colors
 
 
 str_name    = "pfstorage"
-str_version = "3.2.6"
+str_version = "3.2.7"
 str_desc    = Colors.CYAN + """
 
                  __       _
@@ -210,6 +210,14 @@ def synopsis(ab_shortOnly = False):
         return shortSynopsis + description
 
 parser  = ArgumentParser(description = str_desc, formatter_class = RawTextHelpFormatter)
+
+parser.add_argument(
+    '--storeBaseLocation',
+    action  = 'store',
+    dest    = 'str_storeBaseLocation',
+    type    = str,
+    default = '',
+    help    = 'Base location where a File system is mounted')
 
 parser.add_argument(
     '--swiftIP',

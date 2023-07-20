@@ -7,7 +7,7 @@ from .status    import Status
 from .do        import Do
 from .push      import Push
 from .register  import Register
-from .pfstorage import PfStorage, swiftStorage
+from .pfstorage import swiftStorage, fileStorage
 
 def echo(opt={}):
     return Echo(opt).run()
@@ -37,4 +37,7 @@ def register(opt={}):
     return Register(opt).run(opt)
 
 def swiftStore(opt={}):
-    return swiftStorage(opt).run(opt)
+    if opt.get("str_storeBaseLocation"):
+        return fileStorage(opt).run(opt)
+    else :
+        return swiftStorage(opt).run(opt)
