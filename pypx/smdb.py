@@ -1025,7 +1025,6 @@ class SMDB():
         recorded -- this does not return the count of files in the
         packed location.
         """
-        # TODO get from redis
         l_files             : list  = []
         str_processedDir    : str   = os.path.join( self.args.str_logDir,
                                                     self.str_seriesData,

@@ -261,40 +261,6 @@ are in the source code repo root, and assuming you want to debug `px-push`:
                 --verbosity 1                                                  \
                 --json
 
-6. "Really Efficient" Mode
-**************************
-
-    Really Efficient using px-REcount to call px-REpack with the help of REdis.
-
-Typically, a `px-repack` process is called per received DICOM file.
-
-``px-find --reallyEfficient --then receive`` does one `px-repack`
-per series (i.e. one directory of DICOM files). This dramatically
-improves performance See benchmarks_.
-
-"Really efficient" (RE) mode requires a redis server.
-In RE mode, ``px-find`` records the number of DICOM files per series (``NumberOfSeriesRelatedInstances``) to redis.
-``storescp`` is configured to run ``px-recount`` on each instance instead of ``px-repack``.
-``px-recount`` does nothing until the entire series is received.
-Finally, ``px-recount`` calls ``px-repack`` once on the entire series.
-
-``px-recount`` is implemented in Rust to reduce its footprint when being
-called once per instance.
-
-RE Mode Usage
-=============
-
-To use RE mode, install ``pypx`` in RE mode (``pip install 'pypx[re]'``)
-and run ``storescp`` as
-
-.. code-block:: bash
-
-    storescp --fork -od /tmp/data -pm -sp -xcr 'px-recount --xcrdir \"#p\" --xcrfile \"#f\" --verbosity 0 --logdir /home/dicom/log --datadir /home/dicom/data --cleanup' 11113
-
-RE Mode Recovery
-================
-
-In case of database corruption, wipe the Redis database and ``storescp``'s ``/tmp/data`` directory.
 
 7. Additional support (incomplete)
 **********************************

@@ -105,7 +105,6 @@ def synopsis(ab_shortOnly = False):
                 [--intraSeriesRetrieveDelay <seconds>]              \\
                 [--json]                                            \\
                 [--waitForUserTerminate]                            \\
-                [--reallyEfficient]                                 \\
                 [-x|--desc]                                         \\
                 [-y|--synopsis]                                     \\
                 [--version]                                         \\
@@ -297,11 +296,6 @@ def synopsis(ab_shortOnly = False):
         runs the container in interactive tty mode, allowing for user tty
         input to be correctly interpreted.
         
-        [--reallyEfficient]
-        When NumberOfSeriesRelatedInstances is queried for a series, store the
-        value in a redis database. The redis database's connection URL is set
-        by the environment variable PYPX_REDIS_URL.
-
         [-x|--desc]
         Provide an overview help page.
 

@@ -304,13 +304,6 @@ def parser_setup(str_desc):
         action  = 'store_true',
         default = False
     )
-    parser.add_argument(
-        '--reallyEfficient',
-        help    = 'record NumberOfSeriesRelatedInstances to redis',
-        dest    = 'reallyEfficient',
-        action  = 'store_true',
-        default = False
-    )
 
     return parser
 
@@ -392,7 +385,6 @@ class Find(Base):
                                         )
         self.log            = self.dp.qprint
         self.then           = do.Do(self.arg)
-        self.reallyEfficient = arg.get('reallyEfficient', False)
 
     def query(self, opt={}):
         parameters = {
@@ -534,9 +526,6 @@ class Find(Base):
                     = l_seriesResults
                 studyIndex+=1
 
-            if self.reallyEfficient:
-                await self.recordInRedis(filteredStudiesResponse['data'])
-
             if len(self.arg['then']):
                 self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
                 d_then                          = await self.then.run()
@@ -545,48 +534,3 @@ class Find(Base):
             return filteredStudiesResponse
         else:
             return formattedStudiesResponse
-
-    async def recordInRedis(self, data):
-        """
-        Record the value of ``NumberOfSeriesRelatedInstances`` for each series to redis.
-        """
-        seriesInfo = self._extractSeriesRelatedInstances(data)
-        connection = await pypx.re.getRedisClient()
-        async with connection.pipeline(transaction=True) as pipe:
-            for k, v in seriesInfo.items():
-                if (await connection.hget(k, 'fileCounter')) is None:
-                    # TODO we also want to avoid writing to redis when series is already packed
-                    pipe.hset(k, mapping=v)
-            await pipe.execute()
-        await connection.close()
-
-    @classmethod
-    def _extractSeriesRelatedInstances(cls, data) -> Dict[str, pypx.re.ReData]:
-        timestamp = datetime.now().isoformat()
-        all_series = (s for a in data for s in a['series'])
-        return {
-            cls._redisKeyOf(series): cls._createReData(series, timestamp)
-            for series in all_series
-            if cls._seriesHasNumberofSeriesRelatedInstances(series)
-        }
-
-    @staticmethod
-    def _redisKeyOf(s: dict) -> str:
-        return pypx.re.redisKeyOf(s['SeriesInstanceUID']['value'])
-
-    @staticmethod
-    def _seriesHasNumberofSeriesRelatedInstances(s: dict) -> bool:
-        try:
-            num = int(s['NumberOfSeriesRelatedInstances']['value'])
-            return num >= 1
-        except (KeyError, ValueError):
-            return False
-
-    @staticmethod
-    def _createReData(s: dict, date: str) -> pypx.re.ReData:
-        """``ReData`` constructor"""
-        return {
-            'NumberOfSeriesRelatedInstances': s['NumberOfSeriesRelatedInstances']['value'],
-            'fileCounter': 0,
-            'lastUpdate': date
-        }
