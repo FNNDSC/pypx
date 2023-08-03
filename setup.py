@@ -48,11 +48,4 @@ setup(
             'bin/px-status'
         ],
         zip_safe            =   False,
-        extras_require={
-            "none": [],
-            "re": [
-                'redis[hiredis]~=4.6',
-                'px-recount==3.11.0-rc3'
-            ],
-        },
         )
