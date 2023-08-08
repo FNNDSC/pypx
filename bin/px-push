@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-push"
-str_version = "3.2.6"
+str_version = "3.2.8"
 str_desc    = Colors.CYAN + """
 
                                                      _
@@ -272,6 +272,7 @@ if len(args.JSONargString):
 
 if args.desc or args.synopsis:
     print(str_desc)
+    str_help:str    = ""
     if args.desc:
         str_help     = synopsis(False)
     if args.synopsis:

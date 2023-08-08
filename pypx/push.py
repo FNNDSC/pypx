@@ -183,7 +183,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_seriesDirTemplate',
         type    = str,
-        default = '%_pad|5,0_SeriesNumber-%SeriesDescription',
+        default = '%_pad|5,0_SeriesNumber.%_md5|5_SeriesInstanceUID-%SeriesDescription',
         help    = 'Template pattern for series unpack directory'
         )
     parser.add_argument(
