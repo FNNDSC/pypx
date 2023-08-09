@@ -23,7 +23,6 @@ from    dask                import  delayed, compute
 from    .base               import Base
 from    .move               import Move
 import  pypx
-import  pypx.re
 from    pypx                import smdb
 from    pypx                import report
 from    pypx                import do
