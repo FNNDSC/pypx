@@ -19,7 +19,7 @@ setup(
         install_requires=[
             'pudb',
             'terminaltables',
-            'py-dateutil',
+            'python-dateutil',
             'pydicom',
             'pfmisc',
             'dask',
