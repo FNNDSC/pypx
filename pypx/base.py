@@ -135,16 +135,19 @@ class Base():
                 opt[k]  = v
 
         if b_commandGen:
-            str_cmd         = f_commandGen(opt)
+            str_cmd         = f_commandGen(opt) + ' | strings '
             self.dp.qprint("\n%s" % str_cmd, level = 5, type = 'status')
             raw_response    = await asyncio.create_subprocess_shell(
                                 str_cmd,
                                 stdout=asyncio.subprocess.PIPE,
-                                stderr=asyncio.subprocess.STDOUT
+                                stderr=asyncio.subprocess.PIPE
                             )
-            await raw_response.wait()
 
             stdout, stderr = await raw_response.communicate()
+
+            # if only stderr and not stdout, then equate the two...
+            if not stdout and stderr:
+                stdout      = stderr
 
             d_ret   = self.__formatResponseHelper(
                 stdout, str_cmd, raw_response.returncode
@@ -257,3 +260,4 @@ class Base():
             response['data']    = self.parseResponse(std)
 
         return response
+
