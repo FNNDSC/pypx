@@ -34,7 +34,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-find"
-str_version = "3.4.4"
+str_version = "3.4.6"
 str_desc    = Colors.CYAN + """
 
                                    __  _             _ 
@@ -85,6 +85,8 @@ def synopsis(ab_shortOnly = False):
                 [--serverPort <PACSserverPort>]                     \\
                 [--findscu <findscuAbsolutePath>]                   \\
                 [--movescu <movescuAbsolutePath>]                   \\
+                [--StudyOnly]                                       \\
+                [--QueryReturnTags <queryList>]                     \\
                 [--PatientID <MRN>]                                 \\
                 [--PatientName <ExactPatientName>]                  \\
                 [--PatientSex <M_or_F>]                             \\
@@ -189,6 +191,15 @@ def synopsis(ab_shortOnly = False):
 
         [--executable <findscuAbsolutePath>]
         The absolute location of the 'findscu' executable.
+
+        [--StudyOnly]
+        If specified, only perform a study level query. This is useful for
+        cases where series information is not necessary and a quick bulk
+        search is needed. A typical example might be to find all studies
+        performed on a given date.
+
+        [--QueryReturnTags <taglist>]
+        If specified, a comma separated list of tags to return on a query.
 
         [--AccessionNumber <AccessionNumber>]
         The AccessionNumber to Q/R.
@@ -295,7 +306,7 @@ def synopsis(ab_shortOnly = False):
         specify a '-D' for debugging in conjunction with this flag. The '-D'
         runs the container in interactive tty mode, allowing for user tty
         input to be correctly interpreted.
-        
+
         [-x|--desc]
         Provide an overview help page.
 
@@ -474,7 +485,7 @@ d_args  : dict  = vars(args)
 
 # Return the JSON result as a serialized string:
 d_output = asyncio.run(pypx.find(d_args))
-
+#pudb.set_trace()
 if args.verbosity:
     if args.json:
         try:
