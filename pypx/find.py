@@ -124,6 +124,19 @@ def parser_setup(str_desc):
 
     # Query settings
     parser.add_argument(
+        '--StudyOnly',
+        action  = 'store_true',
+        dest    = 'StudyOnly',
+        default = False,
+        help    = 'If specified, perform a query at the STUDY level only')
+    parser.add_argument(
+        '--QueryReturnTags',
+        action  = 'store',
+        dest    = 'QueryReturnTags',
+        type    = str,
+        default = '',
+        help    = 'A comma separated list of query return tags')
+    parser.add_argument(
         '--AccessionNumber',
         action  = 'store',
         dest    = 'AccessionNumber',
@@ -385,7 +398,15 @@ class Find(Base):
         self.log            = self.dp.qprint
         self.then           = do.Do(self.arg)
 
+    def queryCustom_create(self) -> dict:
+        parameters:dict     = {}
+        if self.arg['QueryReturnTags']:
+            parameters = {k: '' for k in self.arg['QueryReturnTags'].split(',')}
+            parameters['QueryRetrieveLevel']    = 'SERIES'
+        return parameters
+
     def query(self, opt={}):
+        custom:dict = {}
         parameters = {
             'AccessionNumber':                  '',
             'PatientID':                        '',
@@ -413,7 +434,7 @@ class Find(Base):
             'AcquisitionProtocolDescription':   '',
             'AcquisitionProtocolName':          '',
             'QueryRetrieveLevel':               'SERIES'
-        }
+        } if not (custom := self.queryCustom_create()) else custom
 
         query = ''
         # we use a sorted dictionary so we can test generated command
@@ -477,8 +498,8 @@ class Find(Base):
                         'QueryRetrieveLevel':   'STUDY'
                     }
             )
-
-        if formattedStudiesResponse['status']  != 'error':
+        # pudb.set_trace()
+        if formattedStudiesResponse['status']  != 'error' and not self.arg['StudyOnly']:
             filteredStudiesResponse             = {}
             filteredStudiesResponse['status']   = formattedStudiesResponse['status']
             filteredStudiesResponse['command']  = formattedStudiesResponse['command']

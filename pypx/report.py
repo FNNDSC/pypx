@@ -26,7 +26,7 @@ class Report(Base):
     px scripts and generates/prints reports.
     """
 
-    def reportTempate_construct(self, arg):
+    def reportTemplate_construct(self, arg):
         """
         Construct the report based on either the internal
         default template, or a parsing of user specified
@@ -81,6 +81,15 @@ class Report(Base):
                             self.d_reportTags[v[0]][v[1]] = \
                                 self.arg[k].split(',')
 
+    def header_studySanitize(self):
+        self.d_reportTags['header']['study'] = [
+                k for k in self.d_reportTags['header']['study']
+                if k in self.arg['reportData']['command']
+        ]
+        if 'Modality' not in self.arg['reportData']['command'] or \
+            'QueryRetrieveLevel=STUDY' in self.arg['reportData']['command']:
+            self.d_reportTags['header']['series'] = []
+
     def __init__(self, arg):
         """
         Constructor.
@@ -105,7 +114,9 @@ class Report(Base):
         self.d_report       : dict  = {}
 
         super(Report, self).__init__(arg)
-        self.reportTempate_construct(arg)
+        # pudb.set_trace()
+        self.reportTemplate_construct(arg)
+        self.header_studySanitize()
         self.dp             = pfmisc.debug(
                                         verbosity   = self.verbosity,
                                         within      = 'Find',
@@ -150,7 +161,7 @@ class Report(Base):
             try:
                 str_value   = d_DICOMfields[str_DICOMtag]['value']
             except:
-                if str_DICOMtag == 'PatientAge':
+                if str_DICOMtag == 'PatientAge' and 'PatientBirthDate' in d_DICOMfields:
                     """
                     Sometimes the PatientAge is not returned
                     in the call to PACS. In this case, calculate
@@ -265,8 +276,9 @@ class Report(Base):
                 if k == 'study':
                     analyze = study
                 if k == 'series':
-                    if len(study['series']):
-                        analyze = study['series'][0]
+                    if 'series' in study:
+                        if len(study['series']):
+                            analyze = study['series'][0]
                 l_tags  = self.d_reportTags['header'][k]
                 l_headerTable, str_reportHeader, d_headerContents = \
                     block_build(analyze, l_tags, l_headerTable, str_reportHeader, d_headerContents)
@@ -290,20 +302,21 @@ class Report(Base):
             str_reportSUID      = ""
             str_reportBody      = ""
             d_bodyFields        = self.d_reportTags['body']
+            dl_bodyContents     = []
+            dl_seriesUID        = []
+            tb_bodyInstance     = SingleTable([])
             nonlocal            seriesCount
             for k in d_bodyFields.keys():
                 l_bodyTable     = []
                 l_suidTable     = []
                 d_bodyContents  = {}
                 d_seriesUID     = {}
-                dl_bodyContents = []
-                dl_seriesUID    = []
                 l_seriesUIDtag  = [
                                     'SeriesInstanceUID',
                                     'SeriesNumber',
                                     'NumberOfSeriesRelatedInstances'
                                 ]
-                if k == 'series':
+                if k == 'series' and 'series' in study:
                     l_series    = study['series']
                     # if len(self.arg['reportBodySeriesTags']):
                     #     l_tags  = self.arg['reportBodySeriesTags'].split()
