@@ -396,6 +396,13 @@ class Report(Base):
                 "json":     l_jsonHits
         }
 
+
+    def queryRetrieveLevel_isStudy(self) -> bool:
+        ret:bool    = False
+        if self.arg['reportData']:
+            ret = True if 'STUDY' in self.arg['reportData']['command'] else False
+        return ret
+
     def toCSV(self, **kwargs):
         """
         Generate a csv version of the report, suitable for consumption
@@ -457,6 +464,7 @@ class Report(Base):
             l_paddedV   :   list    = []
             b_status                = False
 
+            #pudb.set_trace()
             if self.arg['csvPrettify']:
                 b_status            = True
                 self.arg['csvSeparator']    = '│'
@@ -467,7 +475,7 @@ class Report(Base):
                                                     for k in ld_seriesDesc], tag)
                         for i in range(0, len(ld_seriesDesc)):
                             ld_seriesDesc[i][tag]   = l_padded[i]
-                else:
+                elif 'SeriesDescription' in ld_seriesDesc:
                     # Pad the SeriesDescription/UID
                     l_padded, width     = padListToMax([k['SeriesDescription']  \
                                                 for k in ld_seriesDesc], 'SeriesDescription')
@@ -543,7 +551,7 @@ class Report(Base):
                         self.arg['csvSeparator']
                     )
                 str_bodyLabels  = str_bodyLabels[:-1]
-            else:
+            elif not self.queryRetrieveLevel_isStudy():
                 str_bodyLabels   = '%s%s%s' % (
                     'SeriesDescription'.center(len(ld_seriesDesc[0]['SeriesDescription'])),
                     self.arg['csvSeparator'],
@@ -575,7 +583,6 @@ class Report(Base):
         str_tableTop    :   str     = ''
         str_tableMiddle :   str     = ''
         str_tableBottom :   str     = ''
-
         for d_study in self.d_report['json']:
             d_header            = d_study['header']
             ld_seriesDesc       = d_study['body']
@@ -610,6 +617,8 @@ class Report(Base):
                 str_csvReport   +=  str_headerVals                          +\
                                     self.arg['csvSeparator']                +\
                                     str_seriesVals                          +'\n'
+            if self.queryRetrieveLevel_isStudy():
+                str_csvReport  +=   str_headerVals + self.arg['csvSeparator'] + '\n'
             str_csvReport       =  str_csvReport[:-1] + '\n'
             if b_prettifyDo: str_csvReport += str_tableBottom
         return str_csvReport
