@@ -29,7 +29,7 @@ str_defIP   = [l for l in (
                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
 
 str_name    = "px-report"
-str_version = "3.2.32"
+str_version = "3.2.34"
 str_desc    = Colors.CYAN + """
                                                               _
                                                              | |
@@ -342,8 +342,8 @@ parser.add_argument(
     default = False
 )
 
-args        = parser.parse_args()
-
+args            = parser.parse_args()
+exitCode:int    = 0
 if args.desc or args.synopsis:
     print(str_desc)
     if args.desc:
