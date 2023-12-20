@@ -400,9 +400,10 @@ class Find(Base):
 
     def queryCustom_create(self) -> dict:
         parameters:dict     = {}
-        if self.arg['QueryReturnTags']:
-            parameters = {k: '' for k in self.arg['QueryReturnTags'].split(',')}
-            parameters['QueryRetrieveLevel']    = 'SERIES'
+        if 'QueryReturnTags' in self.arg:
+            if self.arg['QueryReturnTags']:
+                parameters = {k: '' for k in self.arg['QueryReturnTags'].split(',')}
+                parameters['QueryRetrieveLevel']    = 'SERIES'
         return parameters
 
     def query(self, opt={}):
