@@ -404,6 +404,8 @@ class Find(Base):
             if self.arg['QueryReturnTags']:
                 parameters = {k: '' for k in self.arg['QueryReturnTags'].split(',')}
                 parameters['QueryRetrieveLevel']    = 'SERIES'
+        if 'StudyOnly' not in self.arg:
+            self.arg['StudyOnly']   = False
         return parameters
 
     def query(self, opt={}):
