@@ -51,6 +51,9 @@ import  fcntl
 import  time
 import  pudb
 
+from    pathlib         import Path
+
+
 def parser_setup(str_desc):
     parser = ArgumentParser(
                 description         = str_desc,
@@ -740,8 +743,11 @@ class SMDB():
 
         """
 
-        # @retry(Exception, delay = 1, backoff = 2, max_delay = 4, tries = 10)
-        def seriesData_write(str_filename, d_obj):
+        @retry(Exception, delay = 1, backoff = 2, max_delay = 4, tries = 10)
+        def seriesData_safeWrite(str_filename, d_obj) -> dict:
+            return seriesData_write(str_filename, d_obj)
+
+        def seriesData_write(str_filename, d_obj) -> dict:
             """
             Multiprocess safe write
             """
@@ -749,17 +755,20 @@ class SMDB():
                 'status'    : True,
                 'error'     : ""
             }
+
             try:
+                # Create a lock file. If this already exists, the touch()
+                # will raise an exception.
+                lockFile:Path   = Path(str_filename).with_suffix('.lock')
+                lockFile.touch(exist_ok = False)
                 with open(str_filename, 'w') as fj:
-                    # Lock it!
-                    fcntl.flock(fj, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    # Edit it!
                     self.json_write(d_obj, fj)
-                    # Unlock it!
-                    fcntl.flock(fj, fcntl.LOCK_UN)
-            except Exception as e:
+                    # Now that we've written the data, remove the lock!
+                    lockFile.unlink()
+            except FileExistsError as e:
                 d_ret['status']     = False
                 d_ret['error']      = "Possible multiprocess write failure."
+                raise
             return d_ret
 
         b_status        : bool          = False
@@ -815,7 +824,7 @@ class SMDB():
                 if b_canWrite:
                     d_meta[str_field]       = value
                     str_fileName            = d_seriesTable[str_tableName]['name']
-                    d_write                 = seriesData_write(str_fileName, d_meta)
+                    d_write                 = seriesData_safeWrite(str_fileName, d_meta)
                     b_status                = d_write['status']
                     if d_write['status']:
                         d_ret               = value
