@@ -204,10 +204,10 @@ def parser_interpret(parser, *args):
     *args is empty
     """
     if len(args):
-        args    = parser.parse_args(*args)
+        args,extras    = parser.parse_known_args(*args)
     else:
-        args    = parser.parse_args(sys.argv[1:])
-    return args
+        args,extras    = parser.parse_known_args(sys.argv[1:])
+    return args, extras
 
 def parser_JSONinterpret(parser, d_JSONargs):
     """

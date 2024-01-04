@@ -400,7 +400,7 @@ class Do(Base):
             d_then                  : dict  = {}
             d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
             pushParser                      = pushParser_setup("Push Parser")
-            d_pushArgs                      = pushParser_JSONinterpret(pushParser, d_pushArgsCLI)
+            d_pushArgs, extras              = pushParser_JSONinterpret(pushParser, d_pushArgsCLI)
             d_pushArgs.str_xcrdir           = d_seriesDir[str_seriesInstanceUID]
             d_then      = pypx.push(
                             vars(d_pushArgs),

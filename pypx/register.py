@@ -50,11 +50,8 @@ from    pypx.push           import parser_interpret     as push_parser_interpret
 argv_orig = sys.argv
 # To exclude help and exit while building push parser
 sys.argv = [a for a in sys.argv if (a!='-h' and a!='--help')]
-# The push parser will complain about any parameter we pass that it doesn't recognize.
-# In order to be safe, we simply pass a `--json` param which doesn't alter any functionality
-sys.argv = ["anytext", "--json"]
 push_parser = push_parser_setup("push_args")
-push_args = push_parser_interpret(push_parser)
+push_args,extras = push_parser_interpret(push_parser)
 sys.argv = argv_orig
 
 def parser_setup(str_desc):

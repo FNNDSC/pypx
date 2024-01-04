@@ -287,10 +287,12 @@ if len(args.JSONargString):
 
 
 if args.b_desc or args.b_synopsis:
+    print(str_desc)
     if args.b_desc:
         str_help     = synopsis(False)
     if args.b_synopsis:
         str_help     = synopsis(True)
+    print(str_help)
     sys.exit(1)
 
 if args.b_version:
@@ -300,7 +302,6 @@ if args.b_version:
 if len(args.upstreamFile):
     with open(args.upstreamFile, 'r') as f:
         args.upstream = json.load(f)
-print(args)
 d_handler   = register(args)
 
 if args.verbosity:
