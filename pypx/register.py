@@ -9,6 +9,7 @@ from    argparse            import  Namespace
 
 # Global modules
 import  os
+os.environ['XDG_CONFIG_HOME'] = '/tmp'
 from    os                  import  listdir
 from    os.path             import  isfile, join
 import  sys
@@ -42,12 +43,26 @@ import  pfmisc
 
 from    argparse            import  Namespace, ArgumentParser
 from    argparse            import  RawTextHelpFormatter
+from    pypx.push           import parser_setup         as push_parser_setup
+from    pypx.push           import parser_interpret     as push_parser_interpret
+
+
+argv_orig = sys.argv
+# To exclude help and exit while building push parser
+sys.argv = [a for a in sys.argv if (a!='-h' and a!='--help')]
+# The push parser will complain about any parameter we pass that it doesn't recognize.
+# In order to be safe, we simply pass a `--json` param which doesn't alter any functionality
+sys.argv = ["anytext", "--json"]
+push_parser = push_parser_setup("push_args")
+push_args = push_parser_interpret(push_parser)
+sys.argv = argv_orig
 
 def parser_setup(str_desc):
     parser = ArgumentParser(
                 description         = str_desc,
                 formatter_class     = RawTextHelpFormatter
             )
+
 
     # JSONarg
     parser.add_argument(
@@ -233,7 +248,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_rootDirTemplate',
         type    = str,
-        default = '%PatientID-%PatientName-%PatientBirthDate',
+        default = push_args.str_rootDirTemplate,
         help    = 'Template pattern for root unpack directory'
         )
     parser.add_argument(
@@ -241,7 +256,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_studyDirTemplate',
         type    = str,
-        default = '%StudyDescription-%AccessionNumber-%StudyDate-%PatientAge-%AgeInDays',
+        default = push_args.str_studyDirTemplate,
         help    = 'Template pattern for study unpack directory'
         )
     parser.add_argument(
@@ -249,7 +264,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_seriesDirTemplate',
         type    = str,
-        default = '%_pad|5,0_SeriesNumber-%SeriesDescription',
+        default =  push_args.str_seriesDirTemplate,
         help    = 'Template pattern for series unpack directory'
         )
     parser.add_argument(
@@ -257,7 +272,7 @@ def parser_setup(str_desc):
         action  = 'store',
         dest    = 'str_imageTemplate',
         type    = str,
-        default = '%_pad|4,0_InstanceNumber-%SOPInstanceUID.dcm',
+        default = push_args.str_imageTemplate,
         help    = 'Template pattern for image file'
         )
 

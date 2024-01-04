@@ -28,7 +28,7 @@ setup(
             'python-swiftclient',
             'pfstate',
             'webob',
-            'python-chrisclient',
+            'python-chrisclient==2.9.1',
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],

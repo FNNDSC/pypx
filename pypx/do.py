@@ -29,7 +29,6 @@ from    pypx.push           import parser_JSONinterpret as pushParser_JSONinterp
 from    pypx.register       import parser_setup         as registerParser_setup
 from    pypx.register       import parser_JSONinterpret as registerParser_JSONinterpret
 
-
 def parser_setup(str_desc):
     parser = ArgumentParser(
                 description         = str_desc,
@@ -425,7 +424,7 @@ class Do(Base):
             d_then                  : dict  = {}
             d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
             registerParser                  = registerParser_setup("Register Parser")
-            d_registerArgs                  = pushParser_JSONinterpret(registerParser, d_registerArgsCLI)
+            d_registerArgs                  = registerParser_JSONinterpret(registerParser, d_registerArgsCLI)
             d_registerArgs.str_xcrdir       = d_seriesDir[str_seriesInstanceUID]
             d_then      = pypx.register(
                             d_registerArgs,
