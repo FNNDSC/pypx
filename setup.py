@@ -7,7 +7,7 @@ def readme():
 
 setup(
         name                =   'pypx',
-        version             =   '3.11.18',
+        version             =   '3.11.20',
         description         =   'PACS/ChRIS core tools and utils',
         long_description    =   readme(),
         python_requires     =   ">= 3.8",
@@ -28,7 +28,7 @@ setup(
             'python-swiftclient',
             'pfstate',
             'webob',
-            'python-chrisclient',
+            'python-chrisclient==2.9.1',
         ],
         test_suite          =   'nose.collector',
         tests_require       =   ['nose'],

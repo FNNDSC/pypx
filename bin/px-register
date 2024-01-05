@@ -21,13 +21,11 @@ from        pypx                import register
 
 import      json
 from        pypx.register       import parser_setup, parser_interpret, parser_JSONinterpret
-
-
 import      pudb
 from        pudb.remote         import set_trace
 
 str_name    = "px-register"
-str_version = "3.4.0"
+str_version = "3.4.2"
 str_desc    = Colors.CYAN + """
 
 
@@ -274,7 +272,7 @@ def synopsis(ab_shortOnly = False):
     else:
         return shortSynopsis + description
 
-
+# pudb.set_trace()
 parser      = parser_setup(str_desc)
 args        = parser_interpret(parser)
 if len(args.JSONargString):
@@ -300,12 +298,10 @@ if args.b_desc or args.b_synopsis:
 if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
-
 # pudb.set_trace()
 if len(args.upstreamFile):
     with open(args.upstreamFile, 'r') as f:
         args.upstream = json.load(f)
-
 d_handler   = register(args)
 
 if args.verbosity:
