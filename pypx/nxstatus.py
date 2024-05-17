@@ -122,6 +122,8 @@ class Status(Base):
         # pudb.set_trace()
         d_CUBE: dict[str, Any] = self.CUBEinfo_get()
         registered: int = 0
+        if not d_CUBE:
+            return registered
 
         auth: aiohttp.BasicAuth = aiohttp.BasicAuth(
             d_CUBE["username"], d_CUBE["password"]
@@ -188,7 +190,7 @@ class Status(Base):
         requested: int = self.requestedDICOMcount_getForSeries(opt)
         packed: int = self.registeredDICOMcount_getFromFS(opt["series"])
         registered: int = await self.registeredDICOMcount_getFromCUBE()
-        if not registered:
+        if not packed:
             return d_status
         d_status = self.status_update(requested, packed, registered, d_status)
         d_status["study"]["seriesListInStudy"]["SeriesInstanceUID"] = opt[
