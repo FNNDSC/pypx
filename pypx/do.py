@@ -1,142 +1,154 @@
 # Global modules
 # import  argparse
 # import  subprocess, re, collections
-from    pfmisc.other import list_removeDuplicates
-import  pudb
-import  json
+from pfmisc.other import list_removeDuplicates
+import pudb
+import json
 
-import  asyncio
+import asyncio
 
-from    datetime            import  datetime
-from    argparse            import  Namespace, ArgumentParser
-from    argparse            import  RawTextHelpFormatter
-import  time
+from datetime import datetime
+from argparse import Namespace, ArgumentParser
+from argparse import RawTextHelpFormatter
+import time
 
-import  pfmisc
-from    pfmisc._colors      import  Colors
+import pfmisc
+from pfmisc._colors import Colors
 
-from    dask                import  delayed, compute
-import  sys
+from dask import delayed, compute
+import sys
 
 # PYPX modules
-from    .base               import Base
-from    .move               import Move
-import  pypx
-from    pypx                import smdb
-from    pypx                import report
-from    pypx.push           import parser_setup         as pushParser_setup
-from    pypx.push           import parser_JSONinterpret as pushParser_JSONinterpret
-from    pypx.register       import parser_setup         as registerParser_setup
-from    pypx.register       import parser_JSONinterpret as registerParser_JSONinterpret
+from .base import Base
+from .move import Move
+import pypx
+from pypx import smdb
+from pypx import report
+from pypx.push import parser_setup as pushParser_setup
+from pypx.push import parser_JSONinterpret as pushParser_JSONinterpret
+from pypx.register import parser_setup as registerParser_setup
+from pypx.register import parser_JSONinterpret as registerParser_JSONinterpret
+
 
 def parser_setup(str_desc):
-    parser = ArgumentParser(
-                description         = str_desc,
-                formatter_class     = RawTextHelpFormatter
-            )
+    parser = ArgumentParser(description=str_desc, formatter_class=RawTextHelpFormatter)
 
     # the main report data to interpret
     parser.add_argument(
-        '--reportData',
-        action  = 'store',
-        dest    = 'reportData',
-        type    = str,
-        default = '',
-        help    = 'JSON report from upstream process')
+        "--reportData",
+        action="store",
+        dest="reportData",
+        type=str,
+        default="",
+        help="JSON report from upstream process",
+    )
 
     parser.add_argument(
-        '--reportDataFile',
-        action  = 'store',
-        dest    = 'reportDataFile',
-        type    = str,
-        default = '',
-        help    = 'JSON report contained in file from upstream process')
+        "--reportDataFile",
+        action="store",
+        dest="reportDataFile",
+        type=str,
+        default="",
+        help="JSON report contained in file from upstream process",
+    )
 
     # db access settings
     parser.add_argument(
-        '--db',
-        action  = 'store',
-        dest    = 'dblogbasepath',
-        type    = str,
-        default = '/tmp/log',
-        help    = 'path to base dir of receipt database')
+        "--db",
+        action="store",
+        dest="dblogbasepath",
+        type=str,
+        default="/tmp/log",
+        help="path to base dir of receipt database",
+    )
 
     # Behaviour settings
     parser.add_argument(
-        '--withFeedBack',
-        action  = 'store_true',
-        dest    = 'withFeedBack',
-        default = False,
-        help    = 'If specified, print the "then" events as they happen')
-    parser.add_argument(
-        '--then',
-        action  = 'store',
-        dest    = 'then',
-        default = "",
-        help    = 'If specified, then perform the set of operations')
-    parser.add_argument(
-        '--thenArgs',
-        action  = 'store',
-        dest    = 'thenArgs',
-        default = "",
-        help    = 'If specified, associate the corresponding JSON string in the list to a then operation')
-    parser.add_argument(
-        '--intraSeriesRetrieveDelay',
-        action  = 'store',
-        dest    = 'intraSeriesRetrieveDelay',
-        default = "0",
-        help    = 'If specified, then wait specified seconds between retrieve series loops')
-
-    parser.add_argument(
-        '--move',
-        action  = 'store_true',
-        dest    = 'move',
-        default = False,
-        help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
-
-    parser.add_argument(
-        '--json',
-        action  = 'store_true',
-        dest    = 'json',
-        default = False,
-        help    = 'If specified, dump the JSON structure relating to the query')
-
-    parser.add_argument(
-        "-v", "--verbosity",
-        help    = "verbosity level for app",
-        dest    = 'verbosity',
-        type    = int,
-        default = 1)
-    parser.add_argument(
-        "-x", "--desc",
-        help    = "long synopsis",
-        dest    = 'desc',
-        action  = 'store_true',
-        default = False
+        "--withFeedBack",
+        action="store_true",
+        dest="withFeedBack",
+        default=False,
+        help='If specified, print the "then" events as they happen',
     )
     parser.add_argument(
-        "-y", "--synopsis",
-        help    = "short synopsis",
-        dest    = 'synopsis',
-        action  = 'store_true',
-        default = False
+        "--then",
+        action="store",
+        dest="then",
+        default="",
+        help="If specified, then perform the set of operations",
     )
     parser.add_argument(
-        '--version',
-        help    = 'if specified, print version number',
-        dest    = 'b_version',
-        action  = 'store_true',
-        default = False
+        "--thenArgs",
+        action="store",
+        dest="thenArgs",
+        default="",
+        help="If specified, associate the corresponding JSON string in the list to a then operation",
     )
     parser.add_argument(
-        '--waitForUserTerminate',
-        help    = 'if specified, wait for user termination',
-        dest    = 'b_waitForUserTerminate',
-        action  = 'store_true',
-        default = False
+        "--intraSeriesRetrieveDelay",
+        action="store",
+        dest="intraSeriesRetrieveDelay",
+        default="0",
+        help="If specified, then wait specified seconds between retrieve series loops",
+    )
+
+    parser.add_argument(
+        "--move",
+        action="store_true",
+        dest="move",
+        default=False,
+        help="If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move",
+    )
+
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="json",
+        default=False,
+        help="If specified, dump the JSON structure relating to the query",
+    )
+
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        help="verbosity level for app",
+        dest="verbosity",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "-x",
+        "--desc",
+        help="long synopsis",
+        dest="desc",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-y",
+        "--synopsis",
+        help="short synopsis",
+        dest="synopsis",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--version",
+        help="if specified, print version number",
+        dest="b_version",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--waitForUserTerminate",
+        help="if specified, wait for user termination",
+        dest="b_waitForUserTerminate",
+        action="store_true",
+        default=False,
     )
 
     return parser
+
 
 def parser_interpret(parser, *args):
     """
@@ -144,10 +156,11 @@ def parser_interpret(parser, *args):
     *args is empty
     """
     if len(args):
-        args    = parser.parse_args(*args)
+        args = parser.parse_args(*args)
     else:
-        args    = parser.parse_args(sys.argv[1:])
+        args = parser.parse_args(sys.argv[1:])
     return args
+
 
 def parser_JSONinterpret(parser, d_JSONargs):
     """
@@ -157,15 +170,16 @@ def parser_JSONinterpret(parser, d_JSONargs):
     list two strings ["--<key>", "<value>"] and then
     argparse.
     """
-    l_args  = []
+    l_args = []
     for k, v in d_JSONargs.items():
-        l_args.append('--%s' % k)
-        if type(v) == type(True): continue
-        l_args.append('%s' % v)
+        l_args.append("--%s" % k)
+        if type(v) == type(True):
+            continue
+        l_args.append("%s" % v)
     return parser_interpret(parser, l_args)
 
-class Do(Base):
 
+class Do(Base):
     """
     The Do module provides a convient and centralised location
     from which to dispatch processing to a variety of additional
@@ -209,25 +223,22 @@ class Do(Base):
         #   CLI dest spaces.
 
         # pudb.set_trace()
-        if 'reportData' in arg.keys():
-            if 'args' in arg['reportData']:
-                for k,v in arg['reportData']['args'].items():
+        if "reportData" in arg.keys():
+            if "args" in arg["reportData"]:
+                for k, v in arg["reportData"]["args"].items():
                     # if k in arg and len('%s' % v):
-                    if len('%s' % v):
-                        if k not in ['json', 'withFeedBack']:
+                    if len("%s" % v):
+                        if k not in ["json", "withFeedBack"]:
                             arg[k] = v
 
         # Minor "sanity" check... if 'withFeedBack' is True
         # then 'json' should be False
-        if arg['withFeedBack']: arg['json'] = False
+        if arg["withFeedBack"]:
+            arg["json"] = False
 
         super(Do, self).__init__(arg)
-        self.dp             = pfmisc.debug(
-                                        verbosity   = self.verbosity,
-                                        within      = 'Do',
-                                        syslog      = False
-                                        )
-        self.log            = self.dp.qprint
+        self.dp = pfmisc.debug(verbosity=self.verbosity, within="Do", syslog=False)
+        self.log = self.dp.qprint
 
     async def run(self, opt={}) -> dict:
         """
@@ -255,17 +266,21 @@ class Do(Base):
         """
 
         def countDownTimer_do(f_time):
-            t               : int   = int(f_time)
+            t: int = int(f_time)
             while t:
                 mins, secs = divmod(t, 60)
-                timer = '{:02d}:{:02d}'.format(mins, secs)
-                if self.arg['withFeedBack']:
-                    print("     ", end = '')
-                    print(  Colors.BLUE_BCKGRND + Colors.WHITE +          \
-                            "[ Parsing incoming images %s ]" % timer + Colors.NO_COLOUR
+                timer = "{:02d}:{:02d}".format(mins, secs)
+                if self.arg["withFeedBack"]:
+                    print("     ", end="")
+                    print(
+                        Colors.BLUE_BCKGRND
+                        + Colors.WHITE
+                        + "[ Parsing incoming images %s ]" % timer
+                        + Colors.NO_COLOUR
                     )
                 time.sleep(1)
-                if self.arg['withFeedBack']: print("\033[2A")
+                if self.arg["withFeedBack"]:
+                    print("\033[2A")
                 t -= 1
 
         def seriesRetrieveDelay_do(str_line):
@@ -277,17 +292,17 @@ class Do(Base):
             or if the delay is the string "dynamic" then delay by
             a function of the number of images retrieved.
             """
-            factor  = 1
+            factor = 1
             f_sleep = 0.0
-            if 'intraSeriesRetrieveDelay' in self.arg.keys():
-                if 'dynamic' not in self.arg['intraSeriesRetrieveDelay']:
-                    f_sleep = float(self.arg['intraSeriesRetrieveDelay'])
+            if "intraSeriesRetrieveDelay" in self.arg.keys():
+                if "dynamic" not in self.arg["intraSeriesRetrieveDelay"]:
+                    f_sleep = float(self.arg["intraSeriesRetrieveDelay"])
                 else:
-                    l_dynamic   = self.arg['intraSeriesRetrieveDelay'].split(':')
-                    if len(l_dynamic) ==2:
-                        factor  = int(l_dynamic[1])
-                    l_words     = str_line.split()
-                    images  = int(l_words[1])
+                    l_dynamic = self.arg["intraSeriesRetrieveDelay"].split(":")
+                    if len(l_dynamic) == 2:
+                        factor = int(l_dynamic[1])
+                    l_words = str_line.split()
+                    images = int(l_words[1])
                     f_sleep = float(images) / factor
                 countDownTimer_do(f_sleep)
 
@@ -296,73 +311,76 @@ class Do(Base):
             Nested retrieve handler
             """
             nonlocal series, studyIndex, seriesIndex
-            seriesInstances : int   = series['NumberOfSeriesRelatedInstances']['value']
-            d_then          : dict  = {}
-            d_db            : dict  = {}
-            d_db                    = db.seriesData(
-                                            'retrieve',
-                                            'NumberOfSeriesRelatedInstances',
-                                            seriesInstances
-                                        )
-            if d_db['status']:
-                str_line        = presenter.seriesRetrieve_print(
-                    studyIndex  = studyIndex, seriesIndex = seriesIndex
+            seriesInstances: int = series["NumberOfSeriesRelatedInstances"]["value"]
+            d_then: dict = {}
+            d_db: dict = {}
+            d_db = db.seriesData(
+                "retrieve", "NumberOfSeriesRelatedInstances", seriesInstances
+            )
+            if d_db["status"]:
+                str_line = presenter.seriesRetrieve_print(
+                    studyIndex=studyIndex, seriesIndex=seriesIndex
                 )
-                if self.arg['withFeedBack']: self.log(str_line + "               ")
-                series['SeriesMetaDescription']  = {
-                                        'tag'   : "0,0",
-                                        'value' : str_line,
-                                        'label' : 'inlineRetrieveText'
-                                    }
-                if self.move:
-                    d_then      = pypx.move({
-                                    **self.arg,
-                                })
-                else:
-                    d_then = self.systemlevel_run(self.arg,
-                            {
-                                'f_commandGen'      : self.movescu_command,
-                                'series_uid'        : str_seriesUID,
-                                'study_uid'         : str_studyUID
-                            }
-                    )
-                if 'intraSeriesRetrieveDelay' in self.arg.keys():
-                    if self.arg['intraSeriesRetrieveDelay']:
-                        seriesRetrieveDelay_do(str_line)
-                series['PACS_retrieve'] = {
-                    'requested' :   '%s' % datetime.now()
+                if self.arg["withFeedBack"]:
+                    self.log(str_line + "               ")
+                series["SeriesMetaDescription"] = {
+                    "tag": "0,0",
+                    "value": str_line,
+                    "label": "inlineRetrieveText",
                 }
-                d_db    = db.seriesData('retrieve', 'command', d_then)
+                if self.move:
+                    d_then = pypx.move(
+                        {
+                            **self.arg,
+                        }
+                    )
+                else:
+                    d_then = self.systemlevel_run(
+                        self.arg,
+                        {
+                            "f_commandGen": self.movescu_command,
+                            "series_uid": str_seriesUID,
+                            "study_uid": str_studyUID,
+                        },
+                    )
+                if "intraSeriesRetrieveDelay" in self.arg.keys():
+                    if self.arg["intraSeriesRetrieveDelay"]:
+                        seriesRetrieveDelay_do(str_line)
+                series["PACS_retrieve"] = {"requested": "%s" % datetime.now()}
+                d_db = db.seriesData("retrieve", "command", d_then)
             else:
-                if self.arg['withFeedBack']:
-                    self.log(d_db['error'])
-                d_then  = d_db
+                if self.arg["withFeedBack"]:
+                    self.log(d_db["error"])
+                d_then = d_db
             return d_then
 
-        def status_do() -> dict:
+        async def status_do() -> dict:
             """
             Nested status handler
             """
-            nonlocal    series
-            d_then      : dict  = {}
-
             # pudb.set_trace()
-            self.arg['verifySeriesInStudy']   = True
-            d_then      = pypx.status({
-                            **self.arg,
-                        })
+            nonlocal series, seriesIndex
+            d_then: dict = {}
 
-            str_line    = presenter.seriesStatus_print(
-                studyIndex  = studyIndex,
-                seriesIndex = seriesIndex,
-                status      = d_then
+            self.arg["verifySeriesInStudy"] = True
+            self.arg["series"] = series
+            d_then = await pypx.status(
+                {
+                    **self.arg,
+                }
             )
-            series['SeriesMetaDescription']    = {
-                                    'tag'   : "0,0",
-                                    'value' : str_line,
-                                    'label' : 'inlineStatusText'
-                                }
-            if self.arg['withFeedBack']: self.log(str_line)
+
+            str_line = presenter.seriesStatus_print(
+                studyIndex=studyIndex, seriesIndex=seriesIndex, status=d_then
+            )
+            str_line = f"{seriesIndex+1:04} │ {str_line}"
+            series["SeriesMetaDescription"] = {
+                "tag": "0,0",
+                "value": str_line,
+                "label": "inlineStatusText",
+            }
+            if self.arg["withFeedBack"]:
+                self.log(str_line)
 
             return d_then
 
@@ -371,15 +389,16 @@ class Do(Base):
             Nested simple "echo/show" handler -- can be used as a 'then' in lieu
             of piping into the `px-report` module.
             """
-            nonlocal    series
-            d_then              : dict  = {}
-            str_instanceNumber  : str    = series['InstanceNumber']['value']
-            str_line    = presenter.seriesReport_print(
-                studyIndex      = studyIndex,
-                seriesIndex     = seriesIndex,
-                instanceNumber  = str_instanceNumber
+            nonlocal series
+            d_then: dict = {}
+            str_instanceNumber: str = series["InstanceNumber"]["value"]
+            str_line = presenter.seriesReport_print(
+                studyIndex=studyIndex,
+                seriesIndex=seriesIndex,
+                instanceNumber=str_instanceNumber,
             )
-            if self.arg['withFeedBack']: self.log(str_line)
+            if self.arg["withFeedBack"]:
+                self.log(str_line)
 
             return d_then
 
@@ -387,24 +406,27 @@ class Do(Base):
             """
             Nested push handler
             """
-            nonlocal    series
-            str_seriesInstanceUID   : str   = series['SeriesInstanceUID']['value']
-            str_line                : str   = presenter.seriesPush_print(
-                studyIndex  = studyIndex,
-                seriesIndex = seriesIndex,
-                fileCounts  = db.series_receivedAndRequested(str_seriesInstanceUID)
+            nonlocal series
+            str_seriesInstanceUID: str = series["SeriesInstanceUID"]["value"]
+            str_line: str = presenter.seriesPush_print(
+                studyIndex=studyIndex,
+                seriesIndex=seriesIndex,
+                fileCounts=db.series_receivedAndRequested(str_seriesInstanceUID),
             )
 
-            if self.arg['withFeedBack']: self.log(str_line)
+            if self.arg["withFeedBack"]:
+                self.log(str_line)
 
-            d_then                  : dict  = {}
-            d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
-            pushParser                      = pushParser_setup("Push Parser")
-            d_pushArgs, extras              = pushParser_JSONinterpret(pushParser, d_pushArgsCLI)
-            d_pushArgs.str_xcrdir           = d_seriesDir[str_seriesInstanceUID]
-            d_then      = pypx.push(
-                            vars(d_pushArgs),
-                        )
+            d_then: dict = {}
+            d_seriesDir: dict = db.imageDirs_getOnSeriesInstanceUID(
+                str_seriesInstanceUID
+            )
+            pushParser = pushParser_setup("Push Parser")
+            d_pushArgs, extras = pushParser_JSONinterpret(pushParser, d_pushArgsCLI)
+            d_pushArgs.str_xcrdir = d_seriesDir[str_seriesInstanceUID]
+            d_then = pypx.push(
+                vars(d_pushArgs),
+            )
 
             return d_then
 
@@ -412,37 +434,42 @@ class Do(Base):
             """
             Nested register handler
             """
-            nonlocal    series
-            str_seriesInstanceUID   : str   = series['SeriesInstanceUID']['value']
-            str_line                : str   = presenter.seriesRegister_print(
-                studyIndex  = studyIndex,
-                seriesIndex = seriesIndex,
-                fileCounts  = db.series_receivedAndRequested(str_seriesInstanceUID)
+            nonlocal series
+            str_seriesInstanceUID: str = series["SeriesInstanceUID"]["value"]
+            str_line: str = presenter.seriesRegister_print(
+                studyIndex=studyIndex,
+                seriesIndex=seriesIndex,
+                fileCounts=db.series_receivedAndRequested(str_seriesInstanceUID),
             )
 
-            if self.arg['withFeedBack']: self.log(str_line)
-            d_then                  : dict  = {}
-            d_seriesDir             : dict  = db.imageDirs_getOnSeriesInstanceUID(str_seriesInstanceUID)
-            registerParser                  = registerParser_setup("Register Parser")
-            d_registerArgs                  = registerParser_JSONinterpret(registerParser, d_registerArgsCLI)
-            d_registerArgs.str_xcrdir       = d_seriesDir[str_seriesInstanceUID]
-            d_then      = pypx.register(
-                            d_registerArgs,
-                        )
+            if self.arg["withFeedBack"]:
+                self.log(str_line)
+            d_then: dict = {}
+            d_seriesDir: dict = db.imageDirs_getOnSeriesInstanceUID(
+                str_seriesInstanceUID
+            )
+            registerParser = registerParser_setup("Register Parser")
+            d_registerArgs = registerParser_JSONinterpret(
+                registerParser, d_registerArgsCLI
+            )
+            d_registerArgs.str_xcrdir = d_seriesDir[str_seriesInstanceUID]
+            d_then = pypx.register(
+                d_registerArgs,
+            )
             try:
-                str_msg     = next(gen_dict_extract('msg', d_then))
+                str_msg = next(gen_dict_extract("msg", d_then))
             except:
-                str_msg     = ""
+                str_msg = ""
             if len(str_msg):
                 try:
-                    self.log(json.dumps(json.loads(str_msg), indent = 4), comms = 'error')
+                    self.log(json.dumps(json.loads(str_msg), indent=4), comms="error")
                 except:
-                    self.log(json.dumps(d_seriesDir, indent = 4), comms = 'error')
-                    self.log(str_msg, comms = 'error')
+                    self.log(json.dumps(d_seriesDir, indent=4), comms="error")
+                    self.log(str_msg, comms="error")
             return d_then
 
         def gen_dict_extract(key, var):
-            if hasattr(var,'items'):
+            if hasattr(var, "items"):
                 for k, v in var.items():
                     if k == key:
                         yield v
@@ -454,96 +481,101 @@ class Do(Base):
                             for result in gen_dict_extract(key, d):
                                 yield result
 
-        db              = smdb.SMDB(
-                            Namespace(str_logDir = self.arg['dblogbasepath'])
-                        )
+        db = smdb.SMDB(Namespace(str_logDir=self.arg["dblogbasepath"]))
         db.housingDirs_create()
-        d_filteredHits  = self.arg['reportData']
+        d_filteredHits = self.arg["reportData"]
 
         # In the case of in-line updates on the progress of the
         # postprocess, we need to create a presentation/report object
         # which we can use for the reporting.
         # pudb.set_trace()
-        presenter   = report.Report({
-                                        'colorize' :    'dark',
-                                        'reportData':   d_filteredHits
-                                    })
+        presenter = report.Report({"colorize": "dark", "reportData": d_filteredHits})
         presenter.run()
-        l_run               = []
-        d_ret               = {
-            'do'        : False
-        }
-        b_status            : bool = False
+        l_run = []
+        d_ret = {"do": False}
+        b_status: bool = False
 
-        l_then              = self.arg['then'].split(',')
-        l_thenArgs          = self.arg['thenArgs'].split(';')
-        d_then      : dict  = {}
-        d_thenArgs  : dict  = {}
-        then        : str   = ""
+        l_then = self.arg["then"].split(",")
+        l_thenArgs = self.arg["thenArgs"].split(";")
+        d_then: dict = {}
+        d_thenArgs: dict = {}
+        then: str = ""
         if len(l_thenArgs) != len(l_then):
-            l_thenArgs      = [''] * len(l_then)
-        b_headerPrinted     = False
-        thenIndex           = -1
-        for (then, thenArgs) in zip(l_then, l_thenArgs):
+            l_thenArgs = [""] * len(l_then)
+        b_headerPrinted = False
+        thenIndex = -1
+        for then, thenArgs in zip(l_then, l_thenArgs):
             if len(thenArgs):
-                d_thenArgs  = json.loads(thenArgs)
+                d_thenArgs = json.loads(thenArgs)
             else:
-                d_thenArgs  = {}
-            thenIndex  += 1
-            studyIndex  = 0
-            d_ret['%02d-%s' % (thenIndex, then)]= { 'study' : []}
-            for study in d_filteredHits['data']:
-                l_run       = []
+                d_thenArgs = {}
+            thenIndex += 1
+            studyIndex = 0
+            d_ret["%02d-%s" % (thenIndex, then)] = {"study": []}
+            for study in d_filteredHits["data"]:
+                l_run = []
                 seriesIndex = 0
-                if self.arg['withFeedBack']:
+                if self.arg["withFeedBack"]:
                     print("")
-                    print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ STUDY %s ]"\
-                            % then + Colors.NO_COLOUR)
-                    presenter.studyHeader_print(
-                        studyIndex  = studyIndex, reportType = 'rawText'
+                    print(
+                        Colors.BLUE_BCKGRND
+                        + Colors.WHITE
+                        + "[ STUDY %s ]" % then
+                        + Colors.NO_COLOUR
                     )
-                    print(  Colors.BLUE_BCKGRND + Colors.WHITE + "[ SERIES %s ]"\
-                            % then + Colors.NO_COLOUR)
-                for series in study['series']:
-                    str_seriesDescription           = series['SeriesDescription']['value']
-                    str_seriesUID                   = series['SeriesInstanceUID']['value']
-                    str_studyUID                    = study['StudyInstanceUID']['value']
-                    db.d_DICOM['SeriesInstanceUID'] = str_seriesUID
-                    self.arg['SeriesInstanceUID']   = str_seriesUID
-                    self.arg['StudyInstanceUID']    = str_studyUID
-                    if then == "retrieve":  d_then  = retrieve_do()
-                    if then == "status"  :  d_then  = status_do()
-                    if then == "push"    :  d_then  = push_do(d_thenArgs)
-                    if then == "register":  d_then  = register_do(d_thenArgs)
-                    if then == "report" :   d_then  = report_do()
+                    presenter.studyHeader_print(
+                        studyIndex=studyIndex, reportType="rawText"
+                    )
+                    print(
+                        Colors.BLUE_BCKGRND
+                        + Colors.WHITE
+                        + "[ SERIES %s ]" % then
+                        + Colors.NO_COLOUR
+                    )
+                for series in study["series"]:
+                    str_seriesDescription = series["SeriesDescription"]["value"]
+                    str_seriesUID = series["SeriesInstanceUID"]["value"]
+                    str_studyUID = study["StudyInstanceUID"]["value"]
+                    db.d_DICOM["SeriesInstanceUID"] = str_seriesUID
+                    self.arg["SeriesInstanceUID"] = str_seriesUID
+                    self.arg["StudyInstanceUID"] = str_studyUID
+                    series["StudyDescription"] = study["StudyDescription"]
+                    series["SeriesNumber"] = {"value": f"{seriesIndex+1}"}
+                    if then == "retrieve":
+                        d_then = retrieve_do()
+                    if then == "status":
+                        d_then = await status_do()
+                    if then == "push":
+                        d_then = push_do(d_thenArgs)
+                    if then == "register":
+                        d_then = register_do(d_thenArgs)
+                    if then == "report":
+                        d_then = report_do()
                     l_run.append(d_then)
-                    if 'status' in d_then:
-                        if not d_then['status'] and then != "status": break
-                        if d_then['status'] == 'error':
-                            if 'withFeedBack' in self.arg:
-                                if self.arg['withFeedBack']: print(json.dumps(d_then, indent=4))
+                    if "status" in d_then:
+                        if not d_then["status"] and then != "status":
+                            break
+                        if d_then["status"] == "error":
+                            if "withFeedBack" in self.arg:
+                                if self.arg["withFeedBack"]:
+                                    print(json.dumps(d_then, indent=4))
                     seriesIndex += 1
-                d_ret['%02d-%s' % (thenIndex, then)]['study'].append(
-                                { study['StudyInstanceUID']['value'] : l_run}
+                d_ret["%02d-%s" % (thenIndex, then)]["study"].append(
+                    {study["StudyInstanceUID"]["value"]: l_run}
                 )
                 studyIndex += 1
-                d_ret['do'] = True
+                d_ret["do"] = True
         return d_ret
 
     def xinetd_command(self, opt={}):
         return "service xinetd restart"
 
     def movescu_command(self, opt={}):
-        command = '-S --move ' + opt['aet']
-        command += ' --timeout 5'
-        command += ' -k QueryRetrieveLevel=SERIES'
-        command += ' -k SeriesInstanceUID=' + opt['series_uid']
-        command += ' -k StudyInstanceUID='  + opt['study_uid']
+        command = "-S --move " + opt["aet"]
+        command += " --timeout 5"
+        command += " -k QueryRetrieveLevel=SERIES"
+        command += " -k SeriesInstanceUID=" + opt["series_uid"]
+        command += " -k StudyInstanceUID=" + opt["study_uid"]
 
-        str_cmd     = "%s %s %s" % (
-                        self.movescu,
-                        command,
-                        self.commandSuffix()
-        )
+        str_cmd = "%s %s %s" % (self.movescu, command, self.commandSuffix())
         return str_cmd
-
