@@ -3,277 +3,289 @@
 # DICOM data from the remote PACS since the log messages
 # will pollute and destroy the DICOM storescp protocol.
 import logging
+
 logging.disable(logging.CRITICAL)
 
-from    argparse            import  Namespace
+from argparse import Namespace
 
 # Global modules
-import  os
-os.environ['XDG_CONFIG_HOME'] = '/tmp'
-from    os                  import  listdir
-from    os.path             import  isfile, join
-import  sys
-import  subprocess
-import  uuid
-import  shutil
-import  configparser
-import  json
-from    pathlib             import  Path
-import  uuid
-import  pathlib
-import  datetime
-from    datetime            import  date, datetime
-import  inspect
+import os
 
-import  re
+os.environ["XDG_CONFIG_HOME"] = "/tmp"
+from os import listdir
+from os.path import isfile, join
+import sys
+import subprocess
+import uuid
+import shutil
+import configparser
+import json
+from pathlib import Path
+import uuid
+import pathlib
+import datetime
+from datetime import date, datetime
+import inspect
+
+import re
 
 # PyDicom module
-import  pydicom             as      dicom
-from    chrisclient         import  client
+import pydicom as dicom
+from chrisclient import client
 
 # PYPX modules
-import  pypx.utils
-import  pypx.smdb
-import  pypx.repack
+import pypx.utils
+import pypx.smdb
+import pypx.repack
 
 # Debugging
-import  pudb
-from    pudb.remote         import  set_trace
-import  pfmisc
+import pudb
+from pudb.remote import set_trace
+import pfmisc
 
-from    argparse            import  Namespace, ArgumentParser
-from    argparse            import  RawTextHelpFormatter
-from    pypx.push           import parser_setup         as push_parser_setup
-from    pypx.push           import parser_interpret     as push_parser_interpret
+from argparse import Namespace, ArgumentParser
+from argparse import RawTextHelpFormatter
+from pypx.push import parser_setup as push_parser_setup
+from pypx.push import parser_interpret as push_parser_interpret
 
 
 argv_orig = sys.argv
 # To exclude help and exit while building push parser
-sys.argv = [a for a in sys.argv if (a!='-h' and a!='--help')]
+sys.argv = [a for a in sys.argv if (a != "-h" and a != "--help")]
 push_parser = push_parser_setup("push_args")
-push_args,extras = push_parser_interpret(push_parser)
+push_args, extras = push_parser_interpret(push_parser)
 sys.argv = argv_orig
 
-def parser_setup(str_desc):
-    parser = ArgumentParser(
-                description         = str_desc,
-                formatter_class     = RawTextHelpFormatter
-            )
 
+def parser_setup(str_desc):
+    parser = ArgumentParser(description=str_desc, formatter_class=RawTextHelpFormatter)
 
     # JSONarg
     parser.add_argument(
-        '--JSONargs',
-        action  = 'store',
-        dest    = 'JSONargString',
-        type    = str,
-        default = '',
-        help    = 'JSON equivalent of CLI key/values')
+        "--JSONargs",
+        action="store",
+        dest="JSONargString",
+        type=str,
+        default="",
+        help="JSON equivalent of CLI key/values",
+    )
 
     # db access settings
     parser.add_argument(
-        '--db',
-        action  = 'store',
-        dest    = 'str_logDir',
-        type    = str,
-        default = '/tmp/log',
-        help    = 'path to base dir of receipt database')
+        "--db",
+        action="store",
+        dest="str_logDir",
+        type=str,
+        default="/tmp/log",
+        help="path to base dir of receipt database",
+    )
 
     parser.add_argument(
-        '--upstreamFile',
-        action  = 'store',
-        dest    = 'upstreamFile',
-        type    = str,
-        default = '',
-        help    = 'JSON report contained in file from upstream process')
+        "--upstreamFile",
+        action="store",
+        dest="upstreamFile",
+        type=str,
+        default="",
+        help="JSON report contained in file from upstream process",
+    )
     parser.add_argument(
-        '--upstream',
-        action  = 'store',
-        dest    = 'reportData',
-        type    = str,
-        default = '',
-        help    = 'JSON report from upstream process')
+        "--upstream",
+        action="store",
+        dest="reportData",
+        type=str,
+        default="",
+        help="JSON report from upstream process",
+    )
 
     parser.add_argument(
-        '-p', '--xcrdir',
-        action  = 'store',
-        dest    = 'str_xcrdir',
-        type    = str,
-        default = '',
-        help    = 'Directory containing a received study'
-        )
+        "-p",
+        "--xcrdir",
+        action="store",
+        dest="str_xcrdir",
+        type=str,
+        default="",
+        help="Directory containing a received study",
+    )
     parser.add_argument(
-        '-f', '--xcrfile',
-        action  = 'store',
-        dest    = 'str_xcrfile',
-        type    = str,
-        default = '',
-        help    = 'File in <xcrdir> to process'
-        )
+        "-f",
+        "--xcrfile",
+        action="store",
+        dest="str_xcrfile",
+        type=str,
+        default="",
+        help="File in <xcrdir> to process",
+    )
     parser.add_argument(
-        '--xcrdirfile',
-        action  = 'store',
-        dest    = 'str_xcrdirfile',
-        type    = str,
-        default = '',
-        help    = 'Fully qualified file to process'
-        )
+        "--xcrdirfile",
+        action="store",
+        dest="str_xcrdirfile",
+        type=str,
+        default="",
+        help="Fully qualified file to process",
+    )
     parser.add_argument(
-        '--parseAllFilesWithSubStr',
-        action  = 'store',
-        dest    = 'str_filesubstr',
-        type    = str,
-        default = '',
-        help    = 'Parse all files in <xcrdir> that contain <substr>'
-        )
+        "--parseAllFilesWithSubStr",
+        action="store",
+        dest="str_filesubstr",
+        type=str,
+        default="",
+        help="Parse all files in <xcrdir> that contain <substr>",
+    )
     parser.add_argument(
-        '--localFileList',
-        action  = 'store',
-        dest    = 'localFileList',
-        default = [],
-        help    = 'a list of local files -- not used by CLI!'
-        )
+        "--localFileList",
+        action="store",
+        dest="localFileList",
+        default=[],
+        help="a list of local files -- not used by CLI!",
+    )
     parser.add_argument(
-        '--objectFileList',
-        action  = 'store',
-        dest    = 'objectFileList',
-        default = [],
-        help    = 'a list of object files -- not used by CLI!'
-        )
+        "--objectFileList",
+        action="store",
+        dest="objectFileList",
+        default=[],
+        help="a list of object files -- not used by CLI!",
+    )
     parser.add_argument(
-        '--PACS',
-        action  = 'store',
-        dest    = 'str_PACS',
-        type    = str,
-        default = '',
-        help    = 'PACS name ID within swift storage'
-        )
+        "--PACS",
+        action="store",
+        dest="str_PACS",
+        type=str,
+        default="",
+        help="PACS name ID within swift storage",
+    )
 
     # CUBE settings
 
     parser.add_argument(
-        '--CUBE',
-        action  = 'store',
-        dest    = 'CUBE',
-        type    = str,
-        default = '',
-        help    = 'CUBE lookup service identifier')
+        "--CUBE",
+        action="store",
+        dest="CUBE",
+        type=str,
+        default="",
+        help="CUBE lookup service identifier",
+    )
 
     parser.add_argument(
-        '--CUBEURL',
-        action  = 'store',
-        dest    = 'str_CUBEURL',
-        type    = str,
-        default = 'http://localhost:8000/api/v1/',
-        help    = 'CUBE URL'
-        )
+        "--CUBEURL",
+        action="store",
+        dest="str_CUBEURL",
+        type=str,
+        default="http://localhost:8000/api/v1/",
+        help="CUBE URL",
+    )
     parser.add_argument(
-        '--CUBEusername',
-        action  = 'store',
-        dest    = 'str_CUBEusername',
-        type    = str,
-        default = 'chris',
-        help    = 'Username with which to log into CUBE'
-        )
+        "--CUBEusername",
+        action="store",
+        dest="str_CUBEusername",
+        type=str,
+        default="chris",
+        help="Username with which to log into CUBE",
+    )
     parser.add_argument(
-        '--CUBEuserpasswd',
-        action  = 'store',
-        dest    = 'str_CUBEuserpasswd',
-        type    = str,
-        default = 'chris1234',
-        help    = 'CUBE user password'
-        )
+        "--CUBEuserpasswd",
+        action="store",
+        dest="str_CUBEuserpasswd",
+        type=str,
+        default="chris1234",
+        help="CUBE user password",
+    )
     parser.add_argument(
-        '--swiftServicesPACS',
-        action  = 'store',
-        dest    = 'str_swiftServicesPACS',
-        type    = str,
-        default = '',
-        help    = 'swift PACS location within SERVICE/PACS to push files')
+        "--swiftServicesPACS",
+        action="store",
+        dest="str_swiftServicesPACS",
+        type=str,
+        default="",
+        help="swift PACS location within SERVICE/PACS to push files",
+    )
 
     parser.add_argument(
-        '--cleanup',
-        action  = 'store_true',
-        dest    = 'b_cleanup',
-        default = False,
-        help    = 'If specified, then cleanup temporary files'
-        )
+        "--cleanup",
+        action="store_true",
+        dest="b_cleanup",
+        default=False,
+        help="If specified, then cleanup temporary files",
+    )
     parser.add_argument(
-        '--debug',
-        action  = 'store_true',
-        dest    = 'b_debug',
-        default = False,
-        help    = 'If specified, then also log debug info to <logdir>'
-        )
+        "--debug",
+        action="store_true",
+        dest="b_debug",
+        default=False,
+        help="If specified, then also log debug info to <logdir>",
+    )
     parser.add_argument(
-        "-v", "--verbosity",
-        help    = "verbosity level for app",
-        dest    = 'verbosity',
-        type    = int,
-        default = 1)
+        "-v",
+        "--verbosity",
+        help="verbosity level for app",
+        dest="verbosity",
+        type=int,
+        default=1,
+    )
     parser.add_argument(
         "--json",
-        help    = "return a JSON payload",
-        dest    = 'json',
-        action  = 'store_true',
-        default = False
+        help="return a JSON payload",
+        dest="json",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
-        "-x", "--desc",
-        help    = "show long synopsis",
-        dest    = 'b_desc',
-        action  = 'store_true',
-        default = False
+        "-x",
+        "--desc",
+        help="show long synopsis",
+        dest="b_desc",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
-        "-y", "--synopsis",
-        help    = "show short synopsis",
-        dest    = 'b_synopsis',
-        action  = 'store_true',
-        default = False
+        "-y",
+        "--synopsis",
+        help="show short synopsis",
+        dest="b_synopsis",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
-        '--version',
-        help    = 'if specified, print version number',
-        dest    = 'b_version',
-        action  = 'store_true',
-        default = False
+        "--version",
+        help="if specified, print version number",
+        dest="b_version",
+        action="store_true",
+        default=False,
     )
 
     parser.add_argument(
-        '--rootDirTemplate',
-        action  = 'store',
-        dest    = 'str_rootDirTemplate',
-        type    = str,
-        default = push_args.str_rootDirTemplate,
-        help    = 'Template pattern for root unpack directory'
-        )
+        "--rootDirTemplate",
+        action="store",
+        dest="str_rootDirTemplate",
+        type=str,
+        default=push_args.str_rootDirTemplate,
+        help="Template pattern for root unpack directory",
+    )
     parser.add_argument(
-        '--studyDirTemplate',
-        action  = 'store',
-        dest    = 'str_studyDirTemplate',
-        type    = str,
-        default = push_args.str_studyDirTemplate,
-        help    = 'Template pattern for study unpack directory'
-        )
+        "--studyDirTemplate",
+        action="store",
+        dest="str_studyDirTemplate",
+        type=str,
+        default=push_args.str_studyDirTemplate,
+        help="Template pattern for study unpack directory",
+    )
     parser.add_argument(
-        '--seriesDirTemplate',
-        action  = 'store',
-        dest    = 'str_seriesDirTemplate',
-        type    = str,
-        default =  push_args.str_seriesDirTemplate,
-        help    = 'Template pattern for series unpack directory'
-        )
+        "--seriesDirTemplate",
+        action="store",
+        dest="str_seriesDirTemplate",
+        type=str,
+        default=push_args.str_seriesDirTemplate,
+        help="Template pattern for series unpack directory",
+    )
     parser.add_argument(
-        '--imageTemplate',
-        action  = 'store',
-        dest    = 'str_imageTemplate',
-        type    = str,
-        default = push_args.str_imageTemplate,
-        help    = 'Template pattern for image file'
-        )
+        "--imageTemplate",
+        action="store",
+        dest="str_imageTemplate",
+        type=str,
+        default=push_args.str_imageTemplate,
+        help="Template pattern for image file",
+    )
 
     return parser
+
 
 def parser_interpret(parser, *args):
     """
@@ -281,10 +293,11 @@ def parser_interpret(parser, *args):
     *args is empty
     """
     if len(args):
-        args    = parser.parse_args(*args)
+        args = parser.parse_args(*args)
     else:
-        args    = parser.parse_args(sys.argv[1:])
+        args = parser.parse_args(sys.argv[1:])
     return args
+
 
 def parser_JSONinterpret(parser, d_JSONargs):
     """
@@ -294,14 +307,16 @@ def parser_JSONinterpret(parser, d_JSONargs):
     list two strings ["--<key>", "<value>"] and then
     argparse.
     """
-    l_args  = []
+    l_args = []
     for k, v in d_JSONargs.items():
-        l_args.append('--%s' % k)
-        if type(v) == type(True): continue
-        l_args.append('%s' % v)
+        l_args.append("--%s" % k)
+        if type(v) == type(True):
+            continue
+        l_args.append("%s" % v)
     return parser_interpret(parser, l_args)
 
-class Register():
+
+class Register:
     """
     The core class of the register module -- this class essentially reads
     a DICOM file, parses its tags, and then registers tags of that file
@@ -315,14 +330,18 @@ class Register():
         smdb service storage and set the CLI flags to pass on along to
         pfstorage.
         """
-        d_CUBEinfo :   dict    = {}
-        d_CUBEinfo['status']   = False
+        d_CUBEinfo: dict = {}
+        d_CUBEinfo["status"] = False
         if len(self.args.CUBE):
-            d_CUBEinfo = self.smdb.service_keyAccess('CUBE')
-            if d_CUBEinfo['status']:
-                self.args.str_CUBEURL           = d_CUBEinfo['CUBE'][self.args.CUBE]['url']
-                self.args.str_CUBEusername      = d_CUBEinfo['CUBE'][self.args.CUBE]['username']
-                self.args.str_CUBEuserpasswd    = d_CUBEinfo['CUBE'][self.args.CUBE]['password']
+            d_CUBEinfo = self.smdb.service_keyAccess("CUBE")
+            if d_CUBEinfo["status"]:
+                self.args.str_CUBEURL = d_CUBEinfo["CUBE"][self.args.CUBE]["url"]
+                self.args.str_CUBEusername = d_CUBEinfo["CUBE"][self.args.CUBE][
+                    "username"
+                ]
+                self.args.str_CUBEuserpasswd = d_CUBEinfo["CUBE"][self.args.CUBE][
+                    "password"
+                ]
 
         return d_CUBEinfo
 
@@ -332,16 +351,16 @@ class Register():
         Essentially we create some pfmisc.debug objects that
         write to files and also give them some shortcut names
         """
-        str_thisMRsession       = pathlib.PurePath(self.args.str_xcrdir).name
-        self.str_debugFile      = '%s/register.log'       % self.args.str_logDir
-        self.dp                 = pfmisc.debug(
-                                            verbosity   = int(self.args.verbosity),
-                                            level       = 2,
-                                            within      = self.__name__,
-                                            debugToFile = self.args.b_debug,
-                                            debugFile   = self.str_debugFile
-                                            )
-        self.log                = self.dp.qprint
+        str_thisMRsession = pathlib.PurePath(self.args.str_xcrdir).name
+        self.str_debugFile = "%s/register.log" % self.args.str_logDir
+        self.dp = pfmisc.debug(
+            verbosity=int(self.args.verbosity),
+            level=2,
+            within=self.__name__,
+            debugToFile=self.args.b_debug,
+            debugFile=self.str_debugFile,
+        )
+        self.log = self.dp.qprint
 
     def filesToRegister_determine(self):
         """
@@ -351,71 +370,58 @@ class Register():
         if self.args.str_filesubstr:
             try:
                 # First create a list of all the files...
-                self.l_files    = [
-                    f                                                       \
-                        for f in listdir(self.args.str_xcrdir)              \
-                            if isfile(join(self.args.str_xcrdir, f))
+                self.l_files = [
+                    f
+                    for f in listdir(self.args.str_xcrdir)
+                    if isfile(join(self.args.str_xcrdir, f))
                 ]
                 # Now filter them according to the passed filesubstr
-                self.l_files    = [
-                    x                                                       \
-                        for y in self.args.str_filesubstr.split(',')        \
-                            for x in self.l_files if y in x
+                self.l_files = [
+                    x
+                    for y in self.args.str_filesubstr.split(",")
+                    for x in self.l_files
+                    if y in x
                 ]
             except:
                 pass
         elif self.args.str_xcrdirfile:
             self.l_files.append(self.args.str_xcrfile)
         elif len(self.args.localFileList):
-            self.l_files    = self.args.localFileList
+            self.l_files = self.args.localFileList
 
     def __init__(self, args):
-
-        self.__name__           : str   = 'register'
-        self.l_files            : list  = []
+        self.__name__: str = "register"
+        self.l_files: list = []
 
         # Check if an upstream 'reportData' exists, and if so
         # merge those args with the current namespace:
-        d_args                          = vars(args)
-        if 'upstream' in d_args.keys():
-            d_argCopy           = d_args.copy()
+        d_args = vars(args)
+        if "upstream" in d_args.keys():
+            d_argCopy = d_args.copy()
             # "merge" these 'arg's with upstream.
-            d_args.update(d_args['upstream'])
-            [setattr(args, k, v) for k,v in d_args.items()]
-        self.args                       = args
+            d_args.update(d_args["upstream"])
+            [setattr(args, k, v) for k, v in d_args.items()]
+        self.args = args
 
         if len(self.args.str_xcrdirfile):
-            self.args.str_xcrdir        = os.path.dirname(
-                                                self.args.str_xcrdirfile
-                                        )
-            self.args.str_xcrfile       = os.path.basename(
-                                                self.args.str_xcrdirfile
-                                        )
+            self.args.str_xcrdir = os.path.dirname(self.args.str_xcrdirfile)
+            self.args.str_xcrfile = os.path.basename(self.args.str_xcrdirfile)
 
-        self.smdb                       = pypx.smdb.SMDB(args)
+        self.smdb = pypx.smdb.SMDB(args)
         self.serviceKey_process()
-        self.packer                     = pypx.repack.Process(
-                                            pypx.repack.args_impedanceMatch(args)
-                                        )
-        self.CUBE                       = client.Client(
-                                            self.args.str_CUBEURL,
-                                            self.args.str_CUBEusername,
-                                            self.args.str_CUBEuserpasswd
-                                        )
+        self.packer = pypx.repack.Process(pypx.repack.args_impedanceMatch(args))
+        self.CUBE = client.Client(
+            self.args.str_CUBEURL,
+            self.args.str_CUBEusername,
+            self.args.str_CUBEuserpasswd,
+        )
 
         self.filesToRegister_determine()
         self.loggers_create()
-        self.log(
-            'Register DICOM dir: %s' % (self.args.str_xcrdir),
-            level = 2
-        )
+        self.log("Register DICOM dir: %s" % (self.args.str_xcrdir), level=2)
         for str_file in self.l_files:
-            self.log(
-                'Regsiter DICOM file: %s' % (str_file),
-                level = 2
-            )
-        self.initDone   = True
-
+            self.log("Regsiter DICOM file: %s" % (str_file), level=2)
+        self.initDone = True
 
     def run(self, opt) -> dict:
         """
@@ -427,34 +433,30 @@ class Register():
         A CRITICAL assumption here is that the file to be registered already
         exists in storage! For now, this assumption is not verified/tested!
         """
-        dl_run      : list  = []
-        d_run       : dict  = {'status' : False}
-        current     : int   = 0
-        total       : int   = len(self.l_files)
+        dl_run: list = []
+        d_run: dict = {"status": False}
+        current: int = 0
+        total: int = len(self.l_files)
         for str_file in self.l_files:
-            current        += 1
-            d_run           = self.DICOMfile_mapsUpdate(
-                                self.DICOMfile_register(
-                                    self.packer.DICOMfile_read(
-                                        file = '%s/%s' % (
-                                                self.args.str_xcrdir,
-                                                str_file
-                                            )
-                                    ),
-                                str_file),
-                            current, total)
+            current += 1
+            d_run = self.DICOMfile_mapsUpdate(
+                self.DICOMfile_register(
+                    self.packer.DICOMfile_read(
+                        file="%s/%s" % (self.args.str_xcrdir, str_file)
+                    ),
+                    str_file,
+                ),
+                current,
+                total,
+            )
             # Before returning, we need to "sanitize" some of the
             # DICOMfile_read fields, specifically the DICOM read
             # payload that can be very full/noisy. Here we just
             # remove it.
-            d_run['d_DICOMfile_register']['d_DICOMfile_read']\
-                    .pop('d_DICOM')
+            d_run["d_DICOMfile_register"]["d_DICOMfile_read"].pop("d_DICOM")
             dl_run.append(d_run)
 
-        return {
-            'status'    : d_run['status'],
-            'run'       : dl_run
-        }
+        return {"status": d_run["status"], "run": dl_run}
 
     def PACSdata_checkFormatting(self, d_pacsData):
         """
@@ -464,17 +466,16 @@ class Register():
         as age in days.
         """
         for field in d_pacsData.keys():
-            if 'date' in  field.lower():
+            if "date" in field.lower():
                 try:
-                    d_pacsData[field]  = datetime.strptime(
-                                            d_pacsData[field],
-                                            "%Y%m%d").strftime('%Y-%m-%d'
-                                        )
+                    d_pacsData[field] = datetime.strptime(
+                        d_pacsData[field], "%Y%m%d"
+                    ).strftime("%Y-%m-%d")
                 except:
                     pass
-            if 'patientage' in field.lower():
-                str_age     = d_pacsData['PatientAge']
-                age         = -1
+            if "patientage" in field.lower():
+                str_age = d_pacsData["PatientAge"]
+                age = -1
                 if not len(str_age):
                     # The PatientAge in the DICOM is empty -- a not
                     # irregular occurence. In this case, we calculate
@@ -483,26 +484,40 @@ class Register():
                     #           StudyDate - PatientBirthDate
                     #
                     # assuming these are also existant.
-                    if len(d_pacsData['StudyDate']) and len(d_pacsData['PatientBirthDate']):
+                    if len(d_pacsData["StudyDate"]) and len(
+                        d_pacsData["PatientBirthDate"]
+                    ):
                         try:
-                            date_study = datetime.strptime(d_pacsData['StudyDate'], "%Y-%m-%d")
+                            date_study = datetime.strptime(
+                                d_pacsData["StudyDate"], "%Y-%m-%d"
+                            )
                         except:
-                            date_study = datetime.strptime(d_pacsData['StudyDate'], "%Y%m%d")
+                            date_study = datetime.strptime(
+                                d_pacsData["StudyDate"], "%Y%m%d"
+                            )
                         try:
-                            date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y-%m-%d")
+                            date_birth = datetime.strptime(
+                                d_pacsData["PatientBirthDate"], "%Y-%m-%d"
+                            )
                         except:
-                            date_birth  = datetime.strptime(d_pacsData['PatientBirthDate'], "%Y%m%d")
+                            date_birth = datetime.strptime(
+                                d_pacsData["PatientBirthDate"], "%Y%m%d"
+                            )
                         age = abs((date_study - date_birth).days)
                 elif not str_age[-1].isnumeric():
                     try:
-                        age     = int(str_age[0:-1])
+                        age = int(str_age[0:-1])
                     except:
-                        age     = -1
-                    AS      = str_age[-1]
-                    if AS == 'Y':   age *= 365
-                    if AS == 'M':   age *= 30
-                    if AS == 'W':   age *= 7
-                    if AS == 'D':   age *= 1
+                        age = -1
+                    AS = str_age[-1]
+                    if AS == "Y":
+                        age *= 365
+                    if AS == "M":
+                        age *= 30
+                    if AS == "W":
+                        age *= 7
+                    if AS == "D":
+                        age *= 1
                 else:
                     # Here the age is specified as a string with no suffix
                     # qualifier. We assume age is then in years
@@ -510,89 +525,96 @@ class Register():
                         age = int(str_age) * 365
                     except:
                         pass
-                d_pacsData['PatientAge']    = '%s' % age
+                d_pacsData["PatientAge"] = "%s" % age
         return d_pacsData
 
-    def DICOMfile_register(self, d_DICOMfile_read, str_file)    -> dict:
+    def DICOMfile_register(self, d_DICOMfile_read, str_file) -> dict:
         """
         Register the DICOM file described by the passed dictionary
         structure. If the self.arg['objectFileList'] is empty, this
         method will ask the repack module where to file would have
         been packed into storage.
         """
-        b_status        :   bool    = False
-        d_pacsData      :   dict    = {}
-        d_register      :   dict    = {}
-        ld_register     :   list    = []
-        l_DICOMtags     :   list    = [
-            'PatientID',    'PatientName',      'PatientBirthDate',
-            'PatientAge',   'PatientSex',       'ProtocolName',
-            'StudyDate',    'StudyDescription', 'StudyInstanceUID',
-            'Modality',     'SeriesDescription','SeriesInstanceUID',
-            'AccessionNumber'
+        b_status: bool = False
+        d_pacsData: dict = {}
+        d_register: dict = {}
+        ld_register: list = []
+        l_DICOMtags: list = [
+            "PatientID",
+            "PatientName",
+            "PatientBirthDate",
+            "PatientAge",
+            "PatientSex",
+            "ProtocolName",
+            "StudyDate",
+            "StudyDescription",
+            "StudyInstanceUID",
+            "Modality",
+            "SeriesDescription",
+            "SeriesInstanceUID",
+            "AccessionNumber",
         ]
-        if d_DICOMfile_read['status']:
+        if d_DICOMfile_read["status"]:
             for k in l_DICOMtags:
                 try:
-                    d_pacsData[k] = d_DICOMfile_read['d_DICOM']['d_dicomSimple'][k]
+                    d_pacsData[k] = d_DICOMfile_read["d_DICOM"]["d_dicomSimple"][k]
                 except Exception as e:
-                    d_pacsData[k]   = "%s" % e
-            d_pacsData['pacs_name']     = self.args.str_swiftServicesPACS
-            d_pacsData                  = self.PACSdata_checkFormatting(d_pacsData)
+                    d_pacsData[k] = "%s" % e
+            d_pacsData["pacs_name"] = self.args.str_swiftServicesPACS
+            d_pacsData = self.PACSdata_checkFormatting(d_pacsData)
             if len(self.args.objectFileList):
                 i = self.args.localFileList.index(str_file)
-                d_pacsData['path']      = self.args.objectFileList[i]
+                d_pacsData["path"] = self.args.objectFileList[i]
             else:
-                d_path                  =  self.packer.packPath_resolve(d_DICOMfile_read)
+                d_path = self.packer.packPath_resolve(d_DICOMfile_read)
 
-                d_pacsData['path']      = 'SERVICES/PACS/%s/%s/%s' % \
-                    (
-                        self.args.str_swiftServicesPACS,
-                        d_path['packDir'],
-                        d_path['imageFile']
-                    )
+                d_pacsData["path"] = "SERVICES/PACS/%s/%s/%s" % (
+                    self.args.str_swiftServicesPACS,
+                    d_path["packDir"],
+                    d_path["imageFile"],
+                )
             try:
                 d_register = self.CUBE.register_pacs_file(d_pacsData)
             except Exception as e:
-                d_register = {
-                    'path'          : d_pacsData['path'],
-                    'msg'           : '%s' % str(e)
-                }
+                d_register = {"path": d_pacsData["path"], "msg": "%s" % str(e)}
         return {
-            'status'                    :   True,
-            'd_DICOMfile_read'          :   d_DICOMfile_read,
-            'd_CUBE_register_pacs_file' :   d_register
+            "status": True,
+            "d_DICOMfile_read": d_DICOMfile_read,
+            "d_CUBE_register_pacs_file": d_register,
         }
 
-    def DICOMfile_mapsUpdate(self, d_DICOMfile_register,
-                             current = 0, total = 0)    -> dict:
+    def DICOMfile_mapsUpdate(self, d_DICOMfile_register, current=0, total=0) -> dict:
         """
         Interact with the SMDB object to update JSON mapping information
         recording this registration operation.
         """
-        b_status        :   bool    = False
-        d_register      :   dict    = {}
-        if d_DICOMfile_register['status']:
-            b_status    = True
+        b_status: bool = False
+        d_register: dict = {}
+        if d_DICOMfile_register["status"]:
+            b_status = True
             self.smdb.housingDirs_create()
-            d_register  = d_DICOMfile_register['d_CUBE_register_pacs_file']
-            if 'id' in d_register.keys():
-                l_pop       = [d_register.pop(k) for k in ['id', 'creation_date', 'fname', 'fsize']]
+            d_register = d_DICOMfile_register["d_CUBE_register_pacs_file"]
+            if "id" in d_register.keys():
+                l_pop = [
+                    d_register.pop(k) for k in ["id", "creation_date", "fname", "fsize"]
+                ]
             # Record in the smdb an entry for each series
-            self.smdb.d_DICOM   = d_DICOMfile_register['d_DICOMfile_read']['d_DICOM']['d_dicomSimple']
-            now                 = datetime.now()
-            self.smdb.seriesData('register', 'info',        d_register)
-            self.smdb.seriesData('register', 'objectCounter',     {
-                'current'   : current,
-                'total'     : total
-            })
-            self.smdb.seriesData('register', 'timestamp',   now.strftime("%Y-%m-%d, %H:%M:%S"))
+            self.smdb.d_DICOM = d_DICOMfile_register["d_DICOMfile_read"]["d_DICOM"][
+                "d_dicomSimple"
+            ]
+            now = datetime.now()
+            self.smdb.seriesData("register", "info", d_register)
+            self.smdb.seriesData(
+                "register", "objectCounter", {"current": current, "total": total}
+            )
+            self.smdb.seriesData(
+                "register", "timestamp", now.strftime("%Y-%m-%d, %H:%M:%S")
+            )
             if len(self.args.CUBE):
-                self.smdb.seriesData('register', 'CUBE',
-                    self.smdb.service_keyAccess('CUBE')['CUBE'][self.args.CUBE])
+                self.smdb.seriesData(
+                    "register",
+                    "CUBE",
+                    self.smdb.service_keyAccess("CUBE")["CUBE"][self.args.CUBE],
+                )
 
-        return {
-            'status'                : b_status,
-            'd_DICOMfile_register'  : d_DICOMfile_register
-        }
-
+        return {"status": b_status, "d_DICOMfile_register": d_DICOMfile_register}
