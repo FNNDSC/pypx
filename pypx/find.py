@@ -1,323 +1,357 @@
 # Global modules
-import  subprocess, re, collections
-import  asyncio
+import subprocess, re, collections
+import asyncio
 from typing import Dict, TypedDict
 
-import  pudb
-import  json
-import  os
-import  sys
-from    datetime            import  datetime
-from    dateutil            import  relativedelta
-from    terminaltables      import  SingleTable
-from    argparse            import  Namespace, ArgumentParser
-from    argparse            import  RawTextHelpFormatter
-import  time
+import pudb
+import json
+import os
+import sys
+from datetime import datetime
+from dateutil import relativedelta
+from terminaltables import SingleTable
+from argparse import Namespace, ArgumentParser
+from argparse import RawTextHelpFormatter
+import time
 
-import  pfmisc
-from    pfmisc._colors      import  Colors
+import pfmisc
+from pfmisc._colors import Colors
 
-from    dask                import  delayed, compute
+from dask import delayed, compute
 
 # PYPX modules
-from    .base               import Base
-from    .move               import Move
-import  pypx
-from    pypx                import smdb
-from    pypx                import report
-from    pypx                import do
-import  copy
+from .base import Base
+from .move import Move
+import pypx
+from pypx import smdb
+from pypx import report
+from pypx import do
+import copy
 
 
 def parser_setup(str_desc):
-    parser = ArgumentParser(
-                description         = str_desc,
-                formatter_class     = RawTextHelpFormatter
-            )
+    parser = ArgumentParser(description=str_desc, formatter_class=RawTextHelpFormatter)
 
     # JSONarg
     parser.add_argument(
-        '--JSONargs',
-        action  = 'store',
-        dest    = 'JSONargString',
-        type    = str,
-        default = '',
-        help    = 'JSON equivalent of CLI key/values')
-
+        "--JSONargs",
+        action="store",
+        dest="JSONargString",
+        type=str,
+        default="",
+        help="JSON equivalent of CLI key/values",
+    )
 
     # db access settings
     parser.add_argument(
-        '--db',
-        action  = 'store',
-        dest    = 'dblogbasepath',
-        type    = str,
-        default = '/tmp/log',
-        help    = 'path to base dir of receipt database')
+        "--db",
+        action="store",
+        dest="dblogbasepath",
+        type=str,
+        default="/tmp/log",
+        help="path to base dir of receipt database",
+    )
 
     # service access settings
     parser.add_argument(
-        '--PACS',
-        action  = 'store',
-        dest    = 'PACS',
-        type    = str,
-        default = '',
-        help    = 'PACS lookup service identifier')
+        "--PACS",
+        action="store",
+        dest="PACS",
+        type=str,
+        default="",
+        help="PACS lookup service identifier",
+    )
     parser.add_argument(
-        '--CUBE',
-        action  = 'store',
-        dest    = 'CUBE',
-        type    = str,
-        default = '',
-        help    = 'CUBE lookup service identifier')
+        "--CUBE",
+        action="store",
+        dest="CUBE",
+        type=str,
+        default="",
+        help="CUBE lookup service identifier",
+    )
     parser.add_argument(
-        '--swift',
-        action  = 'store',
-        dest    = 'swift',
-        type    = str,
-        default = '',
-        help    = 'swift lookup service identifier')
-
+        "--swift",
+        action="store",
+        dest="swift",
+        type=str,
+        default="",
+        help="swift lookup service identifier",
+    )
 
     # PACS access settings
     parser.add_argument(
-        '--aet',
-        action  = 'store',
-        dest    = 'aet',
-        type    = str,
-        default = 'CHRIS-ULTRON-AET',
-        help    = 'aet')
+        "--aet",
+        action="store",
+        dest="aet",
+        type=str,
+        default="CHRIS-ULTRON-AET",
+        help="aet",
+    )
     parser.add_argument(
-        '--aec',
-        action  = 'store',
-        dest    = 'aec',
-        type    = str,
-        default = 'CHRIS-ULTRON-AEC',
-        help    = 'aec')
+        "--aec",
+        action="store",
+        dest="aec",
+        type=str,
+        default="CHRIS-ULTRON-AEC",
+        help="aec",
+    )
     parser.add_argument(
-        '--serverIP',
-        action  = 'store',
-        dest    = 'serverIP',
-        type    = str,
-        default = '192.168.1.110',
-        help    = 'PACS server IP')
+        "--serverIP",
+        action="store",
+        dest="serverIP",
+        type=str,
+        default="192.168.1.110",
+        help="PACS server IP",
+    )
     parser.add_argument(
-        '--serverPort',
-        action  = 'store',
-        dest    = 'serverPort',
-        type    = str,
-        default = '4242',
-        help    = 'PACS server port')
+        "--serverPort",
+        action="store",
+        dest="serverPort",
+        type=str,
+        default="4242",
+        help="PACS server port",
+    )
     parser.add_argument(
-        '--findscu',
-        action  = 'store',
-        dest    = 'findscu',
-        type    = str,
-        default = '/usr/bin/findscu',
-        help    = '"findscu" executable absolute location')
+        "--findscu",
+        action="store",
+        dest="findscu",
+        type=str,
+        default="/usr/bin/findscu",
+        help='"findscu" executable absolute location',
+    )
     parser.add_argument(
-        '--movescu',
-        action  = 'store',
-        dest    = 'movescu',
-        type    = str,
-        default = '/usr/bin/movescu',
-        help    = '"movescu" executable absolute location')
+        "--movescu",
+        action="store",
+        dest="movescu",
+        type=str,
+        default="/usr/bin/movescu",
+        help='"movescu" executable absolute location',
+    )
 
     # Query settings
     parser.add_argument(
-        '--StudyOnly',
-        action  = 'store_true',
-        dest    = 'StudyOnly',
-        default = False,
-        help    = 'If specified, perform a query at the STUDY level only')
+        "--StudyOnly",
+        action="store_true",
+        dest="StudyOnly",
+        default=False,
+        help="If specified, perform a query at the STUDY level only",
+    )
     parser.add_argument(
-        '--QueryReturnTags',
-        action  = 'store',
-        dest    = 'QueryReturnTags',
-        type    = str,
-        default = '',
-        help    = 'A comma separated list of query return tags')
+        "--QueryReturnTags",
+        action="store",
+        dest="QueryReturnTags",
+        type=str,
+        default="",
+        help="A comma separated list of query return tags",
+    )
     parser.add_argument(
-        '--AccessionNumber',
-        action  = 'store',
-        dest    = 'AccessionNumber',
-        type    = str,
-        default = '',
-        help    = 'Accession Number')
+        "--AccessionNumber",
+        action="store",
+        dest="AccessionNumber",
+        type=str,
+        default="",
+        help="Accession Number",
+    )
     parser.add_argument(
-        '--PatientID',
-        action  = 'store',
-        dest    = 'PatientID',
-        type    = str,
-        default = '',
-        help    = 'Patient ID')
+        "--PatientID",
+        action="store",
+        dest="PatientID",
+        type=str,
+        default="",
+        help="Patient ID",
+    )
     parser.add_argument(
-        '--PatientName',
-        action  = 'store',
-        dest    = 'PatientName',
-        type    = str,
-        default = '',
-        help    = 'Patient name')
+        "--PatientName",
+        action="store",
+        dest="PatientName",
+        type=str,
+        default="",
+        help="Patient name",
+    )
     parser.add_argument(
-        '--PatientSex',
-        action  = 'store',
-        dest    = 'PatientSex',
-        type    = str,
-        default = '',
-        help    ='Patient sex')
+        "--PatientSex",
+        action="store",
+        dest="PatientSex",
+        type=str,
+        default="",
+        help="Patient sex",
+    )
     parser.add_argument(
-        '--StudyDate',
-        action  = 'store',
-        dest    = 'StudyDate',
-        type    = str,
-        default = '',
-        help    = 'Study date (YYYY/MM/DD)')
+        "--StudyDate",
+        action="store",
+        dest="StudyDate",
+        type=str,
+        default="",
+        help="Study date (YYYY/MM/DD)",
+    )
     parser.add_argument(
-        '--ModalitiesInStudy',
-        action  = 'store',
-        dest    = 'ModalitiesInStudy',
-        type    = str,
-        default = '',
-        help    = 'Modalities in study')
+        "--ModalitiesInStudy",
+        action="store",
+        dest="ModalitiesInStudy",
+        type=str,
+        default="",
+        help="Modalities in study",
+    )
     parser.add_argument(
-        '--Modality',
-        action  = 'store',
-        dest    = 'Modality',
-        type    = str,
-        default = '',
-        help    = 'Study Modality')
+        "--Modality",
+        action="store",
+        dest="Modality",
+        type=str,
+        default="",
+        help="Study Modality",
+    )
     parser.add_argument(
-        '--PerformedStationAETitle',
-        action  = 'store',
-        dest    = 'PerformedStationAETitle',
-        type    = str,
-        default = '',
-        help    = 'Performed station aet')
+        "--PerformedStationAETitle",
+        action="store",
+        dest="PerformedStationAETitle",
+        type=str,
+        default="",
+        help="Performed station aet",
+    )
     parser.add_argument(
-        '--StudyDescription',
-        action  = 'store',
-        dest    = 'StudyDescription',
-        type    = str,
-        default = '',
-        help    = 'Study description')
+        "--StudyDescription",
+        action="store",
+        dest="StudyDescription",
+        type=str,
+        default="",
+        help="Study description",
+    )
     parser.add_argument(
-        '--SeriesDescription',
-        action  = 'store',
-        dest    = 'SeriesDescription',
-        type    = str,
-        default = '',
-        help    = 'Series Description')
+        "--SeriesDescription",
+        action="store",
+        dest="SeriesDescription",
+        type=str,
+        default="",
+        help="Series Description",
+    )
     parser.add_argument(
-        '--SeriesInstanceUID',
-        action  = 'store',
-        dest    = 'SeriesInstanceUID',
-        type    = str,
-        default = '',
-        help    = 'Series Instance UID')
+        "--SeriesInstanceUID",
+        action="store",
+        dest="SeriesInstanceUID",
+        type=str,
+        default="",
+        help="Series Instance UID",
+    )
     parser.add_argument(
-        '--StudyInstanceUID',
-        action  = 'store',
-        dest    = 'StudyInstanceUID',
-        type    = str,
-        default = '',
-        help    = 'Study Instance UID')
+        "--StudyInstanceUID",
+        action="store",
+        dest="StudyInstanceUID",
+        type=str,
+        default="",
+        help="Study Instance UID",
+    )
     parser.add_argument(
-        '--ProtocolName',
-        action  = 'store',
-        dest    = 'ProtocolName',
-        type    = str,
-        default = '',
-        help    = 'Protocol Name')
+        "--ProtocolName",
+        action="store",
+        dest="ProtocolName",
+        type=str,
+        default="",
+        help="Protocol Name",
+    )
     parser.add_argument(
-        '--AcquisitionProtocolName',
-        action  = 'store',
-        dest    = 'AcquisitionProtocolName',
-        type    = str,
-        default = '',
-        help    = 'Acquisition Protocol Description Name')
+        "--AcquisitionProtocolName",
+        action="store",
+        dest="AcquisitionProtocolName",
+        type=str,
+        default="",
+        help="Acquisition Protocol Description Name",
+    )
 
     parser.add_argument(
-        '--AcquisitionProtocolDescription',
-        action  = 'store',
-        dest    = 'AcquisitionProtocolDescription',
-        type    = str,
-        default = '',
-        help    = 'Acquisition Protocol Description')
+        "--AcquisitionProtocolDescription",
+        action="store",
+        dest="AcquisitionProtocolDescription",
+        type=str,
+        default="",
+        help="Acquisition Protocol Description",
+    )
 
     # Retrieve settings
     parser.add_argument(
-        '--withFeedBack',
-        action  = 'store_true',
-        dest    = 'withFeedBack',
-        default = False,
-        help    = 'If specified, print the "then" events as they happen')
+        "--withFeedBack",
+        action="store_true",
+        dest="withFeedBack",
+        default=False,
+        help='If specified, print the "then" events as they happen',
+    )
     parser.add_argument(
-        '--then',
-        action  = 'store',
-        dest    = 'then',
-        default = "",
-        help    = 'If specified, perform another set operations "next" after the find')
+        "--then",
+        action="store",
+        dest="then",
+        default="",
+        help='If specified, perform another set operations "next" after the find',
+    )
     parser.add_argument(
-        '--thenArgs',
-        action  = 'store',
-        dest    = 'thenArgs',
-        default = "",
-        help    = 'If specified, associate the corresponding JSON string in the list to a then operation')
+        "--thenArgs",
+        action="store",
+        dest="thenArgs",
+        default="",
+        help="If specified, associate the corresponding JSON string in the list to a then operation",
+    )
     parser.add_argument(
-        '--intraSeriesRetrieveDelay',
-        action  = 'store',
-        dest    = 'intraSeriesRetrieveDelay',
-        default = "0",
-        help    = 'If specified, then wait specified seconds between retrieve series loops')
+        "--intraSeriesRetrieveDelay",
+        action="store",
+        dest="intraSeriesRetrieveDelay",
+        default="0",
+        help="If specified, then wait specified seconds between retrieve series loops",
+    )
     parser.add_argument(
-        '--move',
-        action  = 'store_true',
-        dest    = 'move',
-        default = False,
-        help    = 'If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move')
+        "--move",
+        action="store_true",
+        dest="move",
+        default=False,
+        help="If specified with --retrieve, call initiate a PACS pull on the set of SeriesUIDs using pypx/move",
+    )
 
     parser.add_argument(
-        '--json',
-        action  = 'store_true',
-        dest    = 'json',
-        default = False,
-        help    = 'If specified, dump the JSON structure relating to the query')
+        "--json",
+        action="store_true",
+        dest="json",
+        default=False,
+        help="If specified, dump the JSON structure relating to the query",
+    )
 
     parser.add_argument(
-        "-v", "--verbosity",
-        help    = "verbosity level for app",
-        dest    = 'verbosity',
-        type    = int,
-        default = 1)
-    parser.add_argument(
-        "-x", "--desc",
-        help    = "long synopsis",
-        dest    = 'desc',
-        action  = 'store_true',
-        default = False
+        "-v",
+        "--verbosity",
+        help="verbosity level for app",
+        dest="verbosity",
+        type=int,
+        default=1,
     )
     parser.add_argument(
-        "-y", "--synopsis",
-        help    = "short synopsis",
-        dest    = 'synopsis',
-        action  = 'store_true',
-        default = False
+        "-x",
+        "--desc",
+        help="long synopsis",
+        dest="desc",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
-        '--version',
-        help    = 'if specified, print version number',
-        dest    = 'b_version',
-        action  = 'store_true',
-        default = False
+        "-y",
+        "--synopsis",
+        help="short synopsis",
+        dest="synopsis",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
-        '--waitForUserTerminate',
-        help    = 'if specified, wait for user termination',
-        dest    = 'b_waitForUserTerminate',
-        action  = 'store_true',
-        default = False
+        "--version",
+        help="if specified, print version number",
+        dest="b_version",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--waitForUserTerminate",
+        help="if specified, wait for user termination",
+        dest="b_waitForUserTerminate",
+        action="store_true",
+        default=False,
     )
 
     return parser
+
 
 def parser_interpret(parser, *args):
     """
@@ -325,10 +359,11 @@ def parser_interpret(parser, *args):
     *args is empty
     """
     if len(args):
-        args    = parser.parse_args(*args)
+        args = parser.parse_args(*args)
     else:
-        args    = parser.parse_args(sys.argv[1:])
+        args = parser.parse_args(sys.argv[1:])
     return args
+
 
 def parser_JSONinterpret(parser, d_JSONargs):
     """
@@ -338,17 +373,18 @@ def parser_JSONinterpret(parser, d_JSONargs):
     list two strings ["--<key>", "<value>"] and then
     argparse.
     """
-    l_args  = []
+    l_args = []
     for k, v in d_JSONargs.items():
         if type(v) == type(True):
-            if v: l_args.append('--%s' % k)
+            if v:
+                l_args.append("--%s" % k)
             continue
-        l_args.append('--%s' % k)
-        l_args.append('%s' % v)
+        l_args.append("--%s" % k)
+        l_args.append("%s" % v)
     return parser_interpret(parser, l_args)
 
-class Find(Base):
 
+class Find(Base):
     """
     The Find module provides rather extensive PACS query
     functionality.
@@ -390,87 +426,83 @@ class Find(Base):
         the FIRST series in the STUDY is reported.
         """
         super(Find, self).__init__(arg)
-        self.dp             = pfmisc.debug(
-                                        verbosity   = self.verbosity,
-                                        within      = 'Find',
-                                        syslog      = False
-                                        )
-        self.log            = self.dp.qprint
-        self.then           = do.Do(self.arg)
+        self.dp = pfmisc.debug(verbosity=self.verbosity, within="Find", syslog=False)
+        self.log = self.dp.qprint
+        self.then = do.Do(self.arg)
 
     def queryCustom_create(self) -> dict:
-        parameters:dict     = {}
-        if 'QueryReturnTags' in self.arg:
-            if self.arg['QueryReturnTags']:
-                parameters = {k: '' for k in self.arg['QueryReturnTags'].split(',')}
-                parameters['QueryRetrieveLevel']    = 'SERIES'
-        if 'StudyOnly' not in self.arg:
-            self.arg['StudyOnly']   = False
+        parameters: dict = {}
+        if "QueryReturnTags" in self.arg:
+            if self.arg["QueryReturnTags"]:
+                parameters = {k: "" for k in self.arg["QueryReturnTags"].split(",")}
+                parameters["QueryRetrieveLevel"] = "SERIES"
+        if "StudyOnly" not in self.arg:
+            self.arg["StudyOnly"] = False
         return parameters
 
     def query(self, opt={}):
-        custom:dict = {}
-        parameters = {
-            'AccessionNumber':                  '',
-            'PatientID':                        '',
-            'PatientName':                      '',
-            'PatientBirthDate':                 '',
-            'PatientAge':                       '',
-            'PatientSex':                       '',
-            'StudyDate':                        '',
-            'StudyDescription':                 '',
-            'StudyInstanceUID':                 '',
-            'Modality':                         '',
-            'ModalitiesInStudy':                '',
-            'PerformedStationAETitle':          '',
-            'NumberOfPatientRelatedInstances':  '',
-            'NumberOfPatientRelatedStudies':    '',
-            'NumberOfPatientRelatedSeries':     '',
-            'NumberOfStudyRelatedInstances':    '',
-            'NumberOfStudyRelatedSeries':       '',
-            'NumberOfSeriesRelatedInstances':   '',
-            'InstanceNumber':                   '',
-            'SeriesDate':                       '',
-            'SeriesDescription':                '',
-            'SeriesInstanceUID':                '',
-            'ProtocolName':                     '',
-            'AcquisitionProtocolDescription':   '',
-            'AcquisitionProtocolName':          '',
-            'QueryRetrieveLevel':               'SERIES'
-        } if not (custom := self.queryCustom_create()) else custom
+        custom: dict = {}
+        parameters = (
+            {
+                "AccessionNumber": "",
+                "PatientID": "",
+                "PatientName": "",
+                "PatientBirthDate": "",
+                "PatientAge": "",
+                "PatientSex": "",
+                "StudyDate": "",
+                "StudyDescription": "",
+                "StudyInstanceUID": "",
+                "Modality": "",
+                "ModalitiesInStudy": "",
+                "PerformedStationAETitle": "",
+                "NumberOfPatientRelatedInstances": "",
+                "NumberOfPatientRelatedStudies": "",
+                "NumberOfPatientRelatedSeries": "",
+                "NumberOfStudyRelatedInstances": "",
+                "NumberOfStudyRelatedSeries": "",
+                "NumberOfSeriesRelatedInstances": "",
+                "InstanceNumber": "",
+                "SeriesDate": "",
+                "SeriesDescription": "",
+                "SeriesInstanceUID": "",
+                "ProtocolName": "",
+                "AcquisitionProtocolDescription": "",
+                "AcquisitionProtocolName": "",
+                "QueryRetrieveLevel": "SERIES",
+            }
+            if not (custom := self.queryCustom_create())
+            else custom
+        )
 
-        query = ''
+        query = ""
         # we use a sorted dictionary so we can test generated command
         # more easily
         ordered = collections.OrderedDict(
-                        sorted(
-                                parameters.items(),
-                                key=lambda t: t[0]
-                                )
-                        )
+            sorted(parameters.items(), key=lambda t: t[0])
+        )
         for key, value in ordered.items():
             # update value if provided
             if key in opt:
                 value = opt[key]
             # update query
-            if value != '':
-                query += ' -k "' + key + '=' + value + '"'
+            if value != "":
+                query += ' -k "' + key + "=" + value + '"'
             else:
-                query += ' -k ' + key
+                query += " -k " + key
 
         return query
 
     def xinetd_command(self, opt={}):
         return "service xinetd restart"
 
-    def findscu_command(self, opt={} ):
-
-        command = '-xi -S'
-        str_cmd     = "%s %s %s %s" % (
-                        self.findscu,
-                        command,
-                        self.query(opt),
-                        self.commandSuffix()
+    def findscu_command(self, opt={}):
+        command = "-xi -S"
+        str_cmd = "%s %s %s %s" % (
+            self.findscu,
+            command,
+            self.query(opt),
+            self.commandSuffix(),
         )
         return str_cmd
 
@@ -492,67 +524,63 @@ class Find(Base):
         """
         # First we execute on a STUDY level to determine all the
         # STUDIES related to this query
-        series_uid                  = opt["SeriesInstanceUID"]
-        opt["SeriesInstanceUID"]    = ""
-        formattedStudiesResponse    = \
-            await self.systemlevel_runasync(opt,
-                    {
-                        'f_commandGen':         self.findscu_command,
-                        'QueryRetrieveLevel':   'STUDY'
-                    }
-            )
+        series_uid = opt["SeriesInstanceUID"]
+        opt["SeriesInstanceUID"] = ""
+        formattedStudiesResponse = await self.systemlevel_runasync(
+            opt, {"f_commandGen": self.findscu_command, "QueryRetrieveLevel": "STUDY"}
+        )
         # pudb.set_trace()
-        if formattedStudiesResponse['status']  != 'error' and not self.arg['StudyOnly']:
-            filteredStudiesResponse             = {}
-            filteredStudiesResponse['status']   = formattedStudiesResponse['status']
-            filteredStudiesResponse['command']  = formattedStudiesResponse['command']
-            filteredStudiesResponse['data']     = []
-            filteredStudiesResponse['args']     = self.arg
-            studyIndex                          = 0
-            for study in formattedStudiesResponse['data']:
+        if formattedStudiesResponse["status"] != "error" and not self.arg["StudyOnly"]:
+            filteredStudiesResponse = {}
+            filteredStudiesResponse["status"] = formattedStudiesResponse["status"]
+            filteredStudiesResponse["command"] = formattedStudiesResponse["command"]
+            filteredStudiesResponse["data"] = []
+            filteredStudiesResponse["args"] = self.arg
+            studyIndex = 0
+            for study in formattedStudiesResponse["data"]:
                 l_seriesResults = []
                 # For each study, we now execute a query on a SERIES
                 # level to complete the picture.
-                formattedSeriesResponse     = \
-                    await self.systemlevel_runasync(opt,
-                            {
-                                'f_commandGen':         self.findscu_command,
-                                'QueryRetrieveLevel':   'SERIES',
-                                'StudyInstanceUID':     study['StudyInstanceUID']['value'],
-                                'SeriesInstanceUID':    series_uid
-                            }
-                    )
-                for series in formattedSeriesResponse['data']:
-                    series['label']             = {}
-                    series['label']['tag']      = 0
-                    series['label']['value']    = "SERIES"
-                    series['label']['label']    = 'RetrieveLevel'
+                formattedSeriesResponse = await self.systemlevel_runasync(
+                    opt,
+                    {
+                        "f_commandGen": self.findscu_command,
+                        "QueryRetrieveLevel": "SERIES",
+                        "StudyInstanceUID": study["StudyInstanceUID"]["value"],
+                        "SeriesInstanceUID": series_uid,
+                    },
+                )
+                for series in formattedSeriesResponse["data"]:
+                    series["label"] = {}
+                    series["label"]["tag"] = 0
+                    series["label"]["value"] = "SERIES"
+                    series["label"]["label"] = "RetrieveLevel"
 
-                    series['command']           = {}
-                    series['command']['tag']    = 0
-                    series['command']['value']  = formattedSeriesResponse['command']
-                    series['command']['label']  = 'command'
+                    series["command"] = {}
+                    series["command"]["tag"] = 0
+                    series["command"]["value"] = formattedSeriesResponse["command"]
+                    series["command"]["label"] = "command"
 
-                    series['status']            = {}
-                    series['status']['tag']     = 0
-                    series['status']['value']   = formattedSeriesResponse['status']
-                    series['status']['label']   = 'status'
+                    series["status"] = {}
+                    series["status"]["tag"] = 0
+                    series["status"]["value"] = formattedSeriesResponse["status"]
+                    series["status"]["label"] = "status"
 
                     l_seriesResults.append(series)
 
                 if len(l_seriesResults):
-                    filteredStudiesResponse['data'].append(study)
-                    filteredStudiesResponse['data'][-1]['series']           \
-                        = l_seriesResults
+                    filteredStudiesResponse["data"].append(study)
+                    filteredStudiesResponse["data"][-1]["series"] = l_seriesResults
 
-                formattedStudiesResponse['data'][studyIndex]['series']      \
-                    = l_seriesResults
-                studyIndex+=1
+                formattedStudiesResponse["data"][studyIndex]["series"] = l_seriesResults
+                studyIndex += 1
 
-            if len(self.arg['then']):
-                self.then.arg['reportData']     = copy.deepcopy(filteredStudiesResponse)
-                d_then                          = await self.then.run()
-                filteredStudiesResponse['then'] = copy.deepcopy(d_then)
+            # pudb.set_trace()
+            if len(self.arg["then"]):
+                self.then.arg["reportData"] = copy.deepcopy(filteredStudiesResponse)
+                self.then.arg["studyResponse"] = copy.deepcopy(formattedStudiesResponse)
+                d_then = await self.then.run()
+                filteredStudiesResponse["then"] = copy.deepcopy(d_then)
 
             return filteredStudiesResponse
         else:
