@@ -10,32 +10,47 @@
 #
 
 import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
 
-from    argparse            import RawTextHelpFormatter
-from    argparse            import ArgumentParser
-from    terminaltables      import SingleTable
-from    pfmisc._colors      import Colors
-import  json
-import  pypx
-import  socket
-import  pudb
-import  pprint
-import  asyncio
+from argparse import RawTextHelpFormatter
+from argparse import ArgumentParser
+from terminaltables import SingleTable
+from pfmisc._colors import Colors
+import json
+import pypx
+import socket
+import pudb
+import pprint
+import asyncio
 
-from    pypx.report         import Report
-from    pypx.find           import parser_setup, parser_interpret, parser_JSONinterpret
+from pypx.report import Report
+from pypx.find import parser_setup, parser_interpret, parser_JSONinterpret
 
-str_defIP   = [l for l in (
-                [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-                if not ip.startswith("127.")][:1],
-                    [[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())
-                for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+str_defIP = [
+    l
+    for l in (
+        [
+            ip
+            for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+            if not ip.startswith("127.")
+        ][:1],
+        [
+            [
+                (s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close())
+                for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]
+            ][0][1]
+        ],
+    )
+    if l
+][0][0]
 
-str_name    = "px-find"
-str_version = "3.4.8"
-str_desc    = Colors.CYAN + """
+str_name = "px-find"
+str_version = "3.6.0"
+str_desc = (
+    Colors.CYAN
+    + """
 
                                    __  _             _ 
                                   / _|(_)           | |
@@ -50,8 +65,11 @@ str_desc    = Colors.CYAN + """
                         PACS ToolKit Wrapper
                             Query / Find
 
-                       -- version """ + \
-             Colors.YELLOW + str_version + Colors.CYAN + """ --
+                       -- version """
+    + Colors.YELLOW
+    + str_version
+    + Colors.CYAN
+    + """ --
 
     ``px-find`` is a module / script that provides functionality for
     performing a PACS Query operation.
@@ -59,11 +77,16 @@ str_desc    = Colors.CYAN + """
     ``px-find`` is tested against both Orthanc as well as some
     commercial PACS offerings.
 
-""" + Colors.NO_COLOUR
+"""
+    + Colors.NO_COLOUR
+)
 
-def synopsis(ab_shortOnly = False):
+
+def synopsis(ab_shortOnly=False):
     scriptName = os.path.basename(sys.argv[0])
-    shortSynopsis =  Colors.YELLOW + '''
+    shortSynopsis = (
+        Colors.YELLOW
+        + """
     NAME
 
         %s
@@ -113,9 +136,14 @@ def synopsis(ab_shortOnly = False):
                 [--debugToDir <dir>]                                \\
                 [--verbosity <level>]
 
-    ''' % scriptName + Colors.NO_COLOUR
+    """
+        % scriptName
+        + Colors.NO_COLOUR
+    )
 
-    description = Colors.LIGHT_GREEN + '''
+    description = (
+        Colors.LIGHT_GREEN
+        + """
 
     DESCRIPTION
 
@@ -327,7 +355,9 @@ def synopsis(ab_shortOnly = False):
         Set the verbosity level. "0" typically means no/minimal output. Allows for
         more fine tuned output control as opposed to '--quiet' that effectively
         silences everything.
-    ''' + Colors.LIGHT_PURPLE + '''
+    """
+        + Colors.LIGHT_PURPLE
+        + """
 
     EXAMPLES
 
@@ -447,16 +477,19 @@ def synopsis(ab_shortOnly = False):
                 }
             }'
 
-    ''' + Colors.NO_COLOUR
+    """
+        + Colors.NO_COLOUR
+    )
 
     if ab_shortOnly:
         return shortSynopsis
     else:
         return shortSynopsis + description
 
+
 # pudb.set_trace()
-parser      = parser_setup(str_desc)
-args        = parser_interpret(parser)
+parser = parser_setup(str_desc)
+args = parser_interpret(parser)
 if len(args.JSONargString):
     # If the user has specified args in the JSONargString, then
     # interpret this structure.
@@ -464,16 +497,16 @@ if len(args.JSONargString):
     # NOTE:
     # This will OVERWRITE any non-JSON args that may have been specified
     # as per normal. Using the JSONargString is an either-or choice!
-    d_JSONargs  : dict  = json.loads(args.JSONargString)
-    args                = parser_JSONinterpret(parser, d_JSONargs)
+    d_JSONargs: dict = json.loads(args.JSONargString)
+    args = parser_JSONinterpret(parser, d_JSONargs)
 
 if args.desc or args.synopsis:
-    str_help    : str   = ""
+    str_help: str = ""
     print(str_desc)
     if args.desc:
-        str_help     = synopsis(False)
+        str_help = synopsis(False)
     if args.synopsis:
-        str_help     = synopsis(True)
+        str_help = synopsis(True)
     print(str_help)
     sys.exit(1)
 
@@ -481,60 +514,58 @@ if args.b_version:
     print("Version: %s" % str_version)
     sys.exit(1)
 
-d_args  : dict  = vars(args)
-
+d_args: dict = vars(args)
 # Return the JSON result as a serialized string:
 d_output = asyncio.run(pypx.find(d_args))
-#pudb.set_trace()
+# pudb.set_trace()
 if args.verbosity:
     if args.json:
         try:
-            print(json.dumps(d_output, indent = 4))
+            print(json.dumps(d_output, indent=4))
         except Exception as e:
-            print(json.dumps({
-                'status'    : False,
-                'error'     : '%s' % e
-            }))
+            print(json.dumps({"status": False, "error": "%s" % e}))
     else:
         if not args.then:
-            Report({
-                'colorize' :    'dark',
-                'reportData':   d_output,
-                'printReport':  'tabular'
-            }).run()
+            Report(
+                {"colorize": "dark", "reportData": d_output, "printReport": "tabular"}
+            ).run()
 
 if args.b_waitForUserTerminate:
-    l_infoWindow =[
-        [Colors.CYAN                                            +
-        "End of program reached."                               +
-        Colors.NO_COLOUR],
+    l_infoWindow = [
+        [Colors.CYAN + "End of program reached." + Colors.NO_COLOUR],
         [""],
-        [Colors.PURPLE                                          +
-        "If a PACS move/pull/retrieve was requested, not all"   +
-        Colors.NO_COLOUR],
-        [Colors.PURPLE                                          +
-        "image data might have been received since the PACS"    +
-        Colors.NO_COLOUR],
-        [Colors.PURPLE                                          +
-        "operates in an asynchronous manner."                   +
-        Colors.NO_COLOUR],
+        [
+            Colors.PURPLE
+            + "If a PACS move/pull/retrieve was requested, not all"
+            + Colors.NO_COLOUR
+        ],
+        [
+            Colors.PURPLE
+            + "image data might have been received since the PACS"
+            + Colors.NO_COLOUR
+        ],
+        [Colors.PURPLE + "operates in an asynchronous manner." + Colors.NO_COLOUR],
         [""],
-        [Colors.PURPLE                                          +
-        "If you are running this process containerized, on"     +
-        Colors.NO_COLOUR],
-        [Colors.PURPLE                                          +
-        "exit the container will close and no additional data"  +
-        Colors.NO_COLOUR],
-        [Colors.PURPLE                                          +
-        "will be received."                                     +
-        Colors.NO_COLOUR],
+        [
+            Colors.PURPLE
+            + "If you are running this process containerized, on"
+            + Colors.NO_COLOUR
+        ],
+        [
+            Colors.PURPLE
+            + "exit the container will close and no additional data"
+            + Colors.NO_COLOUR
+        ],
+        [Colors.PURPLE + "will be received." + Colors.NO_COLOUR],
         [""],
-        [Colors.BLINK_RED           +
-        "ONLY EXIT IF YOU ARE SURE YOU HAVE RECEIVED ALL IMAGES!" +
-        Colors.NO_COLOUR],
+        [
+            Colors.BLINK_RED
+            + "ONLY EXIT IF YOU ARE SURE YOU HAVE RECEIVED ALL IMAGES!"
+            + Colors.NO_COLOUR
+        ],
     ]
     tb_infoWindow = SingleTable(l_infoWindow)
-    tb_infoWindow.inner_heading_row_border  = False
+    tb_infoWindow.inner_heading_row_border = False
     print(tb_infoWindow.table)
     input("\nHit ENTER now to exit.")
 
