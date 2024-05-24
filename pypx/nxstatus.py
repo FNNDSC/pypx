@@ -10,12 +10,21 @@ from pathlib import Path
 import os
 import aiohttp
 import ssl
+from functools import reduce
 
 # PYPX modules
 from .base import Base
 
 from pypx import smdb
 from pypx import repack
+
+
+def deep_get(dictionary, keys, default=None):
+    return reduce(
+        lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
+        keys.split("."),
+        dictionary,
+    )
 
 
 class Status(Base):
@@ -56,8 +65,8 @@ class Status(Base):
                 "series": "NoSeriesFound",
                 "images": "NoImagesFound",
             },
-            "study": {},
-            "series": {},
+            "study": {"state": "NoInfoAvailable", "seriesListInStudy": {}},
+            "series": {"state": "NoInfoAvailable"},
             "images": {
                 "received": {"count": -1},
                 "requested": {"count": -1},
@@ -120,32 +129,63 @@ class Status(Base):
 
     async def registeredDICOMcount_getFromCUBE(self) -> int:
         # pudb.set_trace()
+        url: str = (
+            f"pacsfiles/search/?pacs_identifier=PACSDCM&SeriesInstanceUID={self.arg['SeriesInstanceUID']}"
+        )
+        registered: int = await self.CUBE_getNameSpace(url, "collection.total", 0)
+        return registered
+
+    async def CUBE_getNameSpace(
+        self, query: str, namespace: str, default: Any = None
+    ) -> Any:
         d_CUBE: dict[str, Any] = self.CUBEinfo_get()
-        registered: int = 0
-        if not d_CUBE:
-            return registered
+        url: str = f"{d_CUBE['url']}{query}"
+        resp: dict[str, Any] = await self.CUBE_get(url)
+        filter: Any = deep_get(resp, namespace)
+        if filter is None and default is not None:
+            filter = default
+        return filter
+
+    async def NumberOfSeriesRelatedInstances_get(self) -> int:
+        url: str = (
+            f"pacsfiles/search/?SeriesInstanceUID={self.arg['SeriesInstanceUID']}&pacs_identifier=org.fnndsc.oxidicom&ProtocolName=NumberOfSeriesRelatedInstances"
+        )
+        items: list = await self.CUBE_getNameSpace(
+            url,
+            "collection.items",
+            [],
+        )
+        if not items:
+            return 0
+
+        data: list = items[0]["data"]
+        d_numberInstances: dict[str, str] = {
+            d["name"]: d["value"] for d in data if d["name"] == "SeriesDescription"
+        }
+        return int(d_numberInstances.get("SeriesDescription", 0))
+
+    async def CUBE_get(self, url: str) -> dict[str, Any]:
+        # pudb.set_trace()
+        d_CUBE: dict[str, Any] = self.CUBEinfo_get()
 
         auth: aiohttp.BasicAuth = aiohttp.BasicAuth(
             d_CUBE["username"], d_CUBE["password"]
-        )
-        url: str = (
-            f"{d_CUBE['url']}pacsfiles/search/?pacs_identifier=PACSDCM&SeriesInstanceUID={self.arg['SeriesInstanceUID']}"
         )
 
         ssl_context: ssl.SSLContext = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-
+        data: dict[str, Any]
         async with aiohttp.ClientSession(
             auth=auth, connector=aiohttp.TCPConnector(ssl=ssl_context)
         ) as session:
             async with session.get(url) as response:
                 if response.status == 200:
-                    data: Any = await response.json()
-                    registered = data["collection"]["total"]
+                    data = await response.json()
                 else:
-                    print(f"Error: {response.status}")
-        return registered
+                    resp = f"Error: {response.status}"
+                    data["error"] = resp
+        return data
 
     def registeredDICOMcount_getFromFS(self, d_DICOMseries: dict[str, Any]) -> int:
         registeredDICOMcount: int = 0
@@ -165,6 +205,7 @@ class Status(Base):
     def status_update(
         self, requested: int, packed: int, registered: int, d_status: dict[str, Any]
     ) -> dict[str, Any]:
+        # pudb.set_trace()
         d_status["status"] = False
         if requested and registered:
             d_status["status"] = True
@@ -188,6 +229,8 @@ class Status(Base):
         # pudb.set_trace()
         d_status: dict = self.status_init()
         requested: int = self.requestedDICOMcount_getForSeries(opt)
+        if not requested:
+            requested = await self.NumberOfSeriesRelatedInstances_get()
         packed: int = self.registeredDICOMcount_getFromFS(opt["series"])
         registered: int = await self.registeredDICOMcount_getFromCUBE()
         if not packed:
