@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name="pypx",
-    version="3.12.2",
+    version="3.12.4",
     description="PACS/ChRIS core tools and utils",
     long_description=readme(),
     python_requires=">= 3.8",
