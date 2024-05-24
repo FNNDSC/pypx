@@ -692,12 +692,12 @@ class Report(Base):
                 str_seriesInstanceUID = v
         if studyIndex >= 0:
             if seriesIndex >= 0:
-                str_receivedCount = "%03d" % d_status["images"]["received"]["count"]
-                str_requestedCount = "%03d" % d_status["images"]["requested"]["count"]
-                str_packedCount = "%03d" % d_status["images"]["packed"]["count"]
-                str_pushedCount = "%03d" % d_status["images"]["pushed"]["count"]
-                str_registeredCount = "%03d" % d_status["images"]["registered"]["count"]
-                str_status = "%s  %s  %s │ " % (
+                str_receivedCount = "%04d" % d_status["images"]["received"]["count"]
+                str_requestedCount = "%04d" % d_status["images"]["requested"]["count"]
+                str_packedCount = "%04d" % d_status["images"]["packed"]["count"]
+                str_pushedCount = "%04d" % d_status["images"]["pushed"]["count"]
+                str_registeredCount = "%04d" % d_status["images"]["registered"]["count"]
+                str_status = "%s   %s    %s │ " % (
                     d_status["state"]["study"],
                     d_status["state"]["series"],
                     d_status["state"]["images"],
